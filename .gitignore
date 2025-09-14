@@ -1,0 +1,8 @@
+/target
+/.devenv
+/.devenv.flake.nix
+/devenv.nix
+devenv.lock
+/CLAUDE.md
+/uv.lock
+__pycache__

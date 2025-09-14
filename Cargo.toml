@@ -1,0 +1,42 @@
+[package]
+name = "pyro-mysql"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "pyro_mysql"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+color-eyre = "0.6.5"
+criterion = "0.7.0"
+mysql = "26.0.1"
+mysql_async = "0.36.1"
+mysql_common = "0.35.5"
+pyo3 = { version = "0.26", features = [
+    "experimental-async",
+    "experimental-inspect",
+    "eyre",
+    "auto-initialize",
+] }
+pyo3-async-runtimes = { version = "0.26", features = ["tokio-runtime"] }
+thiserror = "2.0.16"
+tokio = "1.47.1"
+
+
+[patch.crates-io]
+pyo3 = { git = "https://github.com/elbaro/pyo3.git", rev = "e219540adf7bd00d03c251d53cb8d10cd3a5d16c", features = [
+    "experimental-async",
+    "extension-module",
+    "eyre",
+] }
+pyo3-ffi = { git = "https://github.com/elbaro/pyo3.git", rev = "e219540adf7bd00d03c251d53cb8d10cd3a5d16c" }
+
+
+[features]
+extension-module = ["pyo3/extension-module"]
+default = ["extension-module"]
+
+[[bench]]
+name = "bench"
+harness = false

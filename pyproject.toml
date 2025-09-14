@@ -1,0 +1,38 @@
+[build-system]
+requires = ["maturin>=1,<2"]
+build-backend = "maturin"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+
+[tool.uv]
+cache-keys = [
+  { file = "pyproject.toml" },
+  { file = "pyro_mysql.pyi" },
+  { file = "src/**/*.rs" },
+]
+
+[project]
+name = "pyro-mysql"
+description = "High-performance MySQL driver for Python"
+dynamic = ["version"]
+requires-python = ">=3.12"
+classifiers = ["Programming Language :: Rust"]
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/elbaro/pyro-mysql"
+
+[dependency-groups]
+dev = [
+  "maturin>=1.9.4",
+  "pdoc>=15.0.4",
+  "pyright>=1.1.405",
+  "pytest-asyncio>=1.2.0",
+  "pytest-benchmark>=5.1.0",
+  "rich>=14.1.0",
+  "aiomysql>=0.2.0",
+  "asyncmy>=0.2.10",
+  "mysqlclient>=2.2.7",
+  "pymysql>=1.1.2",
+]
