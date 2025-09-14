@@ -15,6 +15,7 @@ cache-keys = [
 [project]
 name = "pyro-mysql"
 description = "High-performance MySQL driver for Python"
+readme = "README.md"
 dynamic = ["version"]
 requires-python = ">=3.12"
 classifiers = ["Programming Language :: Rust"]

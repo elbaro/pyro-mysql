@@ -2,11 +2,11 @@
 
 A high-performance MySQL driver for Python, backed by Rust.
 
-- [API Reference](./docs.html)
-- [Benchmark](./report/report/index.html)
+- [API Reference](https://htmlpreview.github.io/?https://github.com/elbaro/pyro-mysql/blob/main/docs.html)
+- [Benchmark](https://htmlpreview.github.io/?https://github.com/elbaro/pyro-mysql/blob/main/report/report/index.html)
 
 
-<img src="./report/chart.png" width="800px" />
+<img src="https://github.com/elbaro/pyro-mysql/blob/main/report/chart.png?raw=true" width="800px" />
 
 
 ## Usage
