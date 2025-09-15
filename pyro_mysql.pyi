@@ -41,6 +41,9 @@ asyncio.run(example_transaction())
 
 """
 
+import datetime
+import decimal
+import time
 from types import TracebackType
 from typing import Any, Self
 
@@ -56,8 +59,13 @@ __all__ = [
     "SyncTransaction",
 ]
 
-type Value = Any
+type Value = None | bool | int | float | str | bytes | bytearray | tuple[Any] | list[
+    Any
+] | set[Any] | frozenset[Any] | dict[
+    str, Any
+] | datetime.datetime | datetime.date | datetime.time | datetime.timedelta | time.struct_time | decimal.Decimal
 type Params = None | tuple[Value, ...] | list[Value] | dict[str, Value]
+
 
 def init(worker_threads: int | None = 1, thread_name: str | None = None) -> None:
     """
@@ -70,6 +78,7 @@ def init(worker_threads: int | None = 1, thread_name: str | None = None) -> None
     """
     ...
 
+
 class IsolationLevel:
     """Transaction isolation level enum."""
 
@@ -81,6 +90,7 @@ class IsolationLevel:
     def as_str(self) -> str:
         """Return the isolation level as a string."""
         ...
+
 
 class TxOpts:
     """Transaction options."""
@@ -101,6 +111,7 @@ class TxOpts:
         """
         ...
 
+
 class Row:
     """
     A row returned from a MySQL query.
@@ -120,6 +131,7 @@ class Row:
             assert row.as_dict() == {"1": 1, "2": 2}
         """
         ...
+
 
 class Transaction:
     """
@@ -200,6 +212,40 @@ class Transaction:
             params: List of parameter sets.
         """
         ...
+
+    async def query(self, query: str) -> list[Row]:
+        """
+        Execute a query using text protocol and return all rows.
+
+        Args:
+            query: SQL query string.
+
+        Returns:
+            List of Row objects.
+        """
+        ...
+
+    async def query_first(self, query: str) -> Row | None:
+        """
+        Execute a query using text protocol and return the first row.
+
+        Args:
+            query: SQL query string.
+
+        Returns:
+            First Row or None if no results.
+        """
+        ...
+
+    async def query_drop(self, query: str) -> None:
+        """
+        Execute a query using text protocol and discard the results.
+
+        Args:
+            query: SQL query string.
+        """
+        ...
+
 
 class Conn:
     """
@@ -294,6 +340,40 @@ class Conn:
         """
         ...
 
+    async def query(self, query: str) -> list[Row]:
+        """
+        Execute a query using text protocol and return all rows.
+
+        Args:
+            query: SQL query string.
+
+        Returns:
+            List of Row objects.
+        """
+        ...
+
+    async def query_first(self, query: str) -> Row | None:
+        """
+        Execute a query using text protocol and return the first row.
+
+        Args:
+            query: SQL query string.
+
+        Returns:
+            First Row or None if no results.
+        """
+        ...
+
+    async def query_drop(self, query: str) -> None:
+        """
+        Execute a query using text protocol and discard the results.
+
+        Args:
+            query: SQL query string.
+        """
+        ...
+
+
 class Pool:
     """
     MySQL connection pool.
@@ -317,6 +397,7 @@ class Pool:
             Connection from the pool.
         """
         ...
+
 
 class SyncTransaction:
     """
@@ -380,6 +461,65 @@ class SyncTransaction:
             params_list: List of parameter sets.
         """
         ...
+
+    def query(self, query: str) -> list[Row]:
+        """
+        Execute a query using text protocol and return all rows.
+
+        Args:
+            query: SQL query string.
+
+        Returns:
+            List of Row objects.
+        """
+        ...
+
+    def query_first(self, query: str) -> Row | None:
+        """
+        Execute a query using text protocol and return the first row.
+
+        Args:
+            query: SQL query string.
+
+        Returns:
+            First Row or None if no results.
+        """
+        ...
+
+    def query_drop(self, query: str) -> None:
+        """
+        Execute a query using text protocol and discard the results.
+
+        Args:
+            query: SQL query string.
+        """
+        ...
+
+    def query_iter(self, query: str) -> ResultSetIterator:
+        """
+        Execute a query using text protocol and return an iterator over the results.
+
+        Args:
+            query: SQL query string.
+
+        Returns:
+            ResultSetIterator object for iterating over rows.
+        """
+        ...
+
+    def exec_iter(self, query: str, params: Params = None) -> ResultSetIterator:
+        """
+        Execute a query using binary protocol and return an iterator over the results.
+
+        Args:
+            query: SQL query string with '?' placeholders.
+            params: Query parameters.
+
+        Returns:
+            ResultSetIterator object for iterating over rows.
+        """
+        ...
+
 
 class SyncConn:
     """
@@ -467,6 +607,51 @@ class SyncConn:
         Args:
             query: SQL query string with '?' placeholders.
             params_list: List of parameter sets.
+        """
+        ...
+
+    def query(self, query: str) -> list[Row]:
+        """
+        Execute a query using text protocol and return all rows.
+
+        Args:
+            query: SQL query string.
+
+        Returns:
+            List of Row objects.
+        """
+        ...
+
+    def query_first(self, query: str) -> Row | None:
+        """
+        Execute a query using text protocol and return the first row.
+
+        Args:
+            query: SQL query string.
+
+        Returns:
+            First Row or None if no results.
+        """
+        ...
+
+    def query_drop(self, query: str) -> None:
+        """
+        Execute a query using text protocol and discard the results.
+
+        Args:
+            query: SQL query string.
+        """
+        ...
+
+    def query_iter(self, query: str) -> Any:
+        """
+        Execute a query using text protocol and return an iterator over result sets.
+
+        Args:
+            query: SQL query string.
+
+        Returns:
+            Iterator over result sets.
         """
         ...
 

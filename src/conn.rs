@@ -77,6 +77,19 @@ impl Conn {
     async fn ping(&self) -> Result<()> {
         self.inner.ping().await
     }
+    
+    // ─── Text Protocol ───────────────────────────────────────────────────
+    async fn query(&self, query: String) -> Result<Vec<Row>> {
+        self.inner.query(query).await
+    }
+    async fn query_first(&self, query: String) -> Result<Option<Row>> {
+        self.inner.query_first(query).await
+    }
+    async fn query_drop(&self, query: String) -> Result<()> {
+        self.inner.query_drop(query).await
+    }
+    
+    // ─── Binary Protocol ─────────────────────────────────────────────────
     #[pyo3(signature = (query, params=Params::default()))]
     async fn exec(&self, query: String, params: Params) -> Result<Vec<Row>> {
         self.inner.exec(query, params).await

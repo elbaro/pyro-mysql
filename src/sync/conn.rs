@@ -6,6 +6,7 @@ use pyo3::prelude::*;
 use crate::isolation_level::IsolationLevel;
 use crate::params::Params;
 use crate::row::Row;
+use crate::sync::iterator::ResultSetIterator;
 use crate::sync::transaction::SyncTransaction;
 
 #[pyclass]
@@ -78,6 +79,53 @@ impl SyncConn {
             .ping()?)
     }
 
+    // ─── Text Protocol ───────────────────────────────────────────────────
+
+    #[pyo3(signature = (query))]
+    fn query(&mut self, query: String) -> Result<Vec<Row>> {
+        Ok(self
+            .inner
+            .as_mut()
+            .context("Connection is not available")?
+            .query(query)?)
+    }
+
+    #[pyo3(signature = (query))]
+    fn query_first(&mut self, query: String) -> Result<Option<Row>> {
+        Ok(self
+            .inner
+            .as_mut()
+            .context("Connection is not available")?
+            .query_first(query)?)
+    }
+
+    #[pyo3(signature = (query))]
+    fn query_drop(&mut self, query: String) -> Result<()> {
+        Ok(self
+            .inner
+            .as_mut()
+            .context("Connection is not available")?
+            .query_drop(query)?)
+    }
+    #[pyo3(signature = (query))]
+    fn query_iter(slf: Py<Self>, query: String) -> Result<ResultSetIterator> {
+        Python::attach(|py| {
+            let mut slf_ref = slf.borrow_mut(py);
+            let query_result = slf_ref
+                .inner
+                .as_mut()
+                .context("Connection is not available")?
+                .query_iter(query)?;
+            
+            Ok(ResultSetIterator {
+                owner: slf.clone_ref(py).into_any(),
+                inner: unsafe { std::mem::transmute(query_result) },
+            })
+        })
+    }
+
+    // ─── Binary Protocol ─────────────────────────────────────────────────
+
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec(&mut self, query: String, params: Params) -> Result<Vec<Row>> {
         Ok(self
@@ -112,6 +160,23 @@ impl SyncConn {
             .as_mut()
             .context("Connection is not available")?
             .exec_batch(query, params_list)?)
+    }
+
+    #[pyo3(signature = (query, params=Params::default()))]
+    fn exec_iter(slf: Py<Self>, query: String, params: Params) -> Result<ResultSetIterator> {
+        Python::attach(|py| {
+            let mut slf_ref = slf.borrow_mut(py);
+            let query_result = slf_ref
+                .inner
+                .as_mut()
+                .context("Connection is not available")?
+                .exec_iter(query, params)?;
+            
+            Ok(ResultSetIterator {
+                owner: slf.clone_ref(py).into_any(),
+                inner: unsafe { std::mem::transmute(query_result) },
+            })
+        })
     }
 
     fn close(&mut self) -> PyResult<()> {
