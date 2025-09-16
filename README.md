@@ -11,26 +11,47 @@ A high-performance MySQL driver for Python, backed by Rust.
 
 ## Usage
 
-### 1. Connection
+
+### 0. Import
 
 ```py
-mysql_url = f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
+# Async
+from pyro_mysql.async_ import Conn, Pool
+from pyro_mysql import AsyncConn, AsyncPool
 
-# Directly connect
-conn = await pyro_mysql.Conn.new(mysql_url)
+# Sync
+from pyro_mysql.sync import Conn, Transaction
+from pyro_mysql import SyncConn, SyncTransaction
+````
 
-# Acquire from a pool
-pool = pyro_mysql.Pool(mysql_url)
-conn = await pool.acquire()
+### 1. Connection
 
-# Sync API
-pool = pyro_mysql.SyncPool(mysql_url)
-conn = pyro_mysql.SyncConn(mysql_url) or pool.acquire()
+
+```py
+from pyro_mysql.async_ import Conn, Pool, OptsBuilder
+
+def example1():
+    conn = await Conn.new(f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
+
+def example2():
+    pool = Pool(
+        OptsBuilder()
+            .ip_or_hostname("localhost")
+            .port(3333)
+            .user("username")
+            .db_name("db")
+            .wait_timeout(100)
+            .tcp_nodelay(True)
+            .compression(3)
+            .build()
+    )
+    conn = await pool.acquire()
 ```
+
 
 ### 2. Query Execution
 
-`Conn` and `Transaction` provides the following methods.
+`AsyncConn` and `AsyncTransaction` provides the following methods.
 `SyncConn` and `SyncTransaction` provides the sync versions.
 
 ```py
