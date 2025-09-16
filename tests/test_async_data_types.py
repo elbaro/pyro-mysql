@@ -33,7 +33,14 @@ async def test_integer_types():
     )
 
     result = await conn.query_first("SELECT * FROM test_int_types")
-    assert result.to_tuple() == (127, 32767, 8388607, 2147483647, 9223372036854775807, 4294967295)
+    assert result.to_tuple() == (
+        127,
+        32767,
+        8388607,
+        2147483647,
+        9223372036854775807,
+        4294967295,
+    )
 
     await conn.query_drop("DROP TABLE test_int_types")
     await conn.disconnect()
@@ -60,7 +67,7 @@ async def test_float_types():
     )
 
     result = await conn.query_first("SELECT * FROM test_float_types")
-    float_val, double_val = result
+    float_val, double_val = result.to_tuple()
     assert abs(float_val - 3.14159) < 0.001
     assert abs(double_val - 2.718281828) < 0.000001
 

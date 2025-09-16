@@ -242,17 +242,17 @@ async def test_affected_rows():
         ("Alice", 30, "Bob", 25, "Charlie", 35),
     )
 
-    affected_rows = conn.affected_rows()
+    affected_rows = await conn.affected_rows()
     assert affected_rows == 3
 
     await conn.exec_drop("UPDATE test_table SET age = age + 1 WHERE age > ?", (25,))
 
-    affected_rows = conn.affected_rows()
+    affected_rows = await conn.affected_rows()
     assert affected_rows == 2
 
     await conn.exec_drop("DELETE FROM test_table WHERE age < ?", (30,))
 
-    affected_rows = conn.affected_rows()
+    affected_rows = await conn.affected_rows()
     assert affected_rows == 1
 
     await cleanup_test_table_async(conn)

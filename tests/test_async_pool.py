@@ -60,7 +60,7 @@ async def test_concurrent_connections():
         conn = await pool.get_conn()
         result = await conn.query_first(f"SELECT {worker_id}")
         await conn.disconnect()
-        return result
+        return result.to_tuple()
 
     # Create multiple concurrent workers
     tasks = [worker(i) for i in range(1, 6)]
@@ -81,16 +81,15 @@ async def test_pool_with_transactions():
     conn = await pool.get_conn()
     await setup_test_table_async(conn)
 
-    tx = await conn.start_transaction()
+    async with conn.start_transaction() as tx:
+        await tx.exec_drop(
+            "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
+        )
 
-    await tx.exec_drop(
-        "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
-    )
+        count = await tx.query_first("SELECT COUNT(*) FROM test_table")
+        assert count.to_tuple() == (1,)
 
-    count = await tx.query_first("SELECT COUNT(*) FROM test_table")
-    assert count.to_tuple() == (1,)
-
-    await tx.commit()
+        await tx.commit()
 
     await cleanup_test_table_async(conn)
     await conn.disconnect()
@@ -116,6 +115,7 @@ async def test_pool_connection_reuse():
 
     # Note: Connection IDs might be different due to MySQL server behavior
     # but the test verifies pool functionality
+    assert connection_id1 == connection_id2
 
     await pool.disconnect()
 

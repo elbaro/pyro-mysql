@@ -68,11 +68,31 @@ impl SyncConn {
         })?)
     }
 
+    fn id(&self) -> Result<u32> {
+        Ok(self
+            .inner
+            .as_ref()
+            .context("Conn is already closed")?
+            .connection_id())
+    }
+
     fn affected_rows(&self) -> PyResult<u64> {
         let conn = self.inner.as_ref().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Connection is not available")
         })?;
         Ok(conn.affected_rows())
+    }
+
+    fn last_insert_id(&self) -> Result<Option<u64>> {
+        match self
+            .inner
+            .as_ref()
+            .context("Connection is not available")?
+            .last_insert_id()
+        {
+            0 => Ok(None),
+            x => Ok(Some(x)),
+        }
     }
 
     fn ping(&mut self) -> Result<()> {
@@ -191,5 +211,13 @@ impl SyncConn {
     fn disconnect(&mut self) -> PyResult<()> {
         self.inner.take();
         Ok(())
+    }
+
+    fn server_version(&self) -> Result<(u16, u16, u16)> {
+        Ok(self
+            .inner
+            .as_ref()
+            .context("Connection is not available")?
+            .server_version())
     }
 }

@@ -6,12 +6,12 @@ use mysql_async::Opts;
 use pyo3::prelude::*;
 use tokio::sync::RwLock;
 
+use crate::r#async::AsyncOpts;
+use crate::r#async::transaction::AsyncTransaction;
 use crate::isolation_level::IsolationLevel;
 use crate::params::Params;
 use crate::queryable::Queryable;
-use crate::r#async::AsyncOpts;
 use crate::row::Row;
-use crate::r#async::transaction::AsyncTransaction;
 use crate::util::{mysql_error_to_pyerr, url_error_to_pyerr};
 use color_eyre::Result;
 
@@ -33,12 +33,15 @@ impl AsyncConn {
     }
 
     #[staticmethod]
-    fn new<'py>(py: Python<'py>, url_or_opts: Either<String, PyRef<AsyncOpts>>) -> PyResult<Bound<'py, PyAny>> {
+    fn new<'py>(
+        py: Python<'py>,
+        url_or_opts: Either<String, PyRef<AsyncOpts>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let opts = match url_or_opts {
             Either::Left(url) => Opts::from_url(&url).map_err(url_error_to_pyerr)?,
             Either::Right(opts) => opts.opts.clone(),
         };
-        
+
         let locals = pyo3_async_runtimes::TaskLocals::with_running_loop(py)?;
         pyo3_async_runtimes::tokio::future_into_py_with_locals(py, locals, async move {
             Ok(Self {
@@ -67,6 +70,16 @@ impl AsyncConn {
         AsyncTransaction::new(self.inner.clone(), opts)
     }
 
+    async fn id(&self) -> Result<u32> {
+        Ok(self
+            .inner
+            .read()
+            .await
+            .as_ref()
+            .context("Conn is already closed")?
+            .id())
+    }
+
     async fn affected_rows(&self) -> Result<u64> {
         Ok(self
             .inner
@@ -75,6 +88,16 @@ impl AsyncConn {
             .as_ref()
             .context("Conn is already closed")?
             .affected_rows())
+    }
+
+    async fn last_insert_id(&self) -> Result<Option<u64>> {
+        Ok(self
+            .inner
+            .read()
+            .await
+            .as_ref()
+            .context("Conn is already closed")?
+            .last_insert_id())
     }
 
     // ─── Queryable ───────────────────────────────────────────────────────
@@ -120,5 +143,15 @@ impl AsyncConn {
             conn.disconnect().await?;
         }
         Ok(())
+    }
+
+    async fn server_version(&self) -> Result<(u16, u16, u16)> {
+        Ok(self
+            .inner
+            .read()
+            .await
+            .as_ref()
+            .context("Connection is not available")?
+            .server_version())
     }
 }

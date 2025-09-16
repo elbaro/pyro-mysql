@@ -88,10 +88,10 @@ async def test_connection_server_info():
     opts = get_async_opts()
     conn = await Conn.new(opts)
 
-    server_version = conn.server_version()
+    server_version = await conn.server_version()
     assert server_version[0] >= 5
 
-    connection_id = conn.id()
+    connection_id = await conn.id()
     assert connection_id > 0
 
     await conn.disconnect()
@@ -220,7 +220,7 @@ async def test_connection_with_wrong_credentials():
 async def test_connection_to_invalid_host():
     """Test connection failure to invalid host."""
     opts = (
-        AsyncOptsBuilder.new()
+        AsyncOptsBuilder()
         .ip_or_hostname("invalid.host.that.does.not.exist")
         .tcp_port(3306)
         .build()
