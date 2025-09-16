@@ -7,6 +7,15 @@ pub struct AsyncOpts {
     pub opts: mysql_async::Opts,
 }
 
+#[pymethods]
+impl AsyncOpts {
+    pub fn pool_opts(&self, pool_opts: crate::r#async::pool_opts::AsyncPoolOpts) -> Self {
+        let builder = mysql_async::OptsBuilder::from_opts(self.opts.clone());
+        let new_opts = builder.pool_opts(pool_opts.inner).into();
+        Self { opts: new_opts }
+    }
+}
+
 #[pyclass]
 pub struct AsyncOptsBuilder {
     builder: Option<mysql_async::OptsBuilder>,
@@ -193,8 +202,12 @@ impl AsyncOptsBuilder {
         todo!()
     }
 
-    fn pool_opts(_self_: PyRefMut<Self>, _opts: Option<Py<PyAny>>) -> PyRefMut<Self> {
-        todo!()
+    fn pool_opts(mut self_: PyRefMut<Self>, opts: crate::r#async::pool_opts::AsyncPoolOpts) -> PyResult<PyRefMut<Self>> {
+        let builder = self_.builder.take().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
+        })?;
+        self_.builder = Some(builder.pool_opts(opts.inner));
+        Ok(self_)
     }
 
     // Note: additional_capabilities is not available in mysql_async::OptsBuilder

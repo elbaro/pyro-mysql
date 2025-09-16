@@ -13,14 +13,14 @@ use tokio::runtime::Builder;
 
 use crate::{
     r#async::{
-        AsyncOpts, AsyncOptsBuilder, conn::AsyncConn, pool::AsyncPool,
+        AsyncOpts, AsyncOptsBuilder, AsyncPoolOpts, conn::AsyncConn, pool::AsyncPool,
         transaction::AsyncTransaction,
     },
     capability_flags::CapabilityFlags,
     isolation_level::IsolationLevel,
     row::Row,
     sync::{
-        SyncConn, SyncTransaction,
+        SyncConn, SyncPoolOpts, SyncTransaction,
         opts::{SyncOpts, SyncOptsBuilder},
     },
 };
@@ -60,8 +60,10 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<AsyncTransaction>()?;
     m.add_class::<AsyncOpts>()?;
     m.add_class::<AsyncOptsBuilder>()?;
+    m.add_class::<AsyncPoolOpts>()?;
 
     m.add_class::<SyncConn>()?;
+    m.add_class::<SyncPoolOpts>()?;
     m.add_class::<SyncTransaction>()?;
     m.add_class::<SyncOpts>()?;
     m.add_class::<SyncOptsBuilder>()?;
@@ -73,6 +75,7 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     async_.add("Transaction", py.get_type::<AsyncTransaction>())?;
     async_.add("Opts", py.get_type::<AsyncOpts>())?;
     async_.add("OptsBuilder", py.get_type::<AsyncOptsBuilder>())?;
+    async_.add("PoolOpts", py.get_type::<AsyncPoolOpts>())?;
     m.add_submodule(&async_)?;
     pyo3::py_run!(
         py,
@@ -85,6 +88,7 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     sync.add("Conn", py.get_type::<SyncConn>())?;
     sync.add("Opts", py.get_type::<SyncOpts>())?;
     sync.add("OptsBuilder", py.get_type::<SyncOptsBuilder>())?;
+    sync.add("PoolOpts", py.get_type::<SyncPoolOpts>())?;
     m.add_submodule(&sync)?;
 
     // a hack for Python's import system

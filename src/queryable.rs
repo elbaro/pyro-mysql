@@ -1,8 +1,7 @@
 use color_eyre::{Result, eyre::ContextCompat};
-use mysql_async::{BinaryProtocol, QueryResult};
+use pyo3::prelude::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use pyo3::prelude::*;
 
 use crate::{params::Params, row::Row};
 
@@ -10,7 +9,6 @@ use crate::{params::Params, row::Row};
 ///
 /// pyo3_async_runtimes::tokio::future_into_py_with_locals
 /// pyo3_async_runtimes::tokio::get_runtime().spawn
-
 
 pub trait Queryable {
     async fn ping(&self) -> Result<()>;
@@ -169,7 +167,6 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
     //                 .await?))
     //         })
     //         .await?
-        
-        
+
     // }
 }

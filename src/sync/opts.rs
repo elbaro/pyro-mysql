@@ -9,6 +9,15 @@ pub struct SyncOpts {
     pub opts: mysql::Opts,
 }
 
+#[pymethods]
+impl SyncOpts {
+    pub fn pool_opts(&self, pool_opts: crate::sync::pool_opts::SyncPoolOpts) -> Self {
+        let builder = mysql::OptsBuilder::from_opts(self.opts.clone());
+        let new_opts = builder.pool_opts(pool_opts.inner).into();
+        Self { opts: new_opts }
+    }
+}
+
 #[pyclass]
 pub struct SyncOptsBuilder {
     builder: Option<mysql::OptsBuilder>,
@@ -294,8 +303,12 @@ impl SyncOptsBuilder {
         todo!()
     }
 
-    fn pool_opts(mut self_: PyRefMut<Self>, opts: Option<Py<PyAny>>) -> PyRefMut<Self> {
-        todo!()
+    fn pool_opts(mut self_: PyRefMut<Self>, opts: crate::sync::pool_opts::SyncPoolOpts) -> PyResult<PyRefMut<Self>> {
+        let builder = self_.builder.take().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
+        })?;
+        self_.builder = Some(builder.pool_opts(opts.inner));
+        Ok(self_)
     }
 
     fn additional_capabilities(
