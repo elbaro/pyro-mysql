@@ -52,13 +52,18 @@ __all__ = [
     "Row",
     "TxOpts",
     "IsolationLevel",
+    "CapabilityFlags",
     "async_",
     "sync",
     "AsyncConn",
     "AsyncPool",
     "AsyncTransaction",
+    "AsyncOpts",
+    "AsyncOptsBuilder",
     "SyncConn",
     "SyncTransaction",
+    "SyncOpts",
+    "SyncOptsBuilder",
 ]
 
 JsonEncodable = (
