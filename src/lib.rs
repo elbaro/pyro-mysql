@@ -20,7 +20,7 @@ use crate::{
     isolation_level::IsolationLevel,
     row::Row,
     sync::{
-        SyncConn, SyncPoolOpts, SyncTransaction,
+        SyncConn, SyncPool, SyncPooledConn, SyncPoolOpts, SyncTransaction,
         opts::{SyncOpts, SyncOptsBuilder},
     },
 };
@@ -63,6 +63,8 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<AsyncPoolOpts>()?;
 
     m.add_class::<SyncConn>()?;
+    m.add_class::<SyncPool>()?;
+    m.add_class::<SyncPooledConn>()?;
     m.add_class::<SyncPoolOpts>()?;
     m.add_class::<SyncTransaction>()?;
     m.add_class::<SyncOpts>()?;
@@ -86,6 +88,8 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // sync
     let sync = PyModule::new(py, "sync")?;
     sync.add("Conn", py.get_type::<SyncConn>())?;
+    sync.add("Pool", py.get_type::<SyncPool>())?;
+    sync.add("PooledConn", py.get_type::<SyncPooledConn>())?;
     sync.add("Opts", py.get_type::<SyncOpts>())?;
     sync.add("OptsBuilder", py.get_type::<SyncOptsBuilder>())?;
     sync.add("PoolOpts", py.get_type::<SyncPoolOpts>())?;

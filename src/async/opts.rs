@@ -43,6 +43,19 @@ impl AsyncOptsBuilder {
         }
     }
 
+    #[staticmethod]
+    fn from_url(url: &str) -> PyResult<Self> {
+        let opts = mysql_async::Opts::from_url(url).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Invalid connection URL: {}",
+                e
+            ))
+        })?;
+        Ok(Self {
+            builder: Some(mysql_async::OptsBuilder::from_opts(opts)),
+        })
+    }
+
     // Network/Connection Options
     fn ip_or_hostname(mut self_: PyRefMut<Self>, hostname: String) -> PyResult<PyRefMut<Self>> {
         let builder = self_.builder.take().ok_or_else(|| {

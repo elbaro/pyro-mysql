@@ -5,6 +5,7 @@ use crate::{
     r#async::opts::AsyncOpts,
     util::{mysql_error_to_pyerr, url_error_to_pyerr},
 };
+use either::Either;
 use mysql_async::Opts;
 use pyo3::prelude::*;
 use tokio::sync::RwLock;
@@ -19,20 +20,13 @@ impl AsyncPool {
     /// new() won't assert server availability.
     /// Can accept either a URL string or AsyncOpts object
     #[new]
-    #[pyo3(signature = (opts_or_url,))]
-    pub fn new(opts_or_url: &Bound<'_, PyAny>) -> PyResult<Self> {
-        let pool = if let Ok(url) = opts_or_url.extract::<String>() {
-            // String URL path
-            mysql_async::Pool::new(Opts::try_from(url.as_str()).map_err(url_error_to_pyerr)?)
-        } else if let Ok(opts) = opts_or_url.extract::<AsyncOpts>() {
-            // AsyncOpts object
-            mysql_async::Pool::new(opts.opts)
-        } else {
-            return Err(pyo3::exceptions::PyTypeError::new_err(
-                "Expected string URL or AsyncOpts object"
-            ));
+    pub fn new(url_or_opts: Either<String, PyRef<AsyncOpts>>) -> PyResult<Self> {
+        let opts = match url_or_opts {
+            Either::Left(url) => Opts::from_url(&url).map_err(url_error_to_pyerr)?,
+            Either::Right(opts) => opts.opts.clone(),
         };
 
+        let pool = mysql_async::Pool::new(opts);
         Ok(Self { pool })
     }
 

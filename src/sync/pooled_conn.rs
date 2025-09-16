@@ -1,33 +1,26 @@
 use color_eyre::Result;
 use color_eyre::eyre::ContextCompat;
-use either::Either;
-use mysql::{AccessMode, Opts, prelude::*};
+use mysql::{AccessMode, prelude::*};
 use pyo3::prelude::*;
 
 use crate::isolation_level::IsolationLevel;
 use crate::params::Params;
 use crate::row::Row;
 use crate::sync::iterator::ResultSetIterator;
-use crate::sync::opts::SyncOpts;
 use crate::sync::transaction::SyncTransaction;
 
 #[pyclass]
-pub struct SyncConn {
-    pub inner: Option<mysql::Conn>,
+pub struct SyncPooledConn {
+    pub inner: Option<mysql::PooledConn>,
 }
 
 #[pymethods]
-impl SyncConn {
+impl SyncPooledConn {
     #[new]
-    fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> PyResult<Self> {
-        let opts = match url_or_opts {
-            Either::Left(url) => Opts::from_url(&url)
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?,
-            Either::Right(opts) => opts.opts.clone(),
-        };
-        let conn = mysql::Conn::new(opts)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
-        Ok(Self { inner: Some(conn) })
+    fn __init__() -> PyResult<Self> {
+        Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+            "SyncPooledConn cannot be instantiated directly. Use SyncPool.get_conn() or SyncPool.acquire().",
+        ))
     }
 
     #[pyo3(signature=(callable, consistent_snapshot=false, isolation_level=None, readonly=None))]
@@ -80,12 +73,12 @@ impl SyncConn {
             .inner
             .as_mut()
             .context("Connection is not available")?
+            .as_mut()
             .ping()?)
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
 
-    #[pyo3(signature = (query))]
     fn query(&mut self, query: String) -> Result<Vec<Row>> {
         Ok(self
             .inner
@@ -94,7 +87,6 @@ impl SyncConn {
             .query(query)?)
     }
 
-    #[pyo3(signature = (query))]
     fn query_first(&mut self, query: String) -> Result<Option<Row>> {
         Ok(self
             .inner
@@ -103,7 +95,6 @@ impl SyncConn {
             .query_first(query)?)
     }
 
-    #[pyo3(signature = (query))]
     fn query_drop(&mut self, query: String) -> Result<()> {
         Ok(self
             .inner
@@ -111,7 +102,7 @@ impl SyncConn {
             .context("Connection is not available")?
             .query_drop(query)?)
     }
-    #[pyo3(signature = (query))]
+
     fn query_iter(slf: Py<Self>, query: String) -> Result<ResultSetIterator> {
         Python::attach(|py| {
             let mut slf_ref = slf.borrow_mut(py);

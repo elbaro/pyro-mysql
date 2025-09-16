@@ -45,6 +45,19 @@ impl SyncOptsBuilder {
         }
     }
 
+    #[staticmethod]
+    fn from_url(url: &str) -> PyResult<Self> {
+        let opts = mysql::Opts::from_url(url).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Invalid connection URL: {}",
+                e
+            ))
+        })?;
+        Ok(Self {
+            builder: Some(mysql::OptsBuilder::from_opts(opts)),
+        })
+    }
+
     fn from_hash_map(
         mut self_: PyRefMut<Self>,
         params: HashMap<String, String>,
@@ -290,10 +303,10 @@ impl SyncOptsBuilder {
         Ok(self_)
     }
 
-    fn ssl_opts(mut self_: PyRefMut<Self>, opts: Option<Py<PyAny>>) -> PyRefMut<Self> {
+    fn ssl_opts(mut self_: PyRefMut<Self>, _opts: Option<Py<PyAny>>) -> PyRefMut<Self> {
         // Note: This would need a separate SslOpts wrapper class
         // For now, leaving as placeholder
-        self_
+        todo!()
     }
 
     fn local_infile_handler(
@@ -303,7 +316,10 @@ impl SyncOptsBuilder {
         todo!()
     }
 
-    fn pool_opts(mut self_: PyRefMut<Self>, opts: crate::sync::pool_opts::SyncPoolOpts) -> PyResult<PyRefMut<Self>> {
+    fn pool_opts(
+        mut self_: PyRefMut<Self>,
+        opts: crate::sync::pool_opts::SyncPoolOpts,
+    ) -> PyResult<PyRefMut<Self>> {
         let builder = self_.builder.take().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
         })?;
