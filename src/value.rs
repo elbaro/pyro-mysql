@@ -284,9 +284,14 @@ pub fn value_to_python<'py>(
                 }
 
                 // Text types - return as str
+                // Some text types have BLOB ColumnType
                 ColumnType::MYSQL_TYPE_VARCHAR
                 | ColumnType::MYSQL_TYPE_VAR_STRING
-                | ColumnType::MYSQL_TYPE_STRING => {
+                | ColumnType::MYSQL_TYPE_STRING
+                | ColumnType::MYSQL_TYPE_TINY_BLOB
+                | ColumnType::MYSQL_TYPE_MEDIUM_BLOB
+                | ColumnType::MYSQL_TYPE_LONG_BLOB
+                | ColumnType::MYSQL_TYPE_BLOB => {
                     // Check if it's a BINARY flag (BINARY/VARBINARY columns)
                     if flags.contains(ColumnFlags::BINARY_FLAG) {
                         PyBytes::new(py, &b).into_any()
@@ -298,12 +303,6 @@ pub fn value_to_python<'py>(
                         }
                     }
                 }
-
-                // BLOB types - always return as bytes
-                ColumnType::MYSQL_TYPE_TINY_BLOB
-                | ColumnType::MYSQL_TYPE_MEDIUM_BLOB
-                | ColumnType::MYSQL_TYPE_LONG_BLOB
-                | ColumnType::MYSQL_TYPE_BLOB => PyBytes::new(py, &b).into_any(),
 
                 // ENUM and SET - return as str
                 ColumnType::MYSQL_TYPE_ENUM | ColumnType::MYSQL_TYPE_SET => {
@@ -328,6 +327,17 @@ pub fn value_to_python<'py>(
                                 Err(_) => PyBytes::new(py, b).into_any(),
                             }
                         }
+                        Err(_) => PyBytes::new(py, b).into_any(),
+                    }
+                }
+
+                // Floating point types - parse bytes as float
+                ColumnType::MYSQL_TYPE_FLOAT | ColumnType::MYSQL_TYPE_DOUBLE => {
+                    match std::str::from_utf8(b) {
+                        Ok(float_str) => match float_str.parse::<f64>() {
+                            Ok(f) => f.into_bound_py_any(py)?,
+                            Err(_) => PyBytes::new(py, b).into_any(),
+                        },
                         Err(_) => PyBytes::new(py, b).into_any(),
                     }
                 }

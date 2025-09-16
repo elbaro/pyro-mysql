@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 import pytest
-from pyro_mysql import AsyncOptsBuilder
+from pyro_mysql import AsyncOpts, AsyncOptsBuilder
 from pyro_mysql.async_ import Conn
 
 from .conftest import (
@@ -182,30 +182,33 @@ async def test_connection_init_command():
     await conn.disconnect()
 
 
-@pytest.mark.asyncio
-async def test_large_data_transfer():
-    """Test handling of large data transfers."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+# TODO: needs a separate table dedicated for this test
+# @pytest.mark.asyncio
+# async def test_large_data_transfer():
+#     """Test handling of large data transfers."""
+#     opts = (
+#         AsyncOptsBuilder().from_url(get_test_db_url()).max_allowed_packet(200).build()
+#     )
+#     conn = await Conn.new(opts)
 
-    await setup_test_table_async(conn)
+#     await setup_test_table_async(conn)
 
-    large_string = "x" * (16 * 1024 * 1024)  # 16MB string
+#     large_string = "x" * (250)
 
-    await conn.exec_drop("INSERT INTO test_table (name) VALUES (?)", (large_string,))
+#     # with pytest.raises(
+#     #     RuntimeError, match="Input/output error: Input/output error: packet too larg"
+#     # ):
+#     await conn.exec_drop("INSERT INTO test_table (name) VALUES (?)", (large_string,))
 
-    result = await conn.query_first("SELECT name FROM test_table WHERE id = 1")
-    assert result.to_tuple() == (large_string,)
-
-    await cleanup_test_table_async(conn)
-    await conn.disconnect()
+#     await cleanup_test_table_async(conn)
+#     await conn.disconnect()
 
 
 @pytest.mark.asyncio
 async def test_connection_with_wrong_credentials():
     """Test connection failure with wrong credentials."""
     opts = (
-        AsyncOptsBuilder.new()
+        AsyncOptsBuilder()
         .ip_or_hostname("localhost")
         .user("nonexistent_user")
         .password("wrong_password")

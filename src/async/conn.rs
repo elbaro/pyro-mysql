@@ -145,6 +145,14 @@ impl AsyncConn {
         Ok(())
     }
 
+    async fn reset(&self) -> Result<()> {
+        let mut inner = self.inner.write().await;
+        if let Some(conn) = inner.as_mut() {
+            conn.reset().await?;
+        }
+        Ok(())
+    }
+
     async fn server_version(&self) -> Result<(u16, u16, u16)> {
         Ok(self
             .inner

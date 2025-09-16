@@ -1,5 +1,6 @@
 use color_eyre::Result;
 use color_eyre::eyre::ContextCompat;
+use either::Either;
 use mysql::{AccessMode, prelude::*};
 use pyo3::prelude::*;
 
@@ -114,7 +115,7 @@ impl SyncPooledConn {
 
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
-                inner: unsafe { std::mem::transmute(query_result) },
+                inner: Either::Left(unsafe { std::mem::transmute(query_result) }),
             })
         })
     }
@@ -169,7 +170,7 @@ impl SyncPooledConn {
 
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
-                inner: unsafe { std::mem::transmute(query_result) },
+                inner: Either::Right(unsafe { std::mem::transmute(query_result) }),
             })
         })
     }

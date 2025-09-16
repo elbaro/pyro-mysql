@@ -24,7 +24,7 @@ impl AsyncPoolOpts {
                 inner: self.inner.clone().with_constraints(pool_constraints),
             }),
             None => Err(pyo3::exceptions::PyValueError::new_err(
-                "Invalid pool constraints: min must be <= max"
+                "Invalid pool constraints: min must be <= max",
             )),
         }
     }
@@ -32,13 +32,15 @@ impl AsyncPoolOpts {
     #[pyo3(signature = (ttl,))]
     pub fn with_inactive_connection_ttl(&self, ttl: &Bound<'_, PyAny>) -> PyResult<Self> {
         use pyo3::types::PyDelta;
-        
+
         let duration = if let Ok(delta) = ttl.downcast::<PyDelta>() {
-            let total_seconds = delta.get_seconds() as f64 + delta.get_microseconds() as f64 / 1_000_000.0;
+            let total_seconds =
+                delta.get_seconds() as f64 + delta.get_microseconds() as f64 / 1_000_000.0;
+            // TODO: lose of precision
             Duration::from_secs_f64(total_seconds)
         } else {
             return Err(pyo3::exceptions::PyTypeError::new_err(
-                "Expected timedelta object"
+                "Expected timedelta object",
             ));
         };
 
@@ -50,13 +52,14 @@ impl AsyncPoolOpts {
     #[pyo3(signature = (interval,))]
     pub fn with_ttl_check_interval(&self, interval: &Bound<'_, PyAny>) -> PyResult<Self> {
         use pyo3::types::PyDelta;
-        
+
         let duration = if let Ok(delta) = interval.downcast::<PyDelta>() {
-            let total_seconds = delta.get_seconds() as f64 + delta.get_microseconds() as f64 / 1_000_000.0;
+            let total_seconds =
+                delta.get_seconds() as f64 + delta.get_microseconds() as f64 / 1_000_000.0;
             Duration::from_secs_f64(total_seconds)
         } else {
             return Err(pyo3::exceptions::PyTypeError::new_err(
-                "Expected timedelta object"
+                "Expected timedelta object",
             ));
         };
 

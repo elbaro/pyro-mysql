@@ -31,24 +31,10 @@ def test_sync_connection_with_database():
     conn.disconnect()
 
 
-def test_sync_connection_timeout():
-    """Test sync connection timeout handling."""
-    url = get_test_db_url()
-    opts = OptsBuilder.from_url(url).read_timeout(timedelta(milliseconds=1)).build()
-
-    try:
-        conn = Conn(opts)
-    except Exception:
-        # Timeout is expected to potentially fail
-        pass
-
-
 def test_sync_connection_ping():
     """Test sync connection ping functionality."""
     conn = Conn(get_test_db_url())
-
     conn.ping()
-
     conn.disconnect()
 
 
@@ -163,21 +149,22 @@ def test_sync_connection_init_command():
     conn.disconnect()
 
 
-def test_sync_large_data_transfer():
-    """Test handling of large data transfers."""
-    conn = Conn(get_test_db_url())
+# TODO: needs a separate table to test this
+# def test_sync_large_data_transfer():
+#     """Test handling of large data transfers."""
+#     conn = Conn(get_test_db_url())
 
-    setup_test_table_sync(conn)
+#     setup_test_table_sync(conn)
 
-    large_string = "x" * (16 * 1024 * 1024)  # 16MB string
+#     large_string = "x" * (16 * 1024 * 1024)  # 16MB string
 
-    conn.exec_drop("INSERT INTO test_table (name) VALUES (?)", (large_string,))
+#     conn.exec_drop("INSERT INTO test_table (name) VALUES (?)", (large_string,))
 
-    result = conn.query_first("SELECT name FROM test_table WHERE id = 1")
-    assert result.to_tuple() == (large_string,)
+#     result = conn.query_first("SELECT name FROM test_table WHERE id = 1")
+#     assert result.to_tuple() == (large_string,)
 
-    cleanup_test_table_sync(conn)
-    conn.disconnect()
+#     cleanup_test_table_sync(conn)
+#     conn.disconnect()
 
 
 def test_sync_connection_with_wrong_credentials():

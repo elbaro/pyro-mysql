@@ -27,6 +27,7 @@ impl SyncConn {
         };
         let conn = mysql::Conn::new(opts)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+
         Ok(Self { inner: Some(conn) })
     }
 
@@ -143,7 +144,7 @@ impl SyncConn {
 
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
-                inner: unsafe { std::mem::transmute(query_result) },
+                inner: Either::Left(unsafe { std::mem::transmute(query_result) }),
             })
         })
     }
@@ -198,7 +199,7 @@ impl SyncConn {
 
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
-                inner: unsafe { std::mem::transmute(query_result) },
+                inner: Either::Right(unsafe { std::mem::transmute(query_result) }),
             })
         })
     }
@@ -211,6 +212,14 @@ impl SyncConn {
     fn disconnect(&mut self) -> PyResult<()> {
         self.inner.take();
         Ok(())
+    }
+
+    fn reset(&mut self) -> Result<()> {
+        Ok(self
+            .inner
+            .as_mut()
+            .context("Connection is not available")?
+            .reset()?)
     }
 
     fn server_version(&self) -> Result<(u16, u16, u16)> {

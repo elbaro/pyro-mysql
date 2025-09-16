@@ -568,6 +568,14 @@ class async_:
             """
             ...
 
+        async def reset(self) -> None:
+            """
+            Reset the connection state.
+            
+            This resets the connection to a clean state without closing it.
+            """
+            ...
+
     class Pool:
         """
         MySQL connection pool.
@@ -1255,6 +1263,14 @@ class sync:
             Disconnect from the MySQL server.
             
             This closes the connection and makes it unusable for further operations.
+            """
+            ...
+
+        def reset(self) -> None:
+            """
+            Reset the connection state.
+            
+            This resets the connection to a clean state without closing it.
             """
             ...
 

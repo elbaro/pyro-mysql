@@ -1,9 +1,10 @@
 use color_eyre::{Result, eyre::ContextCompat};
+use either::Either;
 use mysql::prelude::Queryable;
 use pyo3::prelude::*;
 
-use crate::{params::Params, row::Row};
 use crate::sync::iterator::ResultSetIterator;
+use crate::{params::Params, row::Row};
 
 #[pyclass]
 pub struct SyncTransaction {
@@ -28,7 +29,7 @@ impl SyncTransaction {
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
-    
+
     fn query(&mut self, query: String) -> Result<Vec<Row>> {
         Ok(self
             .inner
@@ -36,7 +37,7 @@ impl SyncTransaction {
             .context("Connection is not available")?
             .query(query)?)
     }
-    
+
     fn query_first(&mut self, query: String) -> Result<Option<Row>> {
         Ok(self
             .inner
@@ -44,7 +45,7 @@ impl SyncTransaction {
             .context("Connection is not available")?
             .query_first(query)?)
     }
-    
+
     fn query_drop(&mut self, query: String) -> Result<()> {
         Ok(self
             .inner
@@ -52,7 +53,7 @@ impl SyncTransaction {
             .context("Connection is not available")?
             .query_drop(query)?)
     }
-    
+
     fn query_iter(slf: Py<Self>, query: String) -> Result<ResultSetIterator> {
         Python::attach(|py| {
             let mut slf_ref = slf.borrow_mut(py);
@@ -61,10 +62,10 @@ impl SyncTransaction {
                 .as_mut()
                 .context("Connection is not available")?
                 .query_iter(query)?;
-            
+
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
-                inner: unsafe { std::mem::transmute(query_result) },
+                inner: Either::Left(unsafe { std::mem::transmute(query_result) }),
             })
         })
     }
@@ -113,10 +114,10 @@ impl SyncTransaction {
                 .as_mut()
                 .context("Connection is not available")?
                 .exec_iter(query, params)?;
-            
+
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
-                inner: unsafe { std::mem::transmute(query_result) },
+                inner: Either::Right(unsafe { std::mem::transmute(query_result) }),
             })
         })
     }
