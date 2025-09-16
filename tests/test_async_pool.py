@@ -11,7 +11,7 @@ from .conftest import cleanup_test_table_async, get_async_opts, setup_test_table
 async def test_basic_pool():
     """Test basic pool functionality."""
     opts = get_async_opts()
-    pool = Pool.new(opts)
+    pool = Pool(opts)
 
     conn = await pool.get_conn()
 
@@ -27,13 +27,13 @@ async def test_pool_constraints():
     """Test pool with constraints."""
     opts = get_async_opts()
     pool_opts = (
-        PoolOpts.new()
-        .with_constraints(PoolConstraints.new(2, 10))
+        PoolOpts()
+        .with_constraints((2, 10))
         .with_inactive_connection_ttl(timedelta(seconds=60))
         .with_ttl_check_interval(timedelta(seconds=30))
     )
 
-    pool = Pool.new(opts.pool_opts(pool_opts))
+    pool = Pool(opts.pool_opts(pool_opts))
 
     conn1 = await pool.get_conn()
     conn2 = await pool.get_conn()
@@ -53,8 +53,8 @@ async def test_pool_constraints():
 async def test_concurrent_connections():
     """Test multiple concurrent connections from pool."""
     opts = get_async_opts()
-    pool_opts = PoolOpts.new().with_constraints(PoolConstraints.new(2, 5))
-    pool = Pool.new(opts.pool_opts(pool_opts))
+    pool_opts = PoolOpts().with_constraints((2, 5))
+    pool = Pool(opts.pool_opts(pool_opts))
 
     async def worker(worker_id):
         conn = await pool.get_conn()
@@ -76,7 +76,7 @@ async def test_concurrent_connections():
 async def test_pool_with_transactions():
     """Test pool connections with transactions."""
     opts = get_async_opts()
-    pool = Pool.new(opts)
+    pool = Pool(opts)
 
     conn = await pool.get_conn()
     await setup_test_table_async(conn)
@@ -101,8 +101,8 @@ async def test_pool_with_transactions():
 async def test_pool_connection_reuse():
     """Test that pool connections are properly reused."""
     opts = get_async_opts()
-    pool_opts = PoolOpts.new().with_constraints(PoolConstraints.new(1, 1))
-    pool = Pool.new(opts.pool_opts(pool_opts))
+    pool_opts = PoolOpts().with_constraints((1, 1))
+    pool = Pool(opts.pool_opts(pool_opts))
 
     # Get and release a connection
     conn1 = await pool.get_conn()
@@ -124,8 +124,8 @@ async def test_pool_connection_reuse():
 async def test_pool_max_connections():
     """Test pool respects maximum connection limits."""
     opts = get_async_opts()
-    pool_opts = PoolOpts.new().with_constraints(PoolConstraints.new(1, 2))
-    pool = Pool.new(opts.pool_opts(pool_opts))
+    pool_opts = PoolOpts().with_constraints((1, 2))
+    pool = Pool(opts.pool_opts(pool_opts))
 
     conn1 = await pool.get_conn()
     conn2 = await pool.get_conn()
@@ -147,12 +147,12 @@ async def test_pool_connection_timeout():
     """Test pool connection timeout behavior."""
     opts = get_async_opts()
     pool_opts = (
-        PoolOpts.new()
-        .with_constraints(PoolConstraints.new(1, 1))
+        PoolOpts()
+        .with_constraints((1, 1))
         .with_inactive_connection_ttl(timedelta(milliseconds=100))
     )
 
-    pool = Pool.new(opts.pool_opts(pool_opts))
+    pool = Pool(opts.pool_opts(pool_opts))
 
     conn = await pool.get_conn()
     await conn.query_first("SELECT 1")

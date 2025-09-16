@@ -168,20 +168,19 @@ class AsyncOptsBuilder:
     @staticmethod
     def from_url(url: str) -> "AsyncOptsBuilder":
         """Create builder from a MySQL connection URL.
-        
+
         URL format: mysql://[user[:password]@]host[:port][/database][?param1=value1&...]
-        
+
         Args:
             url: MySQL connection URL string
-            
+
         Returns:
             AsyncOptsBuilder configured from the URL
-            
+
         Raises:
             ValueError: If the URL is invalid or cannot be parsed
         """
         ...
-
     # Network/Connection Options
     def ip_or_hostname(self, hostname: str) -> "AsyncOptsBuilder":
         """Set the hostname or IP address."""
@@ -194,13 +193,12 @@ class AsyncOptsBuilder:
     def socket(self, path: str | None) -> "AsyncOptsBuilder":
         """Set the Unix socket path."""
         ...
-
     # Authentication Options
     def user(self, username: str | None) -> "AsyncOptsBuilder":
         """Set the username."""
         ...
 
-    def pass_(self, password: str | None) -> "AsyncOptsBuilder":
+    def password(self, password: str | None) -> "AsyncOptsBuilder":
         """Set the password."""
         ...
 
@@ -211,7 +209,6 @@ class AsyncOptsBuilder:
     def secure_auth(self, enable: bool) -> "AsyncOptsBuilder":
         """Enable or disable secure authentication."""
         ...
-
     # Performance/Timeout Options
     def wait_timeout(self, seconds: int | None) -> "AsyncOptsBuilder":
         """Set the wait timeout in seconds."""
@@ -220,7 +217,6 @@ class AsyncOptsBuilder:
     def stmt_cache_size(self, size: int) -> "AsyncOptsBuilder":
         """Set the statement cache size."""
         ...
-
     # Additional Options
     def tcp_nodelay(self, enable: bool) -> "AsyncOptsBuilder":
         """Enable or disable TCP_NODELAY."""
@@ -288,10 +284,10 @@ class AsyncPoolOpts:
     def with_constraints(self, constraints: tuple[int, int]) -> "AsyncPoolOpts":
         """
         Set pool constraints as (min_connections, max_connections).
-        
+
         Args:
             constraints: Tuple of (min, max) connections where min <= max.
-            
+
         Returns:
             New AsyncPoolOpts with updated constraints.
         """
@@ -300,10 +296,10 @@ class AsyncPoolOpts:
     def with_inactive_connection_ttl(self, ttl: datetime.timedelta) -> "AsyncPoolOpts":
         """
         Set the TTL for inactive connections.
-        
+
         Args:
             ttl: Time to live for inactive connections.
-            
+
         Returns:
             New AsyncPoolOpts with updated TTL.
         """
@@ -312,10 +308,10 @@ class AsyncPoolOpts:
     def with_ttl_check_interval(self, interval: datetime.timedelta) -> "AsyncPoolOpts":
         """
         Set the interval for TTL checks.
-        
+
         Args:
             interval: How often to check for expired connections.
-            
+
         Returns:
             New AsyncPoolOpts with updated interval.
         """
@@ -564,6 +560,14 @@ class async_:
             """
             ...
 
+        async def disconnect(self) -> None:
+            """
+            Disconnect from the MySQL server.
+            
+            This closes the connection and makes it unusable for further operations.
+            """
+            ...
+
     class Pool:
         """
         MySQL connection pool.
@@ -630,15 +634,15 @@ class SyncOptsBuilder:
     @staticmethod
     def from_url(url: str) -> "SyncOptsBuilder":
         """Create builder from a MySQL connection URL.
-        
+
         URL format: mysql://[user[:password]@]host[:port][/database][?param1=value1&...]
-        
+
         Args:
             url: MySQL connection URL string
-            
+
         Returns:
             SyncOptsBuilder configured from the URL
-            
+
         Raises:
             ValueError: If the URL is invalid or cannot be parsed
         """
@@ -647,7 +651,6 @@ class SyncOptsBuilder:
     def from_hash_map(self, params: dict[str, str]) -> "SyncOptsBuilder":
         """Initialize from a dictionary of parameters."""
         ...
-
     # Network/Connection Options
     def ip_or_hostname(self, hostname: str | None) -> "SyncOptsBuilder":
         """Set the hostname or IP address."""
@@ -664,7 +667,6 @@ class SyncOptsBuilder:
     def bind_address(self, address: str | None) -> "SyncOptsBuilder":
         """Set the bind address for outgoing connections."""
         ...
-
     # Authentication Options
     def user(self, username: str | None) -> "SyncOptsBuilder":
         """Set the username."""
@@ -681,7 +683,6 @@ class SyncOptsBuilder:
     def secure_auth(self, enable: bool) -> "SyncOptsBuilder":
         """Enable or disable secure authentication."""
         ...
-
     # Performance/Timeout Options
     def read_timeout(self, seconds: float | None) -> "SyncOptsBuilder":
         """Set the read timeout in seconds."""
@@ -698,7 +699,6 @@ class SyncOptsBuilder:
     def stmt_cache_size(self, size: int) -> "SyncOptsBuilder":
         """Set the statement cache size."""
         ...
-
     # Additional Options
     def tcp_nodelay(self, enable: bool) -> "SyncOptsBuilder":
         """Enable or disable TCP_NODELAY."""
@@ -708,7 +708,9 @@ class SyncOptsBuilder:
         """Set TCP keepalive time in milliseconds."""
         ...
 
-    def tcp_keepalive_probe_interval_secs(self, interval_secs: int | None) -> "SyncOptsBuilder":
+    def tcp_keepalive_probe_interval_secs(
+        self, interval_secs: int | None
+    ) -> "SyncOptsBuilder":
         """Set TCP keepalive probe interval in seconds."""
         ...
 
@@ -774,10 +776,10 @@ class SyncPoolOpts:
     def with_constraints(self, constraints: tuple[int, int]) -> "SyncPoolOpts":
         """
         Set pool constraints as (min_connections, max_connections).
-        
+
         Args:
             constraints: Tuple of (min, max) connections where min <= max.
-            
+
         Returns:
             New SyncPoolOpts with updated constraints.
         """
@@ -824,7 +826,7 @@ class SyncPool:
 class SyncPooledConn:
     """
     Synchronous MySQL pooled connection.
-    
+
     This represents a connection obtained from a SyncPool.
     It has the same interface as SyncConn but wraps a mysql::PooledConn.
     """
@@ -956,9 +958,7 @@ class SyncPooledConn:
         """
         ...
 
-    def exec_iter(
-        self, query: str, params: Params = None
-    ) -> "sync.ResultSetIterator":
+    def exec_iter(self, query: str, params: Params = None) -> "sync.ResultSetIterator":
         """
         Execute a query using binary protocol and return an iterator over the results.
 
@@ -1248,6 +1248,14 @@ class sync:
 
         def close(self) -> None:
             """Close the connection."""
+            ...
+
+        def disconnect(self) -> None:
+            """
+            Disconnect from the MySQL server.
+            
+            This closes the connection and makes it unusable for further operations.
+            """
             ...
 
 # # Re-export async classes with prefix

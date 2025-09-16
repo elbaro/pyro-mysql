@@ -113,4 +113,12 @@ impl AsyncConn {
     async fn exec_batch(&self, query: String, params: Vec<Params>) -> Result<()> {
         self.inner.exec_batch(query, params).await
     }
+
+    async fn disconnect(&self) -> Result<()> {
+        let mut inner = self.inner.write().await;
+        if let Some(conn) = inner.take() {
+            conn.disconnect().await?;
+        }
+        Ok(())
+    }
 }

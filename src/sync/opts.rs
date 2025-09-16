@@ -131,7 +131,7 @@ impl SyncOptsBuilder {
         Ok(self_)
     }
 
-    fn pass(mut self_: PyRefMut<Self>, password: Option<String>) -> PyResult<PyRefMut<Self>> {
+    fn password(mut self_: PyRefMut<Self>, password: Option<String>) -> PyResult<PyRefMut<Self>> {
         let builder = self_.builder.take().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
         })?;

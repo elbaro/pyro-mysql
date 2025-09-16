@@ -187,4 +187,9 @@ impl SyncConn {
         self.inner.take();
         Ok(())
     }
+
+    fn disconnect(&mut self) -> PyResult<()> {
+        self.inner.take();
+        Ok(())
+    }
 }

@@ -42,11 +42,7 @@ async def test_connection_with_database():
 async def test_connection_timeout():
     """Test connection timeout handling."""
     url = get_test_db_url()
-    opts = (
-        AsyncOptsBuilder.from_url(url)
-        .connect_timeout(timedelta(milliseconds=1))
-        .build()
-    )
+    opts = AsyncOptsBuilder.from_url(url).wait_timeout(0).build()
 
     try:
         conn = await Conn.new(opts)

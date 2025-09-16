@@ -11,7 +11,7 @@ from .conftest import get_async_opts, get_test_db_url
 async def test_connection_timeout_error():
     """Test connection timeout errors."""
     opts = (
-        AsyncOptsBuilder.new()
+        AsyncOptsBuilder()
         .ip_or_hostname("192.0.2.0")  # Non-routable IP
         .tcp_port(3306)
         .connect_timeout(timedelta(milliseconds=100))
@@ -26,7 +26,7 @@ async def test_connection_timeout_error():
 async def test_invalid_credentials_error():
     """Test invalid credentials error."""
     opts = (
-        AsyncOptsBuilder.new()
+        AsyncOptsBuilder()
         .ip_or_hostname("localhost")
         .tcp_port(3306)
         .user("nonexistent_user")
@@ -188,9 +188,9 @@ async def test_connection_lost_error():
 async def test_pool_exhaustion():
     """Test pool connection exhaustion."""
     opts = get_async_opts()
-    from pyro_mysql import PoolConstraints, PoolOpts
+    from pyro_mysql import PoolOpts
 
-    pool_opts = PoolOpts.new().with_constraints(PoolConstraints.new(1, 1))
+    pool_opts = PoolOpts.new().with_constraints((1, 1))
     pool = Pool.new(opts.pool_opts(pool_opts))
 
     # Get the only available connection

@@ -93,7 +93,7 @@ impl AsyncOptsBuilder {
         Ok(self_)
     }
 
-    fn pass(mut self_: PyRefMut<Self>, password: Option<String>) -> PyResult<PyRefMut<Self>> {
+    fn password(mut self_: PyRefMut<Self>, password: Option<String>) -> PyResult<PyRefMut<Self>> {
         let builder = self_.builder.take().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
         })?;
@@ -116,10 +116,6 @@ impl AsyncOptsBuilder {
         self_.builder = Some(builder.secure_auth(enable));
         Ok(self_)
     }
-
-    // Performance/Timeout Options
-    // Note: read_timeout, write_timeout, and tcp_connect_timeout are not available in mysql_async::OptsBuilder
-    // Only wait_timeout is available
 
     fn wait_timeout(mut self_: PyRefMut<Self>, seconds: Option<usize>) -> PyResult<PyRefMut<Self>> {
         let builder = self_.builder.take().ok_or_else(|| {
@@ -215,7 +211,10 @@ impl AsyncOptsBuilder {
         todo!()
     }
 
-    fn pool_opts(mut self_: PyRefMut<Self>, opts: crate::r#async::pool_opts::AsyncPoolOpts) -> PyResult<PyRefMut<Self>> {
+    fn pool_opts(
+        mut self_: PyRefMut<Self>,
+        opts: crate::r#async::pool_opts::AsyncPoolOpts,
+    ) -> PyResult<PyRefMut<Self>> {
         let builder = self_.builder.take().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
         })?;
