@@ -7,7 +7,7 @@ use crate::{params::Params, queryable::Queryable, row::Row};
 
 // struct fields are dropped in the same order as declared in the struct
 #[pyclass]
-pub struct Transaction {
+pub struct AsyncTransaction {
     opts: mysql_async::TxOpts,
 
     /// Option<Transaction> is initialized in __aenter__.
@@ -22,9 +22,9 @@ pub struct Transaction {
     conn: Arc<RwLock<Option<mysql_async::Conn>>>,
 }
 
-impl Transaction {
+impl AsyncTransaction {
     pub fn new(conn: Arc<RwLock<Option<mysql_async::Conn>>>, opts: mysql_async::TxOpts) -> Self {
-        Transaction {
+        AsyncTransaction {
             opts,
             conn,
             guard: Default::default(),
@@ -35,7 +35,7 @@ impl Transaction {
 
 // Order or lock: conn -> conn guard -> inner
 #[pymethods]
-impl Transaction {
+impl AsyncTransaction {
     fn __aenter__<'py>(slf: PyRef<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let locals = pyo3_async_runtimes::TaskLocals::with_running_loop(py)?;
 
@@ -43,7 +43,7 @@ impl Transaction {
         let conn = slf.conn.clone();
         let guard = slf.guard.clone();
         let inner = slf.inner.clone();
-        let slf: Py<Transaction> = slf.into();
+        let slf: Py<AsyncTransaction> = slf.into();
 
         pyo3_async_runtimes::tokio::future_into_py_with_locals(py, locals, async move {
             let mut conn = conn.write().await;
@@ -166,7 +166,7 @@ impl Transaction {
     async fn ping(&self) -> Result<()> {
         self.inner.ping().await
     }
-    
+
     // ─── Text Protocol ───────────────────────────────────────────────────
     async fn query(&self, query: String) -> Result<Vec<Row>> {
         self.inner.query(query).await
@@ -177,7 +177,7 @@ impl Transaction {
     async fn query_drop(&self, query: String) -> Result<()> {
         self.inner.query_drop(query).await
     }
-    
+
     // ─── Binary Protocol ─────────────────────────────────────────────────
     #[pyo3(signature = (query, params=Params::default()))]
     async fn exec(&self, query: String, params: Params) -> Result<Vec<Row>> {

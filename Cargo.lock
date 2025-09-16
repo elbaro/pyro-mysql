@@ -1157,6 +1157,7 @@ name = "pyo3"
 version = "0.26.0"
 source = "git+https://github.com/elbaro/pyo3.git?rev=e219540adf7bd00d03c251d53cb8d10cd3a5d16c#e219540adf7bd00d03c251d53cb8d10cd3a5d16c"
 dependencies = [
+ "either",
  "eyre",
  "indoc",
  "libc",
@@ -1228,6 +1229,7 @@ version = "0.1.1"
 dependencies = [
  "color-eyre",
  "criterion",
+ "either",
  "mysql",
  "mysql_async",
  "mysql_common",

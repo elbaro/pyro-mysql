@@ -1,20 +1,26 @@
-pub mod conn;
+pub mod r#async;
+pub mod capability_flags;
 pub mod isolation_level;
 pub mod params;
-pub mod pool;
 pub mod queryable;
 pub mod row;
 pub mod sync;
-pub mod transaction;
 pub mod util;
 pub mod value;
 
-use conn::Conn;
-use pool::Pool;
 use pyo3::prelude::*;
 use tokio::runtime::Builder;
 
-use crate::{isolation_level::IsolationLevel, row::Row, transaction::Transaction};
+use crate::{
+    r#async::{AsyncOpts, AsyncOptsBuilder, conn::AsyncConn, pool::AsyncPool, transaction::AsyncTransaction},
+    capability_flags::CapabilityFlags,
+    isolation_level::IsolationLevel,
+    row::Row,
+    sync::{
+        SyncConn, SyncTransaction,
+        opts::{SyncOpts, SyncOptsBuilder},
+    },
+};
 
 #[pyfunction]
 /// This function can be called multiple times until any async operation is called.
@@ -33,7 +39,7 @@ fn init(worker_threads: Option<usize>, thread_name: Option<&str>) {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn pyro_mysql(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     if cfg!(debug_assertions) {
         println!("Running in Debug mode.");
     } else {
@@ -43,10 +49,36 @@ fn pyro_mysql(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     init(Some(1), None);
     m.add_function(wrap_pyfunction!(init, m)?)?;
     m.add_class::<Row>()?;
-    m.add_class::<Pool>()?;
-    m.add_class::<Conn>()?;
-    m.add_class::<Transaction>()?;
     m.add_class::<IsolationLevel>()?;
-    m.add_class::<sync::conn::SyncConn>()?;
+    m.add_class::<CapabilityFlags>()?;
+
+    m.add_class::<AsyncPool>()?;
+    m.add_class::<AsyncConn>()?;
+    m.add_class::<AsyncTransaction>()?;
+    m.add_class::<AsyncOpts>()?;
+    m.add_class::<AsyncOptsBuilder>()?;
+
+    m.add_class::<SyncConn>()?;
+    m.add_class::<SyncTransaction>()?;
+
+    // async
+    let async_ = PyModule::new(py, "async_")?;
+    async_.add("Pool", py.get_type::<AsyncPool>())?;
+    async_.add("Conn", py.get_type::<AsyncConn>())?;
+    async_.add(
+        "Transaction",
+        py.get_type::<AsyncTransaction>(),
+    )?;
+    async_.add("Opts", py.get_type::<AsyncOpts>())?;
+    async_.add("OptsBuilder", py.get_type::<AsyncOptsBuilder>())?;
+    m.add_submodule(&async_)?;
+
+    // sync
+    let sync = PyModule::new(py, "sync")?;
+    sync.add("Conn", py.get_type::<SyncConn>())?;
+    sync.add("Opts", py.get_type::<SyncOpts>())?;
+    sync.add("OptsBuilder", py.get_type::<SyncOptsBuilder>())?;
+    m.add_submodule(&sync)?;
+
     Ok(())
 }

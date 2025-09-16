@@ -1,5 +1,6 @@
 use color_eyre::Result;
 use color_eyre::eyre::ContextCompat;
+use either::Either;
 use mysql::{AccessMode, Conn as MysqlConn, Opts, prelude::*};
 use pyo3::prelude::*;
 
@@ -7,6 +8,7 @@ use crate::isolation_level::IsolationLevel;
 use crate::params::Params;
 use crate::row::Row;
 use crate::sync::iterator::ResultSetIterator;
+use crate::sync::opts::SyncOpts;
 use crate::sync::transaction::SyncTransaction;
 
 #[pyclass]
@@ -17,12 +19,14 @@ pub struct SyncConn {
 #[pymethods]
 impl SyncConn {
     #[new]
-    fn new(url: String) -> PyResult<Self> {
-        let opts = Opts::from_url(&url)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+    fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> PyResult<Self> {
+        let opts = match url_or_opts {
+            Either::Left(url) => Opts::from_url(&url)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?,
+            Either::Right(opts) => opts.opts.clone(),
+        };
         let conn = MysqlConn::new(opts)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
-
         Ok(Self { inner: Some(conn) })
     }
 
@@ -116,7 +120,7 @@ impl SyncConn {
                 .as_mut()
                 .context("Connection is not available")?
                 .query_iter(query)?;
-            
+
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
                 inner: unsafe { std::mem::transmute(query_result) },
@@ -171,7 +175,7 @@ impl SyncConn {
                 .as_mut()
                 .context("Connection is not available")?
                 .exec_iter(query, params)?;
-            
+
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
                 inner: unsafe { std::mem::transmute(query_result) },
