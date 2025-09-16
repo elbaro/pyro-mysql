@@ -19,7 +19,7 @@ async def test_basic_connection():
     conn = await Conn.new(opts)
 
     result = await conn.query_first("SELECT 1")
-    assert result == (1,)
+    assert result.to_tuple() == (1,)
 
     await conn.disconnect()
 
@@ -33,7 +33,7 @@ async def test_connection_with_database():
     conn = await Conn.new(opts)
 
     db_name = await conn.query_first("SELECT DATABASE()")
-    assert db_name == ("test",)
+    assert db_name.to_tuple() == ("test",)
 
     await conn.disconnect()
 
@@ -76,12 +76,12 @@ async def test_connection_reset():
     await conn.query_drop("SET @test_var = 42")
 
     result = await conn.query_first("SELECT @test_var")
-    assert result == (42,)
+    assert result.to_tuple() == (42,)
 
     await conn.reset()
 
     result = await conn.query_first("SELECT @test_var")
-    assert result == (None,)
+    assert result.to_tuple() == (None,)
 
     await conn.disconnect()
 
@@ -115,7 +115,7 @@ async def test_connection_charset():
     await conn.query_drop("SET NAMES utf8mb4")
 
     charset = await conn.query_first("SELECT @@character_set_connection")
-    assert charset == ("utf8mb4",)
+    assert charset.to_tuple() == ("utf8mb4",)
 
     await conn.disconnect()
 
@@ -131,21 +131,21 @@ async def test_connection_autocommit():
     await conn.query_drop("SET autocommit = 0")
 
     autocommit = await conn.query_first("SELECT @@autocommit")
-    assert autocommit == (0,)
+    assert autocommit.to_tuple() == (0,)
 
     await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Test', 25)")
 
     await conn.query_drop("ROLLBACK")
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (0,)
+    assert count.to_tuple() == (0,)
 
     await conn.query_drop("SET autocommit = 1")
 
     await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Test2', 30)")
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (1,)
+    assert count.to_tuple() == (1,)
 
     await cleanup_test_table_async(conn)
     await conn.disconnect()
@@ -181,7 +181,7 @@ async def test_connection_init_command():
     conn = await Conn.new(opts)
 
     result = await conn.query_first("SELECT @init_test")
-    assert result == (123,)
+    assert result.to_tuple() == (123,)
 
     await conn.disconnect()
 
@@ -199,7 +199,7 @@ async def test_large_data_transfer():
     await conn.exec_drop("INSERT INTO test_table (name) VALUES (?)", (large_string,))
 
     result = await conn.query_first("SELECT name FROM test_table WHERE id = 1")
-    assert result == (large_string,)
+    assert result.to_tuple() == (large_string,)
 
     await cleanup_test_table_async(conn)
     await conn.disconnect()

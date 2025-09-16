@@ -33,7 +33,7 @@ async def test_integer_types():
     )
 
     result = await conn.query_first("SELECT * FROM test_int_types")
-    assert result == (127, 32767, 8388607, 2147483647, 9223372036854775807, 4294967295)
+    assert result.to_tuple() == (127, 32767, 8388607, 2147483647, 9223372036854775807, 4294967295)
 
     await conn.query_drop("DROP TABLE test_int_types")
     await conn.disconnect()
@@ -97,7 +97,7 @@ async def test_string_types():
     )
 
     result = await conn.query_first("SELECT * FROM test_string_types")
-    assert result == (
+    assert result.to_tuple() == (
         "Hello World",
         "Fixed",
         "This is a text field",
@@ -164,7 +164,7 @@ async def test_decimal_types():
     )
 
     result = await conn.query_first("SELECT * FROM test_decimal_types")
-    assert result == (Decimal("123.45"), Decimal("12345.6789"))
+    assert result.to_tuple() == (Decimal("123.45"), Decimal("12345.6789"))
 
     await conn.query_drop("DROP TABLE test_decimal_types")
     await conn.disconnect()
@@ -224,7 +224,7 @@ async def test_null_values():
     )
 
     result = await conn.query_first("SELECT * FROM test_null_types")
-    assert result == (None, None, None)
+    assert result.to_tuple() == (None, None, None)
 
     await conn.query_drop("DROP TABLE test_null_types")
     await conn.disconnect()
@@ -251,8 +251,8 @@ async def test_boolean_type():
 
     results = await conn.query("SELECT * FROM test_boolean_types ORDER BY bool_val")
     assert len(results) == 2
-    assert results[0] == (0,) or results[0] == (False,)
-    assert results[1] == (1,) or results[1] == (True,)
+    assert results[0].to_tuple() == (0,) or results[0].to_tuple() == (False,)
+    assert results[1].to_tuple() == (1,) or results[1].to_tuple() == (True,)
 
     await conn.query_drop("DROP TABLE test_boolean_types")
     await conn.disconnect()

@@ -16,7 +16,7 @@ async def test_basic_pool():
     conn = await pool.get_conn()
 
     result = await conn.query_first("SELECT 1")
-    assert result == (1,)
+    assert result.to_tuple() == (1,)
 
     await conn.disconnect()
     await pool.disconnect()
@@ -41,8 +41,8 @@ async def test_pool_constraints():
     result1 = await conn1.query_first("SELECT 1")
     result2 = await conn2.query_first("SELECT 2")
 
-    assert result1 == (1,)
-    assert result2 == (2,)
+    assert result1.to_tuple() == (1,)
+    assert result2.to_tuple() == (2,)
 
     await conn1.disconnect()
     await conn2.disconnect()
@@ -88,7 +88,7 @@ async def test_pool_with_transactions():
     )
 
     count = await tx.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (1,)
+    assert count.to_tuple() == (1,)
 
     await tx.commit()
 
@@ -134,8 +134,8 @@ async def test_pool_max_connections():
     result1 = await conn1.query_first("SELECT 1")
     result2 = await conn2.query_first("SELECT 2")
 
-    assert result1 == (1,)
-    assert result2 == (2,)
+    assert result1.to_tuple() == (1,)
+    assert result2.to_tuple() == (2,)
 
     await conn1.disconnect()
     await conn2.disconnect()
@@ -164,7 +164,7 @@ async def test_pool_connection_timeout():
     # Get another connection
     conn2 = await pool.get_conn()
     result = await conn2.query_first("SELECT 2")
-    assert result == (2,)
+    assert result.to_tuple() == (2,)
 
     await conn2.disconnect()
     await pool.disconnect()

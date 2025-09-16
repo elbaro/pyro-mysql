@@ -313,6 +313,25 @@ pub fn value_to_python<'py>(
                     }
                 }
 
+                // Integer types - parse bytes as integers
+                ColumnType::MYSQL_TYPE_LONGLONG
+                | ColumnType::MYSQL_TYPE_LONG
+                | ColumnType::MYSQL_TYPE_INT24
+                | ColumnType::MYSQL_TYPE_SHORT
+                | ColumnType::MYSQL_TYPE_TINY
+                | ColumnType::MYSQL_TYPE_YEAR => {
+                    match std::str::from_utf8(b) {
+                        Ok(int_str) => {
+                            // Use PyLong::from_str to handle arbitrarily large integers
+                            match py.import("builtins")?.getattr("int")?.call1((int_str,)) {
+                                Ok(py_int) => py_int,
+                                Err(_) => PyBytes::new(py, b).into_any(),
+                            }
+                        }
+                        Err(_) => PyBytes::new(py, b).into_any(),
+                    }
+                }
+
                 // BIT type - return as bytes
                 ColumnType::MYSQL_TYPE_BIT => PyBytes::new(py, &b).into_any(),
 

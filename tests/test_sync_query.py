@@ -16,11 +16,10 @@ def test_basic_sync_query():
     result = conn.query("SELECT 1 UNION SELECT 2 UNION SELECT 3")
 
     assert len(result) == 3
-    assert result[0] == (1,)
-    assert result[1] == (2,)
-    assert result[2] == (3,)
+    assert result[0].to_tuple() == (1,)
+    assert result[1].to_tuple() == (2,)
+    assert result[2].to_tuple() == (3,)
 
-    conn.disconnect()
 
 
 def test_sync_query_with_params():
@@ -41,10 +40,9 @@ def test_sync_query_with_params():
     results = conn.exec("SELECT name, age FROM test_table WHERE age = ?", (25,))
 
     assert len(results) == 1
-    assert results[0] == ("Bob", 25)
+    assert results[0].to_tuple() == ("Bob", 25)
 
     cleanup_test_table_sync(conn)
-    conn.disconnect()
 
 
 def test_sync_query_first():
@@ -60,14 +58,13 @@ def test_sync_query_first():
 
     result = conn.exec_first("SELECT name, age FROM test_table ORDER BY age DESC", ())
 
-    assert result == ("Alice", 30)
+    assert result.to_tuple() == ("Alice", 30)
 
     result = conn.exec_first("SELECT name, age FROM test_table WHERE age > ?", (100,))
 
     assert result is None
 
     cleanup_test_table_sync(conn)
-    conn.disconnect()
 
 
 def test_sync_query_iter():
@@ -94,7 +91,6 @@ def test_sync_query_iter():
     assert count == 3
 
     cleanup_test_table_sync(conn)
-    conn.disconnect()
 
 
 def test_sync_named_params():
@@ -114,10 +110,9 @@ def test_sync_named_params():
         "SELECT name, age FROM test_table WHERE name = :name", {"name": "Alice"}
     )
 
-    assert result == ("Alice", 30)
+    assert result.to_tuple() == ("Alice", 30)
 
     cleanup_test_table_sync(conn)
-    conn.disconnect()
 
 
 def test_sync_batch_exec():
@@ -138,10 +133,9 @@ def test_sync_batch_exec():
 
     count = conn.query_first("SELECT COUNT(*) FROM test_table")
 
-    assert count == (5,)
+    assert count.to_tuple() == (5,)
 
     cleanup_test_table_sync(conn)
-    conn.disconnect()
 
 
 def test_sync_query_with_nulls():
@@ -158,11 +152,10 @@ def test_sync_query_with_nulls():
     results = conn.query("SELECT name, age FROM test_table ORDER BY name")
 
     assert len(results) == 2
-    assert results[0] == ("Alice", 30)
-    assert results[1] == ("Bob", None)
+    assert results[0].to_tuple() == ("Alice", 30)
+    assert results[1].to_tuple() == ("Bob", None)
 
     cleanup_test_table_sync(conn)
-    conn.disconnect()
 
 
 def test_sync_multi_statement_query():
@@ -181,7 +174,6 @@ def test_sync_multi_statement_query():
     assert count.to_tuple() == (2,)
 
     cleanup_test_table_sync(conn)
-    conn.disconnect()
 
 
 def test_sync_last_insert_id():
@@ -203,7 +195,6 @@ def test_sync_last_insert_id():
     assert new_last_id > last_id
 
     cleanup_test_table_sync(conn)
-    conn.disconnect()
 
 
 def test_sync_affected_rows():
@@ -231,4 +222,3 @@ def test_sync_affected_rows():
     assert affected_rows == 1
 
     cleanup_test_table_sync(conn)
-    conn.disconnect()

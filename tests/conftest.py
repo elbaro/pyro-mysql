@@ -42,10 +42,7 @@ def sync_conn():
 
     conn = SyncConn(get_test_db_url())
 
-    try:
-        yield conn
-    finally:
-        conn.disconnect()
+    yield conn
 
 
 async def setup_test_table_async(conn):
@@ -110,9 +107,6 @@ def sync_conn_with_table():
 
     conn = Conn(get_test_db_url())
 
-    try:
-        setup_test_table_sync(conn)
-        yield conn
-        cleanup_test_table_sync(conn)
-    finally:
-        conn.disconnect()
+    setup_test_table_sync(conn)
+    yield conn
+    cleanup_test_table_sync(conn)

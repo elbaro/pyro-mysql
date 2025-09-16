@@ -22,12 +22,12 @@ async def test_basic_transaction():
     )
 
     count = await tx.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (1,)
+    assert count.to_tuple() == (1,)
 
     await tx.commit()
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (1,)
+    assert count.to_tuple() == (1,)
 
     await cleanup_test_table_async(conn)
     await conn.disconnect()
@@ -48,12 +48,12 @@ async def test_transaction_rollback():
     )
 
     count = await tx.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (1,)
+    assert count.to_tuple() == (1,)
 
     await tx.rollback()
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (0,)
+    assert count.to_tuple() == (0,)
 
     await cleanup_test_table_async(conn)
     await conn.disconnect()
@@ -85,7 +85,7 @@ async def test_transaction_isolation_levels():
         await tx.commit()
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (4,)
+    assert count.to_tuple() == (4,)
 
     await cleanup_test_table_async(conn)
     await conn.disconnect()
@@ -99,7 +99,7 @@ async def test_nested_transactions():
 
     await setup_test_table_async(conn)
 
-    tx = await conn.start_transaction(TxOpts.default())
+    tx = await conn.start_transaction()
 
     await tx.exec_drop(
         "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
@@ -110,18 +110,18 @@ async def test_nested_transactions():
     await tx.exec_drop("INSERT INTO test_table (name, age) VALUES (?, ?)", ("Bob", 25))
 
     count = await tx.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (2,)
+    assert count.to_tuple() == (2,)
 
     await tx.exec_drop("ROLLBACK TO SAVEPOINT sp1")
 
     count = await tx.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (1,)
+    assert count.to_tuple() == (1,)
 
     await tx.commit()
 
     result = await conn.query("SELECT name, age FROM test_table")
     assert len(result) == 1
-    assert result[0] == ("Alice", 30)
+    assert result[0].to_tuple() == ("Alice", 30)
 
     await cleanup_test_table_async(conn)
     await conn.disconnect()
@@ -139,7 +139,7 @@ async def test_transaction_with_error():
         "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
     )
 
-    tx = await conn.start_transaction(TxOpts.default())
+    tx = await conn.start_transaction()
 
     await tx.exec_drop("INSERT INTO test_table (name, age) VALUES (?, ?)", ("Bob", 25))
 
@@ -153,7 +153,7 @@ async def test_transaction_with_error():
     await tx.rollback()
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (1,)
+    assert count.to_tuple() == (1,)
 
     await cleanup_test_table_async(conn)
     await conn.disconnect()
@@ -172,23 +172,20 @@ async def test_transaction_concurrent_read():
         "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Initial", 20)
     )
 
-    tx_opts = TxOpts.default().with_isolation_level(IsolationLevel.ReadCommitted)
-
-    tx = await conn1.start_transaction(tx_opts)
-
+    tx = await conn1.start_transaction(isolation_level=IsolationLevel.ReadCommitted)
     await tx.exec_drop(
         "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
     )
 
     # conn2 should not see the uncommitted change
     count = await conn2.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (1,)
+    assert count.to_tuple() == (1,)
 
     await tx.commit()
 
     # Now conn2 should see the committed change
     count = await conn2.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (2,)
+    assert count.to_tuple() == (2,)
 
     await cleanup_test_table_async(conn1)
     await conn1.disconnect()
@@ -207,9 +204,7 @@ async def test_transaction_read_only():
         "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
     )
 
-    tx_opts = TxOpts.default().with_readonly(True)
-
-    tx = await conn.start_transaction(tx_opts)
+    tx = await conn.start_transaction(readonly=True)
 
     result = await tx.query("SELECT name, age FROM test_table")
     assert len(result) == 1
@@ -247,7 +242,7 @@ async def test_transaction_consistent_snapshot():
     tx = await conn.start_transaction(tx_opts)
 
     count = await tx.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (1,)
+    assert count.to_tuple() == (1,)
 
     await tx.commit()
 
@@ -264,7 +259,7 @@ async def test_transaction_auto_rollback_on_drop():
     await setup_test_table_async(conn)
 
     # Create and drop transaction without explicit commit/rollback
-    tx = await conn.start_transaction(TxOpts.default())
+    tx = await conn.start_transaction()
 
     await tx.exec_drop(
         "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
@@ -277,7 +272,7 @@ async def test_transaction_auto_rollback_on_drop():
     await asyncio.sleep(0.1)
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
-    assert count == (0,)
+    assert count.to_tuple() == (0,)
 
     await cleanup_test_table_async(conn)
     await conn.disconnect()
