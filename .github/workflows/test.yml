@@ -15,7 +15,7 @@ jobs:
 
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:9.4
         env:
           MYSQL_RANDOM_ROOT_PASSWORD: yes
           MYSQL_USER: test
@@ -30,6 +30,7 @@ jobs:
           --health-retries=5
 
     strategy:
+      max-parallel: 2 # Limit parallel jobs to reduce memory usage
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14.0-rc.2"]
 
@@ -50,8 +51,10 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            target/release
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-
 
       - name: Cache Python virtual environment
         uses: actions/cache@v3
@@ -73,9 +76,11 @@ jobs:
           pip install maturin
 
       - name: Build and install package
+        env:
+          RUSTFLAGS: "-C link-arg=-Wl,--as-needed" # Reduce binary size
         run: |
           source venv/bin/activate
-          maturin develop
+          maturin develop --release  # Use release mode for smaller binary
 
       - name: Install test dependencies
         run: |
