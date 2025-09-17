@@ -89,6 +89,8 @@ async def test_transaction_isolation_levels():
     await conn.disconnect()
 
 
+# TODO
+# Server error: `ERROR HY000 (1295): This command is not supported in the prepared statement protocol yet
 @pytest.mark.asyncio
 async def test_nested_transactions():
     """Test nested transactions with savepoints."""
@@ -104,7 +106,9 @@ async def test_nested_transactions():
 
         await tx.exec_drop("SAVEPOINT sp1")
 
-        await tx.exec_drop("INSERT INTO test_table (name, age) VALUES (?, ?)", ("Bob", 25))
+        await tx.exec_drop(
+            "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Bob", 25)
+        )
 
         count = await tx.query_first("SELECT COUNT(*) FROM test_table")
         assert count.to_tuple() == (2,)
@@ -137,7 +141,9 @@ async def test_transaction_with_error():
     )
 
     async with conn.start_transaction() as tx:
-        await tx.exec_drop("INSERT INTO test_table (name, age) VALUES (?, ?)", ("Bob", 25))
+        await tx.exec_drop(
+            "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Bob", 25)
+        )
 
         # Try to insert with duplicate primary key
         with pytest.raises(Exception):
@@ -168,7 +174,9 @@ async def test_transaction_concurrent_read():
         "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Initial", 20)
     )
 
-    async with conn1.start_transaction(isolation_level=IsolationLevel.ReadCommitted) as tx:
+    async with conn1.start_transaction(
+        isolation_level=IsolationLevel.ReadCommitted
+    ) as tx:
         await tx.exec_drop(
             "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
         )

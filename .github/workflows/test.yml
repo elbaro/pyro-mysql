@@ -1,0 +1,102 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mariadb:latest
+        env:
+          MARIADB_RANDOM_ROOT_PASSWORD: yes
+          MARIADB_USER: test
+          MARIADB_PASSWORD: 1234
+          MARIADB_DATABASE: test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping --user=test --password=1234"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    strategy:
+      max-parallel: 2 # Limit parallel jobs to reduce memory usage
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14.0-rc.2"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/release
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-
+
+      - name: Cache Python virtual environment
+        uses: actions/cache@v3
+        with:
+          path: venv
+          key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-venv-${{ matrix.python-version }}-
+
+      - name: Create virtual environment
+        run: |
+          python -m venv venv
+          echo "$PWD/venv/bin" >> $GITHUB_PATH
+
+      - name: Install maturin
+        run: |
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install maturin
+
+      - name: Build and install package
+        env:
+          RUSTFLAGS: "-C link-arg=-Wl,--as-needed" # Reduce binary size
+        run: |
+          source venv/bin/activate
+          maturin develop --release  # Use release mode for smaller binary
+
+      - name: Install test dependencies
+        run: |
+          source venv/bin/activate
+          pip install pytest pytest-asyncio
+
+      - name: Wait for MySQL
+        run: |
+          until mysqladmin ping -h 127.0.0.1 -u test -p1234 --silent; do
+            echo 'waiting for mysql...'
+            sleep 1
+          done
+
+      - name: Run tests
+        env:
+          TEST_DATABASE_URL: mysql://test:1234@127.0.0.1:3306/test
+        run: |
+          source venv/bin/activate
+          pytest -v

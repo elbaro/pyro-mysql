@@ -11,12 +11,10 @@ use pyo3::{
 };
 
 static DATETIME_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
-static DATE_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
-static TIME_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
 static TIMEDELTA_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 static DECIMAL_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 static JSON_MODULE: PyOnceLock<Py<PyModule>> = PyOnceLock::new();
-static STRUCT_TIME_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 
 fn get_datetime_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
     Ok(DATETIME_CLASS
@@ -57,42 +55,6 @@ fn get_decimal_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
 fn get_json_module<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyModule>> {
     Ok(JSON_MODULE
         .get_or_init(py, || PyModule::import(py, "json").unwrap().unbind())
-        .bind(py))
-}
-
-fn get_date_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
-    Ok(DATE_CLASS
-        .get_or_init(py, || {
-            PyModule::import(py, "datetime")
-                .unwrap()
-                .getattr("date")
-                .unwrap()
-                .unbind()
-        })
-        .bind(py))
-}
-
-fn get_time_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
-    Ok(TIME_CLASS
-        .get_or_init(py, || {
-            PyModule::import(py, "datetime")
-                .unwrap()
-                .getattr("time")
-                .unwrap()
-                .unbind()
-        })
-        .bind(py))
-}
-
-fn get_struct_time_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
-    Ok(STRUCT_TIME_CLASS
-        .get_or_init(py, || {
-            PyModule::import(py, "time")
-                .unwrap()
-                .getattr("struct_time")
-                .unwrap()
-                .unbind()
-        })
         .bind(py))
 }
 
@@ -349,10 +311,13 @@ pub fn value_to_python<'py>(
                 ColumnType::MYSQL_TYPE_GEOMETRY => PyBytes::new(py, &b).into_any(),
 
                 // Default: try string, fall back to bytes
-                _ => match PyString::from_bytes(py, b) {
-                    Ok(s) => s.into_any(),
-                    Err(_) => PyBytes::new(py, b).into_any(),
-                },
+                _ => {
+                    eprintln!("Unimplemented column type: {:?}", col_type);
+                    match PyString::from_bytes(py, b) {
+                        Ok(s) => s.into_any(),
+                        Err(_) => PyBytes::new(py, b).into_any(),
+                    }
+                }
             }
         }
     };

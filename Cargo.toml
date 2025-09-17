@@ -26,7 +26,6 @@ thiserror = "2.0.16"
 tokio = "1.47.1"
 
 
-
 [patch.crates-io]
 pyo3 = { git = "https://github.com/elbaro/pyo3.git", rev = "e219540adf7bd00d03c251d53cb8d10cd3a5d16c", features = [
     "experimental-async",

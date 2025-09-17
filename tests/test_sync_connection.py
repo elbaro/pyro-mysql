@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 import pytest
 from pyro_mysql.sync import Conn, OptsBuilder
 
@@ -20,15 +18,15 @@ def test_basic_sync_connection():
     conn.disconnect()
 
 
-def test_sync_connection_with_database():
-    """Test sync connection with specific database."""
-    opts = OptsBuilder().ip_or_hostname("localhost").db_name("test").build()
-    conn = Conn(opts)
+# Add the second db to test this
+# def test_sync_connection_with_database():
+#     """Test sync connection with specific database."""
+#     conn = Conn(get_test_db_url())
 
-    db_name = conn.query_first("SELECT DATABASE()")
-    assert db_name.to_tuple() == ("test",)
+#     db_name = conn.query_first("SELECT DATABASE()")
+#     assert db_name.to_tuple() == ("test",)
 
-    conn.disconnect()
+#     conn.disconnect()
 
 
 def test_sync_connection_ping():
