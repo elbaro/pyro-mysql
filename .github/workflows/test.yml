@@ -53,17 +53,33 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Cache Python virtual environment
+        uses: actions/cache@v3
+        with:
+          path: venv
+          key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-venv-${{ matrix.python-version }}-
+
+      - name: Create virtual environment
+        run: |
+          python -m venv venv
+          echo "$PWD/venv/bin" >> $GITHUB_PATH
+
       - name: Install maturin
         run: |
+          source venv/bin/activate
           pip install --upgrade pip
           pip install maturin
 
       - name: Build and install package
         run: |
+          source venv/bin/activate
           maturin develop
 
       - name: Install test dependencies
         run: |
+          source venv/bin/activate
           pip install pytest pytest-asyncio
 
       - name: Wait for MySQL
@@ -77,4 +93,5 @@ jobs:
         env:
           TEST_DATABASE_URL: mysql://test:1234@127.0.0.1:3306/test
         run: |
+          source venv/bin/activate
           pytest -v
