@@ -1,3 +1,5 @@
+#![allow(async_fn_in_trait)]
+
 pub mod r#async;
 pub mod capability_flags;
 pub mod isolation_level;
@@ -20,7 +22,7 @@ use crate::{
     isolation_level::IsolationLevel,
     row::Row,
     sync::{
-        SyncConn, SyncPool, SyncPooledConn, SyncPoolOpts, SyncTransaction,
+        SyncConn, SyncPool, SyncPoolOpts, SyncPooledConn, SyncTransaction,
         opts::{SyncOpts, SyncOptsBuilder},
     },
 };

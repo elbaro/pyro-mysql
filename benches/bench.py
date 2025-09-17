@@ -2,13 +2,13 @@ import sys
 
 sys.path = [".venv/lib/python3.14/site-packages"] + sys.path
 
-import pyro_mysql
 import asyncio
-import asyncmy
+
 import aiomysql
+import asyncmy
 import MySQLdb
 import pymysql
-
+import pyro_mysql
 
 HOST = "127.0.0.1"
 PORT = 3306
@@ -34,7 +34,7 @@ pyro_mysql.init(worker_threads=1)
 
 
 async def insert_pyro_async(n):
-    conn = await pyro_mysql.Conn.new(
+    conn = await pyro_mysql.AsyncConn.new(
         f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
     )
     for i in range(n):
@@ -99,7 +99,7 @@ def insert_sync(connect_fn, n: int):
 
 
 async def select_pyro_async(n: int, batch: int):
-    conn = await pyro_mysql.Conn.new(
+    conn = await pyro_mysql.AsyncConn.new(
         f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
     )
     for i in range(0, n * batch, batch):

@@ -303,15 +303,15 @@ impl SyncOptsBuilder {
         Ok(self_)
     }
 
-    fn ssl_opts(mut self_: PyRefMut<Self>, _opts: Option<Py<PyAny>>) -> PyRefMut<Self> {
+    fn ssl_opts(mut _self: PyRefMut<Self>, _opts: Option<Py<PyAny>>) -> PyRefMut<Self> {
         // Note: This would need a separate SslOpts wrapper class
         // For now, leaving as placeholder
         todo!()
     }
 
     fn local_infile_handler(
-        mut self_: PyRefMut<Self>,
-        handler: Option<Py<PyAny>>,
+        mut _self: PyRefMut<Self>,
+        _handler: Option<Py<PyAny>>,
     ) -> PyRefMut<Self> {
         todo!()
     }
