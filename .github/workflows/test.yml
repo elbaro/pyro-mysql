@@ -15,12 +15,12 @@ jobs:
 
     services:
       mysql:
-        image: mysql:9.4
+        image: mariadb:latest
         env:
-          MYSQL_RANDOM_ROOT_PASSWORD: yes
-          MYSQL_USER: test
-          MYSQL_PASSWORD: 1234
-          MYSQL_DATABASE: test
+          MARIADB_RANDOM_ROOT_PASSWORD: yes
+          MARIADB_USER: test
+          MARIADB_PASSWORD: 1234
+          MARIADB_DATABASE: test
         ports:
           - 3306:3306
         options: >-
