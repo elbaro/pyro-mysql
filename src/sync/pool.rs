@@ -30,9 +30,7 @@ impl SyncPool {
             .pool
             .get_conn()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
-        Ok(SyncPooledConn {
-            inner: Some(conn),
-        })
+        Ok(SyncPooledConn { inner: Some(conn) })
     }
 
     fn acquire(&self) -> PyResult<SyncPooledConn> {

@@ -22,11 +22,10 @@ impl SyncPoolOpts {
                 inner: self.inner.clone().with_constraints(pool_constraints),
             }),
             None => Err(pyo3::exceptions::PyValueError::new_err(
-                "Invalid pool constraints: min must be <= max"
+                "Invalid pool constraints: min must be <= max",
             )),
         }
     }
-
 }
 
 impl Default for SyncPoolOpts {
