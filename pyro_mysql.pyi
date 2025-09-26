@@ -50,35 +50,37 @@ from typing import Any, Self
 __all__ = [
     "init",
     "Row",
-    "TxOpts",
     "IsolationLevel",
     "CapabilityFlags",
     "async_",
     "sync",
-    "AsyncConn",
-    "AsyncPool",
-    "AsyncTransaction",
-    "AsyncOpts",
-    "AsyncOptsBuilder",
-    "AsyncPoolOpts",
-    "SyncConn",
-    "SyncPool",
-    "SyncPooledConn",
-    "SyncTransaction",
-    "SyncOpts",
-    "SyncOptsBuilder",
-    "SyncPoolOpts",
 ]
 
 JsonEncodable = (
     dict[str, "JsonEncodable"] | list["JsonEncodable"] | str | int | float | bool | None
 )
-type Value = None | bool | int | float | str | bytes | bytearray | tuple[
-    JsonEncodable, ...
-] | list[JsonEncodable] | set[JsonEncodable] | frozenset[JsonEncodable] | dict[
-    str, JsonEncodable
-] | datetime.datetime | datetime.date | datetime.time | datetime.timedelta | time.struct_time | decimal.Decimal
-type Params = None | tuple[Value, ...] | list[Value] | dict[str, Value]
+type Value = (
+    None
+    | bool
+    | int
+    | float
+    | str
+    | bytes
+    | bytearray
+    | tuple[JsonEncodable, ...]
+    | list[JsonEncodable]
+    | set[JsonEncodable]
+    | frozenset[JsonEncodable]
+    | dict[str, JsonEncodable]
+    | datetime.datetime
+    | datetime.date
+    | datetime.time
+    | datetime.timedelta
+    | time.struct_time
+    | decimal.Decimal
+)
+type Params = (None | tuple[Value, ...] | list[Value] | dict[str, Value])
+
 
 def init(worker_threads: int | None = 1, thread_name: str | None = None) -> None:
     """
@@ -90,6 +92,7 @@ def init(worker_threads: int | None = 1, thread_name: str | None = None) -> None
         thread_name: Name prefix for worker threads.
     """
     ...
+
 
 class IsolationLevel:
     """Transaction isolation level enum."""
@@ -103,24 +106,43 @@ class IsolationLevel:
         """Return the isolation level as a string."""
         ...
 
-class TxOpts:
-    """Transaction options."""
 
-    def __init__(
-        self,
-        consistent_snapshot: bool = False,
-        isolation_level: IsolationLevel | None = None,
-        readonly: bool = False,
-    ) -> None:
-        """
-        Create transaction options.
+class CapabilityFlags:
+    """MySQL capability flags for client connections."""
 
-        Args:
-            consistent_snapshot: Whether to use consistent snapshot.
-            isolation_level: Transaction isolation level.
-            readonly: Whether the transaction is read-only.
-        """
-        ...
+    CLIENT_LONG_PASSWORD: int = 0x00000001
+    CLIENT_FOUND_ROWS: int = 0x00000002
+    CLIENT_LONG_FLAG: int = 0x00000004
+    CLIENT_CONNECT_WITH_DB: int = 0x00000008
+    CLIENT_NO_SCHEMA: int = 0x00000010
+    CLIENT_COMPRESS: int = 0x00000020
+    CLIENT_ODBC: int = 0x00000040
+    CLIENT_LOCAL_FILES: int = 0x00000080
+    CLIENT_IGNORE_SPACE: int = 0x00000100
+    CLIENT_PROTOCOL_41: int = 0x00000200
+    CLIENT_INTERACTIVE: int = 0x00000400
+    CLIENT_SSL: int = 0x00000800
+    CLIENT_IGNORE_SIGPIPE: int = 0x00001000
+    CLIENT_TRANSACTIONS: int = 0x00002000
+    CLIENT_RESERVED: int = 0x00004000
+    CLIENT_SECURE_CONNECTION: int = 0x00008000
+    CLIENT_MULTI_STATEMENTS: int = 0x00010000
+    CLIENT_MULTI_RESULTS: int = 0x00020000
+    CLIENT_PS_MULTI_RESULTS: int = 0x00040000
+    CLIENT_PLUGIN_AUTH: int = 0x00080000
+    CLIENT_CONNECT_ATTRS: int = 0x00100000
+    CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA: int = 0x00200000
+    CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS: int = 0x00400000
+    CLIENT_SESSION_TRACK: int = 0x00800000
+    CLIENT_DEPRECATE_EOF: int = 0x01000000
+    CLIENT_OPTIONAL_RESULTSET_METADATA: int = 0x02000000
+    CLIENT_ZSTD_COMPRESSION_ALGORITHM: int = 0x04000000
+    CLIENT_QUERY_ATTRIBUTES: int = 0x08000000
+    MULTI_FACTOR_AUTHENTICATION: int = 0x10000000
+    CLIENT_PROGRESS_OBSOLETE: int = 0x20000000
+    CLIENT_SSL_VERIFY_SERVER_CERT: int = 0x40000000
+    CLIENT_REMEMBER_OPTIONS: int = 0x80000000
+
 
 class Row:
     """
@@ -142,9 +164,11 @@ class Row:
         """
         ...
 
+
 # ============================================================================
 # Async API
 # ============================================================================
+
 
 class AsyncOpts:
     """MySQL connection options for async operations."""
@@ -152,6 +176,7 @@ class AsyncOpts:
     def pool_opts(self, pool_opts: "AsyncPoolOpts") -> "AsyncOpts":
         """Set pool options for the connection."""
         ...
+
 
 class AsyncOptsBuilder:
     """Builder for AsyncOpts with method chaining."""
@@ -181,6 +206,7 @@ class AsyncOptsBuilder:
             ValueError: If the URL is invalid or cannot be parsed
         """
         ...
+
     # Network/Connection Options
     def ip_or_hostname(self, hostname: str) -> "AsyncOptsBuilder":
         """Set the hostname or IP address."""
@@ -193,6 +219,7 @@ class AsyncOptsBuilder:
     def socket(self, path: str | None) -> "AsyncOptsBuilder":
         """Set the Unix socket path."""
         ...
+
     # Authentication Options
     def user(self, username: str | None) -> "AsyncOptsBuilder":
         """Set the username."""
@@ -209,6 +236,7 @@ class AsyncOptsBuilder:
     def secure_auth(self, enable: bool) -> "AsyncOptsBuilder":
         """Enable or disable secure authentication."""
         ...
+
     # Performance/Timeout Options
     def wait_timeout(self, seconds: int | None) -> "AsyncOptsBuilder":
         """Set the wait timeout in seconds."""
@@ -217,6 +245,7 @@ class AsyncOptsBuilder:
     def stmt_cache_size(self, size: int) -> "AsyncOptsBuilder":
         """Set the statement cache size."""
         ...
+
     # Additional Options
     def tcp_nodelay(self, enable: bool) -> "AsyncOptsBuilder":
         """Enable or disable TCP_NODELAY."""
@@ -274,6 +303,7 @@ class AsyncOptsBuilder:
         """Build the AsyncOpts object."""
         ...
 
+
 class AsyncPoolOpts:
     """Pool options for async connections."""
 
@@ -316,6 +346,7 @@ class AsyncPoolOpts:
             New AsyncPoolOpts with updated interval.
         """
         ...
+
 
 class async_:
     """Async MySQL driver components."""
@@ -461,12 +492,19 @@ class async_:
             """
             ...
 
-        def start_transaction(self, opts: TxOpts = ...) -> "async_.Transaction":
+        def start_transaction(
+            self,
+            consistent_snapshot: bool = False,
+            isolation_level: IsolationLevel | None = None,
+            readonly: bool | None = None,
+        ) -> "async_.Transaction":
             """
             Start a new transaction.
 
             Args:
-                opts: Transaction options.
+                consistent_snapshot: Whether to use consistent snapshot.
+                isolation_level: Transaction isolation level.
+                readonly: Whether the transaction is read-only.
 
             Returns:
                 New Transaction instance.
@@ -563,7 +601,7 @@ class async_:
         async def disconnect(self) -> None:
             """
             Disconnect from the MySQL server.
-            
+
             This closes the connection and makes it unusable for further operations.
             """
             ...
@@ -571,7 +609,7 @@ class async_:
         async def reset(self) -> None:
             """
             Reset the connection state.
-            
+
             This resets the connection to a clean state without closing it.
             """
             ...
@@ -616,9 +654,24 @@ class async_:
             """
             ...
 
+    # These classes are exposed in the async_ module namespace
+    class Opts(AsyncOpts):
+        \"\"\"Async connection options. See AsyncOpts for details.\"\"\"
+        ...
+
+    class OptsBuilder(AsyncOptsBuilder):
+        \"\"\"Async options builder. See AsyncOptsBuilder for details.\"\"\"
+        ...
+
+    class PoolOpts(AsyncPoolOpts):
+        \"\"\"Async pool options. See AsyncPoolOpts for details.\"\"\"
+        ...
+
+
 # ============================================================================
 # Sync API
 # ============================================================================
+
 
 class SyncOpts:
     """MySQL connection options for sync operations."""
@@ -626,6 +679,7 @@ class SyncOpts:
     def pool_opts(self, pool_opts: "SyncPoolOpts") -> "SyncOpts":
         """Set pool options for the connection."""
         ...
+
 
 class SyncOptsBuilder:
     """Builder for SyncOpts with method chaining."""
@@ -659,6 +713,7 @@ class SyncOptsBuilder:
     def from_hash_map(self, params: dict[str, str]) -> "SyncOptsBuilder":
         """Initialize from a dictionary of parameters."""
         ...
+
     # Network/Connection Options
     def ip_or_hostname(self, hostname: str | None) -> "SyncOptsBuilder":
         """Set the hostname or IP address."""
@@ -675,6 +730,7 @@ class SyncOptsBuilder:
     def bind_address(self, address: str | None) -> "SyncOptsBuilder":
         """Set the bind address for outgoing connections."""
         ...
+
     # Authentication Options
     def user(self, username: str | None) -> "SyncOptsBuilder":
         """Set the username."""
@@ -691,6 +747,7 @@ class SyncOptsBuilder:
     def secure_auth(self, enable: bool) -> "SyncOptsBuilder":
         """Enable or disable secure authentication."""
         ...
+
     # Performance/Timeout Options
     def read_timeout(self, seconds: float | None) -> "SyncOptsBuilder":
         """Set the read timeout in seconds."""
@@ -707,6 +764,7 @@ class SyncOptsBuilder:
     def stmt_cache_size(self, size: int) -> "SyncOptsBuilder":
         """Set the statement cache size."""
         ...
+
     # Additional Options
     def tcp_nodelay(self, enable: bool) -> "SyncOptsBuilder":
         """Enable or disable TCP_NODELAY."""
@@ -774,6 +832,7 @@ class SyncOptsBuilder:
         """Build the SyncOpts object."""
         ...
 
+
 class SyncPoolOpts:
     """Pool options for sync connections."""
 
@@ -792,6 +851,7 @@ class SyncPoolOpts:
             New SyncPoolOpts with updated constraints.
         """
         ...
+
 
 class SyncPool:
     """Synchronous MySQL connection pool."""
@@ -830,6 +890,7 @@ class SyncPool:
         Disconnect and close all connections in the pool.
         """
         ...
+
 
 class SyncPooledConn:
     """
@@ -982,6 +1043,7 @@ class SyncPooledConn:
     def close(self) -> None:
         """Close the connection."""
         ...
+
 
 class sync:
     """Synchronous MySQL driver components."""
@@ -1261,7 +1323,7 @@ class sync:
         def disconnect(self) -> None:
             """
             Disconnect from the MySQL server.
-            
+
             This closes the connection and makes it unusable for further operations.
             """
             ...
@@ -1269,16 +1331,46 @@ class sync:
         def reset(self) -> None:
             """
             Reset the connection state.
-            
+
             This resets the connection to a clean state without closing it.
             """
             ...
 
-# # Re-export async classes with prefix
-# AsyncConn = async_.Conn
-# AsyncPool = async_.Pool
-# AsyncTransaction = async_.Transaction
+    # These classes are exposed in the sync module namespace
+    class Pool(SyncPool):
+        """Sync connection pool. See SyncPool for details."""
+        ...
 
-# # Re-export sync classes with prefix
-# SyncConn = sync.Conn
-# SyncTransaction = sync.Transaction
+    class PooledConn(SyncPooledConn):
+        """Sync pooled connection. See SyncPooledConn for details."""
+        ...
+
+    class Opts(SyncOpts):
+        """Sync connection options. See SyncOpts for details."""
+        ...
+
+    class OptsBuilder(SyncOptsBuilder):
+        """Sync options builder. See SyncOptsBuilder for details."""
+        ...
+
+    class PoolOpts(SyncPoolOpts):
+        """Sync pool options. See SyncPoolOpts for details."""
+        ...
+
+
+# Compatibility aliases for backward compatibility
+# These are exposed at module level in lib.rs
+AsyncConn = async_.Conn
+AsyncPool = async_.Pool
+AsyncTransaction = async_.Transaction
+AsyncOpts = async_.Opts
+AsyncOptsBuilder = async_.OptsBuilder
+AsyncPoolOpts = async_.PoolOpts
+
+SyncConn = sync.Conn
+SyncPool = sync.Pool
+SyncPooledConn = sync.PooledConn
+SyncTransaction = sync.Transaction
+SyncOpts = sync.Opts
+SyncOptsBuilder = sync.OptsBuilder
+SyncPoolOpts = sync.PoolOpts
