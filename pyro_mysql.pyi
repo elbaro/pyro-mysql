@@ -50,35 +50,36 @@ from typing import Any, Self
 __all__ = [
     "init",
     "Row",
-    "TxOpts",
     "IsolationLevel",
     "CapabilityFlags",
     "async_",
     "sync",
-    "AsyncConn",
-    "AsyncPool",
-    "AsyncTransaction",
-    "AsyncOpts",
-    "AsyncOptsBuilder",
-    "AsyncPoolOpts",
-    "SyncConn",
-    "SyncPool",
-    "SyncPooledConn",
-    "SyncTransaction",
-    "SyncOpts",
-    "SyncOptsBuilder",
-    "SyncPoolOpts",
 ]
 
 JsonEncodable = (
     dict[str, "JsonEncodable"] | list["JsonEncodable"] | str | int | float | bool | None
 )
-type Value = None | bool | int | float | str | bytes | bytearray | tuple[
-    JsonEncodable, ...
-] | list[JsonEncodable] | set[JsonEncodable] | frozenset[JsonEncodable] | dict[
-    str, JsonEncodable
-] | datetime.datetime | datetime.date | datetime.time | datetime.timedelta | time.struct_time | decimal.Decimal
-type Params = None | tuple[Value, ...] | list[Value] | dict[str, Value]
+type Value = (
+    None
+    | bool
+    | int
+    | float
+    | str
+    | bytes
+    | bytearray
+    | tuple[JsonEncodable, ...]
+    | list[JsonEncodable]
+    | set[JsonEncodable]
+    | frozenset[JsonEncodable]
+    | dict[str, JsonEncodable]
+    | datetime.datetime
+    | datetime.date
+    | datetime.time
+    | datetime.timedelta
+    | time.struct_time
+    | decimal.Decimal
+)
+type Params = (None | tuple[Value, ...] | list[Value] | dict[str, Value])
 
 def init(worker_threads: int | None = 1, thread_name: str | None = None) -> None:
     """
@@ -103,24 +104,41 @@ class IsolationLevel:
         """Return the isolation level as a string."""
         ...
 
-class TxOpts:
-    """Transaction options."""
+class CapabilityFlags:
+    """MySQL capability flags for client connections."""
 
-    def __init__(
-        self,
-        consistent_snapshot: bool = False,
-        isolation_level: IsolationLevel | None = None,
-        readonly: bool = False,
-    ) -> None:
-        """
-        Create transaction options.
-
-        Args:
-            consistent_snapshot: Whether to use consistent snapshot.
-            isolation_level: Transaction isolation level.
-            readonly: Whether the transaction is read-only.
-        """
-        ...
+    CLIENT_LONG_PASSWORD: int = 0x00000001
+    CLIENT_FOUND_ROWS: int = 0x00000002
+    CLIENT_LONG_FLAG: int = 0x00000004
+    CLIENT_CONNECT_WITH_DB: int = 0x00000008
+    CLIENT_NO_SCHEMA: int = 0x00000010
+    CLIENT_COMPRESS: int = 0x00000020
+    CLIENT_ODBC: int = 0x00000040
+    CLIENT_LOCAL_FILES: int = 0x00000080
+    CLIENT_IGNORE_SPACE: int = 0x00000100
+    CLIENT_PROTOCOL_41: int = 0x00000200
+    CLIENT_INTERACTIVE: int = 0x00000400
+    CLIENT_SSL: int = 0x00000800
+    CLIENT_IGNORE_SIGPIPE: int = 0x00001000
+    CLIENT_TRANSACTIONS: int = 0x00002000
+    CLIENT_RESERVED: int = 0x00004000
+    CLIENT_SECURE_CONNECTION: int = 0x00008000
+    CLIENT_MULTI_STATEMENTS: int = 0x00010000
+    CLIENT_MULTI_RESULTS: int = 0x00020000
+    CLIENT_PS_MULTI_RESULTS: int = 0x00040000
+    CLIENT_PLUGIN_AUTH: int = 0x00080000
+    CLIENT_CONNECT_ATTRS: int = 0x00100000
+    CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA: int = 0x00200000
+    CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS: int = 0x00400000
+    CLIENT_SESSION_TRACK: int = 0x00800000
+    CLIENT_DEPRECATE_EOF: int = 0x01000000
+    CLIENT_OPTIONAL_RESULTSET_METADATA: int = 0x02000000
+    CLIENT_ZSTD_COMPRESSION_ALGORITHM: int = 0x04000000
+    CLIENT_QUERY_ATTRIBUTES: int = 0x08000000
+    MULTI_FACTOR_AUTHENTICATION: int = 0x10000000
+    CLIENT_PROGRESS_OBSOLETE: int = 0x20000000
+    CLIENT_SSL_VERIFY_SERVER_CERT: int = 0x40000000
+    CLIENT_REMEMBER_OPTIONS: int = 0x80000000
 
 class Row:
     """
@@ -461,12 +479,19 @@ class async_:
             """
             ...
 
-        def start_transaction(self, opts: TxOpts = ...) -> "async_.Transaction":
+        def start_transaction(
+            self,
+            consistent_snapshot: bool = False,
+            isolation_level: IsolationLevel | None = None,
+            readonly: bool | None = None,
+        ) -> "async_.Transaction":
             """
             Start a new transaction.
 
             Args:
-                opts: Transaction options.
+                consistent_snapshot: Whether to use consistent snapshot.
+                isolation_level: Transaction isolation level.
+                readonly: Whether the transaction is read-only.
 
             Returns:
                 New Transaction instance.
@@ -615,6 +640,22 @@ class async_:
             Disconnect and close all connections in the pool.
             """
             ...
+
+    # These classes are exposed in the async_ module namespace
+    class Opts(AsyncOpts):
+        """Async connection options. See AsyncOpts for details."""
+
+        ...
+
+    class OptsBuilder(AsyncOptsBuilder):
+        """Async options builder. See AsyncOptsBuilder for details."""
+
+        ...
+
+    class PoolOpts(AsyncPoolOpts):
+        """Async pool options. See AsyncPoolOpts for details."""
+
+        ...
 
 # ============================================================================
 # Sync API
@@ -1274,11 +1315,45 @@ class sync:
             """
             ...
 
-# # Re-export async classes with prefix
-# AsyncConn = async_.Conn
-# AsyncPool = async_.Pool
-# AsyncTransaction = async_.Transaction
+    # These classes are exposed in the sync module namespace
+    class Pool(SyncPool):
+        """Sync connection pool. See SyncPool for details."""
 
-# # Re-export sync classes with prefix
-# SyncConn = sync.Conn
-# SyncTransaction = sync.Transaction
+        ...
+
+    class PooledConn(SyncPooledConn):
+        """Sync pooled connection. See SyncPooledConn for details."""
+
+        ...
+
+    class Opts(SyncOpts):
+        """Sync connection options. See SyncOpts for details."""
+
+        ...
+
+    class OptsBuilder(SyncOptsBuilder):
+        """Sync options builder. See SyncOptsBuilder for details."""
+
+        ...
+
+    class PoolOpts(SyncPoolOpts):
+        """Sync pool options. See SyncPoolOpts for details."""
+
+        ...
+
+# Compatibility aliases for backward compatibility
+# These are exposed at module level in lib.rs
+AsyncConn = async_.Conn
+AsyncPool = async_.Pool
+AsyncTransaction = async_.Transaction
+AsyncOpts = async_.Opts
+AsyncOptsBuilder = async_.OptsBuilder
+AsyncPoolOpts = async_.PoolOpts
+
+SyncConn = sync.Conn
+SyncPool = sync.Pool
+SyncPooledConn = sync.PooledConn
+SyncTransaction = sync.Transaction
+SyncOpts = sync.Opts
+SyncOptsBuilder = sync.OptsBuilder
+SyncPoolOpts = sync.PoolOpts

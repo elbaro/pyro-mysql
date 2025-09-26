@@ -172,7 +172,13 @@
                     <a class="class" href="#AsyncPool">AsyncPool</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="function" href="#AsyncPool.get_conn">get_conn</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#AsyncPool.acquire">acquire</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AsyncPool.disconnect">disconnect</a>
                         </li>
                 </ul>
 
@@ -187,7 +193,13 @@
                                 <a class="function" href="#AsyncConn.start_transaction">start_transaction</a>
                         </li>
                         <li>
+                                <a class="function" href="#AsyncConn.id">id</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#AsyncConn.affected_rows">affected_rows</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AsyncConn.last_insert_id">last_insert_id</a>
                         </li>
                         <li>
                                 <a class="function" href="#AsyncConn.close_prepared_statement">close_prepared_statement</a>
@@ -215,6 +227,15 @@
                         </li>
                         <li>
                                 <a class="function" href="#AsyncConn.exec_batch">exec_batch</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AsyncConn.disconnect">disconnect</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AsyncConn.reset">reset</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AsyncConn.server_version">server_version</a>
                         </li>
                 </ul>
 
@@ -264,6 +285,9 @@
             <li>
                     <a class="class" href="#AsyncOpts">AsyncOpts</a>
                             <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#AsyncOpts.pool_opts">pool_opts</a>
+                        </li>
                 </ul>
 
             </li>
@@ -272,6 +296,9 @@
                             <ul class="memberlist">
                         <li>
                                 <a class="function" href="#AsyncOptsBuilder.from_opts">from_opts</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AsyncOptsBuilder.from_url">from_url</a>
                         </li>
                         <li>
                                 <a class="function" href="#AsyncOptsBuilder.ip_or_hostname">ip_or_hostname</a>
@@ -286,7 +313,7 @@
                                 <a class="function" href="#AsyncOptsBuilder.user">user</a>
                         </li>
                         <li>
-                                <a class="function" href="#AsyncOptsBuilder.pass">pass</a>
+                                <a class="function" href="#AsyncOptsBuilder.password">password</a>
                         </li>
                         <li>
                                 <a class="function" href="#AsyncOptsBuilder.db_name">db_name</a>
@@ -346,13 +373,34 @@
 
             </li>
             <li>
+                    <a class="class" href="#AsyncPoolOpts">AsyncPoolOpts</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#AsyncPoolOpts.with_constraints">with_constraints</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AsyncPoolOpts.with_inactive_connection_ttl">with_inactive_connection_ttl</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AsyncPoolOpts.with_ttl_check_interval">with_ttl_check_interval</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
                     <a class="class" href="#SyncConn">SyncConn</a>
                             <ul class="memberlist">
                         <li>
                                 <a class="function" href="#SyncConn.run_transaction">run_transaction</a>
                         </li>
                         <li>
+                                <a class="function" href="#SyncConn.id">id</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#SyncConn.affected_rows">affected_rows</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncConn.last_insert_id">last_insert_id</a>
                         </li>
                         <li>
                                 <a class="function" href="#SyncConn.ping">ping</a>
@@ -386,6 +434,81 @@
                         </li>
                         <li>
                                 <a class="function" href="#SyncConn.close">close</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncConn.disconnect">disconnect</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncConn.reset">reset</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncConn.server_version">server_version</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#SyncPool">SyncPool</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#SyncPool.get_conn">get_conn</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPool.acquire">acquire</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#SyncPooledConn">SyncPooledConn</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#SyncPooledConn.run_transaction">run_transaction</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPooledConn.affected_rows">affected_rows</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPooledConn.ping">ping</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPooledConn.query">query</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPooledConn.query_first">query_first</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPooledConn.query_drop">query_drop</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPooledConn.query_iter">query_iter</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPooledConn.exec">exec</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPooledConn.exec_first">exec_first</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPooledConn.exec_drop">exec_drop</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPooledConn.exec_batch">exec_batch</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPooledConn.exec_iter">exec_iter</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncPooledConn.close">close</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#SyncPoolOpts">SyncPoolOpts</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#SyncPoolOpts.with_constraints">with_constraints</a>
                         </li>
                 </ul>
 
@@ -433,6 +556,114 @@
 
             </li>
             <li>
+                    <a class="class" href="#SyncOpts">SyncOpts</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#SyncOpts.pool_opts">pool_opts</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#SyncOptsBuilder">SyncOptsBuilder</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.from_opts">from_opts</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.from_url">from_url</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.from_hash_map">from_hash_map</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.ip_or_hostname">ip_or_hostname</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.tcp_port">tcp_port</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.socket">socket</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.bind_address">bind_address</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.user">user</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.password">password</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.db_name">db_name</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.secure_auth">secure_auth</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.read_timeout">read_timeout</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.write_timeout">write_timeout</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.tcp_connect_timeout">tcp_connect_timeout</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.stmt_cache_size">stmt_cache_size</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.tcp_nodelay">tcp_nodelay</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.tcp_keepalive_time_ms">tcp_keepalive_time_ms</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.tcp_keepalive_probe_interval_secs">tcp_keepalive_probe_interval_secs</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.tcp_keepalive_probe_count">tcp_keepalive_probe_count</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.tcp_user_timeout_ms">tcp_user_timeout_ms</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.max_allowed_packet">max_allowed_packet</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.prefer_socket">prefer_socket</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.init">init</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.connect_attrs">connect_attrs</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.compress">compress</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.ssl_opts">ssl_opts</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.local_infile_handler">local_infile_handler</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.pool_opts">pool_opts</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.additional_capabilities">additional_capabilities</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.enable_cleartext_plugin">enable_cleartext_plugin</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SyncOptsBuilder.build">build</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
                     <a class="variable" href="#Value">Value</a>
             </li>
             <li>
@@ -454,47 +685,7 @@
                     <h1 class="modulename">
 pyro_mysql    </h1>
 
-                        <div class="docstring"><p>pyro_mysql - High-performance MySQL driver for Python.</p>
-
-<div class="pdoc-code codehilite">
-<pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">pyro_mysql</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mysql</span>
-
-<span class="n">mysql</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">worker_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-
-<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">example_select</span><span class="p">():</span>
-    <span class="n">conn</span> <span class="o">=</span> <span class="k">await</span> <span class="n">mysql</span><span class="o">.</span><span class="n">Conn</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;mysql://localhost@127.0.0.1:3306/test&quot;</span><span class="p">)</span>
-    <span class="n">rows</span> <span class="o">=</span> <span class="k">await</span> <span class="n">conn</span><span class="o">.</span><span class="n">exec</span><span class="p">(</span><span class="s2">&quot;SELECT * from mydb.mytable&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
-
-
-<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">example_transaction</span><span class="p">():</span>
-    <span class="n">conn</span> <span class="o">=</span> <span class="k">await</span> <span class="n">mysql</span><span class="o">.</span><span class="n">Conn</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;mysql://localhost@127.0.0.1:3306/test&quot;</span><span class="p">)</span>
-
-    <span class="k">async</span> <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">start_transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">tx</span><span class="p">:</span>
-        <span class="k">await</span> <span class="n">tx</span><span class="o">.</span><span class="n">exec_drop</span><span class="p">(</span>
-            <span class="s2">&quot;INSERT INTO test.asyncmy(`decimal`, `date`, `datetime`, `float`, `string`, `tinyint`) VALUES (?,?,?,?,?,?)&quot;</span><span class="p">,</span>
-            <span class="p">(</span>
-                <span class="mi">1</span><span class="p">,</span>
-                <span class="s2">&quot;2021-01-01&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;2020-07-16 22:49:54&quot;</span><span class="p">,</span>
-                <span class="mi">1</span><span class="p">,</span>
-                <span class="s2">&quot;asyncmy&quot;</span><span class="p">,</span>
-                <span class="mi">1</span><span class="p">,</span>
-            <span class="p">),</span>
-        <span class="p">)</span>
-        <span class="k">await</span> <span class="n">tx</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
-
-    <span class="k">await</span> <span class="nb">len</span><span class="p">(</span><span class="n">conn</span><span class="o">.</span><span class="n">exec</span><span class="p">(</span><span class="s1">&#39;SELECT * FROM mydb.mytable&#39;</span><span class="p">))</span> <span class="o">==</span> <span class="mi">100</span>
-
-<span class="c1"># The connection pool is not tied to a single event loop.</span>
-<span class="c1"># You can reuse the pool between event loops.</span>
-<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">example_pool</span><span class="p">())</span>
-<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">example_select</span><span class="p">())</span>
-<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">example_transaction</span><span class="p">())</span>
-<span class="o">...</span>
-</code></pre>
-</div>
+                        <div class="docstring"><p>A Python module implemented in Rust.</p>
 </div>
 
                         <input id="mod-pyro_mysql-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
@@ -514,21 +705,13 @@ pyro_mysql    </h1>
                     <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">init</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">worker_threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">1</span>, </span><span class="param"><span class="n">thread_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
+        <span class="name">init</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">worker_threads</span><span class="o">=</span><span class="bp">Ellipsis</span>, </span><span class="param"><span class="n">thread_name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#init"></a>
     
-            <div class="docstring"><p>Initialize the Tokio runtime for async operations.
-This function can be called multiple times until Any async operation is called.</p>
-
-<h6 id="arguments">Arguments:</h6>
-
-<ul>
-<li><strong>worker_threads:</strong>  Number of worker threads for the Tokio runtime. If None, set to the number of CPUs.</li>
-<li><strong>thread_name:</strong>  Name prefix for worker threads.</li>
-</ul>
+            <div class="docstring"><p>This function can be called multiple times until any async operation is called.</p>
 </div>
 
 
@@ -543,22 +726,19 @@ This function can be called multiple times until Any async operation is called.<
     </div>
     <a class="headerlink" href="#Row"></a>
     
-            <div class="docstring"><p>A row returned from a MySQL query.
-to_tuple() / to_dict() copies the data, and should not be called many times.</p>
-</div>
-
+    
 
                             <div id="Row.to_tuple" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">to_tuple</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="n">Value</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>:</span></span>
+        <span class="name">to_tuple</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#Row.to_tuple"></a>
     
-            <div class="docstring"><p>Convert the row to a Python list.</p>
+            <div class="docstring"><p>The type of the None singleton.</p>
 </div>
 
 
@@ -567,7 +747,7 @@ to_tuple() / to_dict() copies the data, and should not be called many times.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">to_dict</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Value</span><span class="p">]</span>:</span></span>
+        <span class="name">to_dict</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -589,28 +769,26 @@ to_tuple() / to_dict() copies the data, and should not be called many times.</p>
     </div>
     <a class="headerlink" href="#IsolationLevel"></a>
     
-            <div class="docstring"><p>Transaction isolation level enum.</p>
-</div>
-
+    
 
                             <div id="IsolationLevel.as_str" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">as_str</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
+        <span class="name">as_str</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#IsolationLevel.as_str"></a>
     
-            <div class="docstring"><p>Return the isolation level as a string.</p>
+            <div class="docstring"><p>The type of the None singleton.</p>
 </div>
 
 
                             </div>
                             <div id="IsolationLevel.ReadUncommitted" class="classattr">
                                 <div class="attr variable">
-            <span class="name">ReadUncommitted</span><span class="annotation">: &#39;IsolationLevel&#39;</span>        =
+            <span class="name">ReadUncommitted</span>        =
 <span class="default_value"><a href="#IsolationLevel.ReadUncommitted">IsolationLevel.ReadUncommitted</a></span>
 
         
@@ -622,7 +800,7 @@ to_tuple() / to_dict() copies the data, and should not be called many times.</p>
                             </div>
                             <div id="IsolationLevel.ReadCommitted" class="classattr">
                                 <div class="attr variable">
-            <span class="name">ReadCommitted</span><span class="annotation">: &#39;IsolationLevel&#39;</span>        =
+            <span class="name">ReadCommitted</span>        =
 <span class="default_value"><a href="#IsolationLevel.ReadCommitted">IsolationLevel.ReadCommitted</a></span>
 
         
@@ -634,7 +812,7 @@ to_tuple() / to_dict() copies the data, and should not be called many times.</p>
                             </div>
                             <div id="IsolationLevel.RepeatableRead" class="classattr">
                                 <div class="attr variable">
-            <span class="name">RepeatableRead</span><span class="annotation">: &#39;IsolationLevel&#39;</span>        =
+            <span class="name">RepeatableRead</span>        =
 <span class="default_value"><a href="#IsolationLevel.RepeatableRead">IsolationLevel.RepeatableRead</a></span>
 
         
@@ -646,7 +824,7 @@ to_tuple() / to_dict() copies the data, and should not be called many times.</p>
                             </div>
                             <div id="IsolationLevel.Serializable" class="classattr">
                                 <div class="attr variable">
-            <span class="name">Serializable</span><span class="annotation">: &#39;IsolationLevel&#39;</span>        =
+            <span class="name">Serializable</span>        =
 <span class="default_value"><a href="#IsolationLevel.Serializable">IsolationLevel.Serializable</a></span>
 
         
@@ -1066,6 +1244,21 @@ to_tuple() / to_dict() copies the data, and should not be called many times.</p>
     
     
 
+                            <div id="AsyncPool.get_conn" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_conn</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncPool.get_conn"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
                             <div id="AsyncPool.acquire" class="classattr">
                                 <div class="attr function">
             
@@ -1075,6 +1268,21 @@ to_tuple() / to_dict() copies the data, and should not be called many times.</p>
         
     </div>
     <a class="headerlink" href="#AsyncPool.acquire"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="AsyncPool.disconnect" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">disconnect</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncPool.disconnect"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -1129,6 +1337,21 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
 
 
                             </div>
+                            <div id="AsyncConn.id" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">id</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncConn.id"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
                             <div id="AsyncConn.affected_rows" class="classattr">
                                 <div class="attr function">
             
@@ -1138,6 +1361,21 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
         
     </div>
     <a class="headerlink" href="#AsyncConn.affected_rows"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="AsyncConn.last_insert_id" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">last_insert_id</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncConn.last_insert_id"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -1273,6 +1511,51 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
         
     </div>
     <a class="headerlink" href="#AsyncConn.exec_batch"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="AsyncConn.disconnect" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">disconnect</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncConn.disconnect"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="AsyncConn.reset" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">reset</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncConn.reset"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="AsyncConn.server_version" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">server_version</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncConn.server_version"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -1485,6 +1768,21 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
     
     
 
+                            <div id="AsyncOpts.pool_opts" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">pool_opts</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">pool_opts</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncOpts.pool_opts"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="AsyncOptsBuilder">
                     <div class="attr class">
@@ -1507,6 +1805,21 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
         
     </div>
     <a class="headerlink" href="#AsyncOptsBuilder.from_opts"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="AsyncOptsBuilder.from_url" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_url</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">url</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncOptsBuilder.from_url"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -1573,15 +1886,15 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
 
 
                             </div>
-                            <div id="AsyncOptsBuilder.pass" class="classattr">
+                            <div id="AsyncOptsBuilder.password" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">pass</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">password</span></span><span class="return-annotation">):</span></span>
+        <span class="name">password</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">password</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#AsyncOptsBuilder.pass"></a>
+    <a class="headerlink" href="#AsyncOptsBuilder.password"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -1772,7 +2085,7 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">pool_opts</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">_opts</span></span><span class="return-annotation">):</span></span>
+        <span class="name">pool_opts</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">opts</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -1859,6 +2172,64 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
 
                             </div>
                 </section>
+                <section id="AsyncPoolOpts">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">AsyncPoolOpts</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncPoolOpts"></a>
+    
+    
+
+                            <div id="AsyncPoolOpts.with_constraints" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">with_constraints</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">constraints</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncPoolOpts.with_constraints"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="AsyncPoolOpts.with_inactive_connection_ttl" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">with_inactive_connection_ttl</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">ttl</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncPoolOpts.with_inactive_connection_ttl"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="AsyncPoolOpts.with_ttl_check_interval" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">with_ttl_check_interval</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">interval</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AsyncPoolOpts.with_ttl_check_interval"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                </section>
                 <section id="SyncConn">
                     <div class="attr class">
             
@@ -1886,6 +2257,21 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
 
 
                             </div>
+                            <div id="SyncConn.id" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">id</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncConn.id"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
                             <div id="SyncConn.affected_rows" class="classattr">
                                 <div class="attr function">
             
@@ -1895,6 +2281,21 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
         
     </div>
     <a class="headerlink" href="#SyncConn.affected_rows"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncConn.last_insert_id" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">last_insert_id</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncConn.last_insert_id"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -2060,6 +2461,330 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
         
     </div>
     <a class="headerlink" href="#SyncConn.close"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncConn.disconnect" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">disconnect</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncConn.disconnect"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncConn.reset" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">reset</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncConn.reset"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncConn.server_version" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">server_version</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncConn.server_version"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                </section>
+                <section id="SyncPool">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">SyncPool</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPool"></a>
+    
+    
+
+                            <div id="SyncPool.get_conn" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_conn</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPool.get_conn"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPool.acquire" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">acquire</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPool.acquire"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                </section>
+                <section id="SyncPooledConn">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">SyncPooledConn</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn"></a>
+    
+    
+
+                            <div id="SyncPooledConn.run_transaction" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">run_transaction</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="o">/</span>,</span><span class="param">	<span class="nb">callable</span>,</span><span class="param">	<span class="n">consistent_snapshot</span><span class="o">=</span><span class="kc">False</span>,</span><span class="param">	<span class="n">isolation_level</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">readonly</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.run_transaction"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPooledConn.affected_rows" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">affected_rows</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.affected_rows"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPooledConn.ping" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">ping</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.ping"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPooledConn.query" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">query</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.query"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPooledConn.query_first" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">query_first</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.query_first"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPooledConn.query_drop" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">query_drop</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.query_drop"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPooledConn.query_iter" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">query_iter</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.query_iter"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPooledConn.exec" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.exec"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPooledConn.exec_first" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec_first</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.exec_first"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPooledConn.exec_drop" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec_drop</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.exec_drop"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPooledConn.exec_batch" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec_batch</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params_list</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.exec_batch"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPooledConn.exec_iter" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec_iter</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.exec_iter"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncPooledConn.close" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">close</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPooledConn.close"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                </section>
+                <section id="SyncPoolOpts">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">SyncPoolOpts</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPoolOpts"></a>
+    
+    
+
+                            <div id="SyncPoolOpts.with_constraints" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">with_constraints</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">constraints</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncPoolOpts.with_constraints"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -2253,6 +2978,512 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
         
     </div>
     <a class="headerlink" href="#SyncTransaction.exec_iter"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                </section>
+                <section id="SyncOpts">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">SyncOpts</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOpts"></a>
+    
+    
+
+                            <div id="SyncOpts.pool_opts" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">pool_opts</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">pool_opts</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOpts.pool_opts"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                </section>
+                <section id="SyncOptsBuilder">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">SyncOptsBuilder</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder"></a>
+    
+    
+
+                            <div id="SyncOptsBuilder.from_opts" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_opts</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">opts</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.from_opts"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.from_url" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_url</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">url</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.from_url"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.from_hash_map" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_hash_map</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">params</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.from_hash_map"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.ip_or_hostname" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">ip_or_hostname</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">hostname</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.ip_or_hostname"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.tcp_port" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tcp_port</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">port</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.tcp_port"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.socket" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">socket</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">path</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.socket"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.bind_address" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">bind_address</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">address</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.bind_address"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.user" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">user</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">username</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.user"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.password" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">password</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">password</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.password"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.db_name" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">db_name</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">database</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.db_name"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.secure_auth" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">secure_auth</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">enable</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.secure_auth"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.read_timeout" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">read_timeout</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">seconds</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.read_timeout"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.write_timeout" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">write_timeout</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">seconds</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.write_timeout"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.tcp_connect_timeout" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tcp_connect_timeout</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">seconds</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.tcp_connect_timeout"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.stmt_cache_size" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">stmt_cache_size</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">size</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.stmt_cache_size"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.tcp_nodelay" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tcp_nodelay</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">enable</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.tcp_nodelay"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.tcp_keepalive_time_ms" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tcp_keepalive_time_ms</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">time_ms</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.tcp_keepalive_time_ms"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.tcp_keepalive_probe_interval_secs" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tcp_keepalive_probe_interval_secs</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">interval_secs</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.tcp_keepalive_probe_interval_secs"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.tcp_keepalive_probe_count" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tcp_keepalive_probe_count</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">count</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.tcp_keepalive_probe_count"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.tcp_user_timeout_ms" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tcp_user_timeout_ms</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">timeout_ms</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.tcp_user_timeout_ms"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.max_allowed_packet" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">max_allowed_packet</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">max_allowed_packet</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.max_allowed_packet"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.prefer_socket" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">prefer_socket</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">prefer_socket</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.prefer_socket"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.init" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">init</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">commands</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.init"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.connect_attrs" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">connect_attrs</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">attrs</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.connect_attrs"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.compress" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">compress</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">level</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.compress"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.ssl_opts" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">ssl_opts</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">_opts</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.ssl_opts"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.local_infile_handler" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">local_infile_handler</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">_handler</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.local_infile_handler"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.pool_opts" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">pool_opts</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">opts</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.pool_opts"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.additional_capabilities" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">additional_capabilities</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">capabilities</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.additional_capabilities"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.enable_cleartext_plugin" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">enable_cleartext_plugin</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">enable</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.enable_cleartext_plugin"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="SyncOptsBuilder.build" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">build</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyncOptsBuilder.build"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
