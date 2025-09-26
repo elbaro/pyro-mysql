@@ -81,7 +81,6 @@ type Value = (
 )
 type Params = (None | tuple[Value, ...] | list[Value] | dict[str, Value])
 
-
 def init(worker_threads: int | None = 1, thread_name: str | None = None) -> None:
     """
     Initialize the Tokio runtime for async operations.
@@ -92,7 +91,6 @@ def init(worker_threads: int | None = 1, thread_name: str | None = None) -> None
         thread_name: Name prefix for worker threads.
     """
     ...
-
 
 class IsolationLevel:
     """Transaction isolation level enum."""
@@ -105,7 +103,6 @@ class IsolationLevel:
     def as_str(self) -> str:
         """Return the isolation level as a string."""
         ...
-
 
 class CapabilityFlags:
     """MySQL capability flags for client connections."""
@@ -143,7 +140,6 @@ class CapabilityFlags:
     CLIENT_SSL_VERIFY_SERVER_CERT: int = 0x40000000
     CLIENT_REMEMBER_OPTIONS: int = 0x80000000
 
-
 class Row:
     """
     A row returned from a MySQL query.
@@ -164,11 +160,9 @@ class Row:
         """
         ...
 
-
 # ============================================================================
 # Async API
 # ============================================================================
-
 
 class AsyncOpts:
     """MySQL connection options for async operations."""
@@ -176,7 +170,6 @@ class AsyncOpts:
     def pool_opts(self, pool_opts: "AsyncPoolOpts") -> "AsyncOpts":
         """Set pool options for the connection."""
         ...
-
 
 class AsyncOptsBuilder:
     """Builder for AsyncOpts with method chaining."""
@@ -206,7 +199,6 @@ class AsyncOptsBuilder:
             ValueError: If the URL is invalid or cannot be parsed
         """
         ...
-
     # Network/Connection Options
     def ip_or_hostname(self, hostname: str) -> "AsyncOptsBuilder":
         """Set the hostname or IP address."""
@@ -219,7 +211,6 @@ class AsyncOptsBuilder:
     def socket(self, path: str | None) -> "AsyncOptsBuilder":
         """Set the Unix socket path."""
         ...
-
     # Authentication Options
     def user(self, username: str | None) -> "AsyncOptsBuilder":
         """Set the username."""
@@ -236,7 +227,6 @@ class AsyncOptsBuilder:
     def secure_auth(self, enable: bool) -> "AsyncOptsBuilder":
         """Enable or disable secure authentication."""
         ...
-
     # Performance/Timeout Options
     def wait_timeout(self, seconds: int | None) -> "AsyncOptsBuilder":
         """Set the wait timeout in seconds."""
@@ -245,7 +235,6 @@ class AsyncOptsBuilder:
     def stmt_cache_size(self, size: int) -> "AsyncOptsBuilder":
         """Set the statement cache size."""
         ...
-
     # Additional Options
     def tcp_nodelay(self, enable: bool) -> "AsyncOptsBuilder":
         """Enable or disable TCP_NODELAY."""
@@ -303,7 +292,6 @@ class AsyncOptsBuilder:
         """Build the AsyncOpts object."""
         ...
 
-
 class AsyncPoolOpts:
     """Pool options for async connections."""
 
@@ -346,7 +334,6 @@ class AsyncPoolOpts:
             New AsyncPoolOpts with updated interval.
         """
         ...
-
 
 class async_:
     """Async MySQL driver components."""
@@ -656,22 +643,23 @@ class async_:
 
     # These classes are exposed in the async_ module namespace
     class Opts(AsyncOpts):
-        \"\"\"Async connection options. See AsyncOpts for details.\"\"\"
+        """Async connection options. See AsyncOpts for details."""
+
         ...
 
     class OptsBuilder(AsyncOptsBuilder):
-        \"\"\"Async options builder. See AsyncOptsBuilder for details.\"\"\"
+        """Async options builder. See AsyncOptsBuilder for details."""
+
         ...
 
     class PoolOpts(AsyncPoolOpts):
-        \"\"\"Async pool options. See AsyncPoolOpts for details.\"\"\"
-        ...
+        """Async pool options. See AsyncPoolOpts for details."""
 
+        ...
 
 # ============================================================================
 # Sync API
 # ============================================================================
-
 
 class SyncOpts:
     """MySQL connection options for sync operations."""
@@ -679,7 +667,6 @@ class SyncOpts:
     def pool_opts(self, pool_opts: "SyncPoolOpts") -> "SyncOpts":
         """Set pool options for the connection."""
         ...
-
 
 class SyncOptsBuilder:
     """Builder for SyncOpts with method chaining."""
@@ -713,7 +700,6 @@ class SyncOptsBuilder:
     def from_hash_map(self, params: dict[str, str]) -> "SyncOptsBuilder":
         """Initialize from a dictionary of parameters."""
         ...
-
     # Network/Connection Options
     def ip_or_hostname(self, hostname: str | None) -> "SyncOptsBuilder":
         """Set the hostname or IP address."""
@@ -730,7 +716,6 @@ class SyncOptsBuilder:
     def bind_address(self, address: str | None) -> "SyncOptsBuilder":
         """Set the bind address for outgoing connections."""
         ...
-
     # Authentication Options
     def user(self, username: str | None) -> "SyncOptsBuilder":
         """Set the username."""
@@ -747,7 +732,6 @@ class SyncOptsBuilder:
     def secure_auth(self, enable: bool) -> "SyncOptsBuilder":
         """Enable or disable secure authentication."""
         ...
-
     # Performance/Timeout Options
     def read_timeout(self, seconds: float | None) -> "SyncOptsBuilder":
         """Set the read timeout in seconds."""
@@ -764,7 +748,6 @@ class SyncOptsBuilder:
     def stmt_cache_size(self, size: int) -> "SyncOptsBuilder":
         """Set the statement cache size."""
         ...
-
     # Additional Options
     def tcp_nodelay(self, enable: bool) -> "SyncOptsBuilder":
         """Enable or disable TCP_NODELAY."""
@@ -832,7 +815,6 @@ class SyncOptsBuilder:
         """Build the SyncOpts object."""
         ...
 
-
 class SyncPoolOpts:
     """Pool options for sync connections."""
 
@@ -851,7 +833,6 @@ class SyncPoolOpts:
             New SyncPoolOpts with updated constraints.
         """
         ...
-
 
 class SyncPool:
     """Synchronous MySQL connection pool."""
@@ -890,7 +871,6 @@ class SyncPool:
         Disconnect and close all connections in the pool.
         """
         ...
-
 
 class SyncPooledConn:
     """
@@ -1043,7 +1023,6 @@ class SyncPooledConn:
     def close(self) -> None:
         """Close the connection."""
         ...
-
 
 class sync:
     """Synchronous MySQL driver components."""
@@ -1339,24 +1318,28 @@ class sync:
     # These classes are exposed in the sync module namespace
     class Pool(SyncPool):
         """Sync connection pool. See SyncPool for details."""
+
         ...
 
     class PooledConn(SyncPooledConn):
         """Sync pooled connection. See SyncPooledConn for details."""
+
         ...
 
     class Opts(SyncOpts):
         """Sync connection options. See SyncOpts for details."""
+
         ...
 
     class OptsBuilder(SyncOptsBuilder):
         """Sync options builder. See SyncOptsBuilder for details."""
+
         ...
 
     class PoolOpts(SyncPoolOpts):
         """Sync pool options. See SyncPoolOpts for details."""
-        ...
 
+        ...
 
 # Compatibility aliases for backward compatibility
 # These are exposed at module level in lib.rs
