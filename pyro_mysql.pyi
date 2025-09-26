@@ -563,7 +563,7 @@ class async_:
         async def disconnect(self) -> None:
             """
             Disconnect from the MySQL server.
-            
+
             This closes the connection and makes it unusable for further operations.
             """
             ...
@@ -571,7 +571,7 @@ class async_:
         async def reset(self) -> None:
             """
             Reset the connection state.
-            
+
             This resets the connection to a clean state without closing it.
             """
             ...
@@ -1261,7 +1261,7 @@ class sync:
         def disconnect(self) -> None:
             """
             Disconnect from the MySQL server.
-            
+
             This closes the connection and makes it unusable for further operations.
             """
             ...
@@ -1269,7 +1269,7 @@ class sync:
         def reset(self) -> None:
             """
             Reset the connection state.
-            
+
             This resets the connection to a clean state without closing it.
             """
             ...
