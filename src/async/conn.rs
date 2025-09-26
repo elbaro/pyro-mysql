@@ -12,7 +12,7 @@ use crate::isolation_level::IsolationLevel;
 use crate::params::Params;
 use crate::queryable::Queryable;
 use crate::row::Row;
-use crate::util::{mysql_error_to_pyerr, url_error_to_pyerr};
+use crate::util::{mysql_error_to_pyerr, rust_future_into_py, url_error_to_pyerr};
 use color_eyre::Result;
 
 #[pyclass]
@@ -36,14 +36,13 @@ impl AsyncConn {
     fn new<'py>(
         py: Python<'py>,
         url_or_opts: Either<String, PyRef<AsyncOpts>>,
-    ) -> PyResult<Bound<'py, PyAny>> {
+    ) -> PyResult<Py<crate::util::RaiiFuture>> {
         let opts = match url_or_opts {
             Either::Left(url) => Opts::from_url(&url).map_err(url_error_to_pyerr)?,
             Either::Right(opts) => opts.opts.clone(),
         };
 
-        let locals = pyo3_async_runtimes::TaskLocals::with_running_loop(py)?;
-        pyo3_async_runtimes::tokio::future_into_py_with_locals(py, locals, async move {
+        rust_future_into_py(py, async move {
             Ok(Self {
                 inner: Arc::new(RwLock::new(Some(
                     mysql_async::Conn::new(opts)

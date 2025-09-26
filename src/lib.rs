@@ -25,6 +25,7 @@ use crate::{
         SyncConn, SyncPool, SyncPoolOpts, SyncPooledConn, SyncTransaction,
         opts::{SyncOpts, SyncOptsBuilder},
     },
+    util::RaiiFuture,
 };
 
 #[pyfunction]
@@ -56,6 +57,7 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Row>()?;
     m.add_class::<IsolationLevel>()?;
     m.add_class::<CapabilityFlags>()?;
+    m.add_class::<RaiiFuture>()?;
 
     m.add_class::<AsyncPool>()?;
     m.add_class::<AsyncConn>()?;

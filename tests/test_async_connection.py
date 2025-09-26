@@ -16,7 +16,12 @@ from .conftest import (
 async def test_basic_connection():
     """Test basic connection establishment."""
     opts = get_async_opts()
-    conn = await Conn.new(opts)
+    print("1")
+    conn_fut = Conn.new(opts)
+    print(conn_fut)
+    conn = await conn_fut
+    # conn = await Conn.new(opts)
+    print("2")
 
     result = await conn.query_first("SELECT 1")
     assert result.to_tuple() == (1,)

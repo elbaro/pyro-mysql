@@ -1230,6 +1230,7 @@ dependencies = [
  "color-eyre",
  "criterion",
  "either",
+ "futures",
  "mysql",
  "mysql_async",
  "mysql_common",

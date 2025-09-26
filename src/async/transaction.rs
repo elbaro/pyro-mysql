@@ -3,7 +3,12 @@ use pyo3::prelude::*;
 use std::sync::Arc;
 use tokio::sync::{RwLock, RwLockWriteGuard};
 
-use crate::{params::Params, queryable::Queryable, row::Row};
+use crate::{
+    params::Params,
+    queryable::Queryable,
+    row::Row,
+    util::{RaiiFuture, rust_future_into_py},
+};
 
 // struct fields are dropped in the same order as declared in the struct
 #[pyclass]
@@ -36,16 +41,14 @@ impl AsyncTransaction {
 // Order or lock: conn -> conn guard -> inner
 #[pymethods]
 impl AsyncTransaction {
-    fn __aenter__<'py>(slf: PyRef<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let locals = pyo3_async_runtimes::TaskLocals::with_running_loop(py)?;
-
+    fn __aenter__<'py>(slf: PyRef<'py, Self>, py: Python<'py>) -> PyResult<Py<RaiiFuture>> {
         let opts = slf.opts.clone();
         let conn = slf.conn.clone();
         let guard = slf.guard.clone();
         let inner = slf.inner.clone();
         let slf: Py<AsyncTransaction> = slf.into();
 
-        pyo3_async_runtimes::tokio::future_into_py_with_locals(py, locals, async move {
+        rust_future_into_py(py, async move {
             let mut conn = conn.write().await;
             let mut guard = guard.write().await;
             let mut inner = inner.write().await;
@@ -88,11 +91,10 @@ impl AsyncTransaction {
         _exc_type: &crate::Bound<'py, crate::PyAny>,
         _exc_value: &crate::Bound<'py, crate::PyAny>,
         _traceback: &crate::Bound<'py, crate::PyAny>,
-    ) -> PyResult<Bound<'py, PyAny>> {
-        let locals = pyo3_async_runtimes::TaskLocals::with_running_loop(py)?;
+    ) -> PyResult<Py<RaiiFuture>> {
         let guard = self.guard.clone();
         let inner = self.inner.clone();
-        pyo3_async_runtimes::tokio::future_into_py_with_locals(py, locals, async move {
+        rust_future_into_py(py, async move {
             // TODO: check if  is not called and normally exiting without exception
 
             let mut guard = guard.write().await;
