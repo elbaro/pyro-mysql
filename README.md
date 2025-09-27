@@ -104,3 +104,23 @@ conn.run_transaction(func)
 | `datetime.timedelta` | `Time(is_negative, days, hours, minutes, seconds, microseconds)` |
 | `time.struct_time` | `Date(year, month, day, hour, minute, second, 0)` |
 | `decimal.Decimal` | `Bytes` |
+
+### MySQL -> Python
+
+| MySQL Column | Python |
+|-------------|------------|
+| `NULL` | `None` |
+| `INT` / `TINYINT` / `SMALLINT` / `MEDIUMINT` / `BIGINT` / `YEAR` | `int` |
+| `FLOAT` | `float` |
+| `DOUBLE` | `float` |
+| `DECIMAL` / `NUMERIC` | `decimal.Decimal` |
+| `DATE` | `datetime.date` |
+| `TIME` | `datetime.timedelta` |
+| `DATETIME` | `datetime.datetime` |
+| `TIMESTAMP` | `datetime.datetime` |
+| `CHAR` / `VARCHAR` / `TEXT` / `TINYTEXT` / `MEDIUMTEXT` / `LONGTEXT` | `str` |
+| `BINARY` / `VARBINARY` / `BLOB` / `TINYBLOB` / `MEDIUMBLOB` / `LONGBLOB` | `bytes` |
+| `JSON` | `dict` / `list` (parsed JSON) |
+| `ENUM` / `SET` | `str` |
+| `BIT` | `bytes` |
+| `GEOMETRY` | `bytes` (WKB format) |
