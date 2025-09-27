@@ -14,23 +14,82 @@ pub fn url_error_to_pyerr(error: mysql_async::UrlError) -> PyErr {
 
 /// A wrapper around a Python future that cancels the associated Rust future when dropped.
 #[pyclass]
-pub struct RaiiFuture {
+pub struct PyroFuture {
     py_future: Py<PyAny>,
     abort_handle: AbortHandle,
 }
 
-impl Drop for RaiiFuture {
+/// Iterator wrapper that keeps RaiiFuture alive during iteration
+#[pyclass]
+struct PyroFutureIterator {
+    iterator: Py<PyAny>,
+    _future: Py<PyroFuture>, // Keep the future alive
+}
+
+#[pymethods]
+impl PyroFutureIterator {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        self.iterator.bind(py).call_method0("__next__")
+    }
+
+    fn send<'py>(&self, py: Python<'py>, value: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+        self.iterator.bind(py).call_method1("send", (value,))
+    }
+
+    fn throw<'py>(
+        &self,
+        py: Python<'py>,
+        exc: Bound<'py, PyAny>,
+        val: Option<Bound<'py, PyAny>>,
+        tb: Option<Bound<'py, PyAny>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let args = match (val, tb) {
+            (Some(v), Some(t)) => (exc, v, t).into_pyobject(py)?,
+            (Some(v), None) => (exc, v).into_pyobject(py)?,
+            (None, None) => (exc,).into_pyobject(py)?,
+            (None, Some(_)) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "throw() with traceback but no value",
+                ));
+            }
+        };
+        self.iterator.bind(py).call_method1("throw", args)
+    }
+
+    fn close<'py>(&self, py: Python<'py>) -> PyResult<()> {
+        match self.iterator.bind(py).call_method0("close") {
+            Ok(_) => Ok(()),
+            Err(e) if e.is_instance_of::<pyo3::exceptions::PyAttributeError>(py) => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl Drop for PyroFuture {
     fn drop(&mut self) {
         self.abort_handle.abort();
     }
 }
 
 #[pymethods]
-impl RaiiFuture {
-    fn __await__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let awaitable = self.py_future.bind(py);
-        println!("RaiiFuture await");
-        awaitable.call_method0("__await__")
+impl PyroFuture {
+    fn __await__<'py>(slf: PyRef<'py, Self>, py: Python<'py>) -> PyResult<Py<PyroFutureIterator>> {
+        // Get the iterator from the underlying future
+        let awaitable = slf.py_future.bind(py);
+        let iterator = awaitable.call_method0("__await__")?;
+
+        // Create our wrapper iterator that keeps self alive
+        Py::new(
+            py,
+            PyroFutureIterator {
+                iterator: iterator.unbind(),
+                _future: slf.into_pyobject(py)?.unbind(),
+            },
+        )
     }
 
     fn cancel<'py>(&mut self, py: Python<'py>) -> PyResult<bool> {
@@ -51,7 +110,7 @@ impl RaiiFuture {
 }
 
 /// Convert a Rust future into a Python future wrapped with RaiiFuture for automatic cancellation.
-pub fn rust_future_into_py<F, T>(py: Python<'_>, fut: F) -> PyResult<Py<RaiiFuture>>
+pub fn rust_future_into_py<F, T>(py: Python<'_>, fut: F) -> PyResult<Py<PyroFuture>>
 where
     F: Future<Output = PyResult<T>> + Send + 'static,
     T: for<'py> IntoPyObject<'py>,
@@ -117,14 +176,12 @@ where
                 }
             }
         });
-
-        println!("rust future finished");
     });
 
     // Wrap it in RaiiFuture
     let raii_future = Py::new(
         py,
-        RaiiFuture {
+        PyroFuture {
             py_future: py_fut.unbind(),
             abort_handle,
         },

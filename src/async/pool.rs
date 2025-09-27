@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     r#async::conn::AsyncConn,
     r#async::opts::AsyncOpts,
-    util::{RaiiFuture, mysql_error_to_pyerr, rust_future_into_py, url_error_to_pyerr},
+    util::{PyroFuture, mysql_error_to_pyerr, rust_future_into_py, url_error_to_pyerr},
 };
 use either::Either;
 use mysql_async::Opts;
@@ -35,7 +35,7 @@ impl AsyncPool {
     // For now, we'll leave it as a placeholder
     // }
 
-    fn get_conn<'py>(&self, py: Python<'py>) -> PyResult<Py<RaiiFuture>> {
+    fn get_conn<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         let pool = self.pool.clone();
         rust_future_into_py(py, async move {
             Ok(AsyncConn {
@@ -46,11 +46,11 @@ impl AsyncPool {
         })
     }
 
-    fn acquire<'py>(&self, py: Python<'py>) -> PyResult<Py<RaiiFuture>> {
+    fn acquire<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         self.get_conn(py)
     }
 
-    fn disconnect<'py>(&self, py: Python<'py>) -> PyResult<Py<RaiiFuture>> {
+    fn disconnect<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         let pool = self.pool.clone();
         rust_future_into_py(py, async move {
             pool.disconnect().await.map_err(mysql_error_to_pyerr)?;
