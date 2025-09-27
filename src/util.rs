@@ -3,6 +3,7 @@ use std::future::Future;
 use futures::future::{AbortHandle, Abortable};
 use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
+use pyo3::types::PyTuple;
 
 pub fn mysql_error_to_pyerr(error: mysql_async::Error) -> PyErr {
     PyErr::new::<pyo3::exceptions::PyException, _>(format!("MySQL Error: {}", error))
@@ -40,23 +41,12 @@ impl PyroFutureIterator {
         self.iterator.bind(py).call_method1("send", (value,))
     }
 
+    #[pyo3(signature = (*args))]
     fn throw<'py>(
         &self,
         py: Python<'py>,
-        exc: Bound<'py, PyAny>,
-        val: Option<Bound<'py, PyAny>>,
-        tb: Option<Bound<'py, PyAny>>,
+        args: &'py Bound<'_, PyTuple>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        let args = match (val, tb) {
-            (Some(v), Some(t)) => (exc, v, t).into_pyobject(py)?,
-            (Some(v), None) => (exc, v).into_pyobject(py)?,
-            (None, None) => (exc,).into_pyobject(py)?,
-            (None, Some(_)) => {
-                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                    "throw() with traceback but no value",
-                ));
-            }
-        };
         self.iterator.bind(py).call_method1("throw", args)
     }
 

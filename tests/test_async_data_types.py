@@ -159,6 +159,7 @@ async def test_decimal_types():
     await conn.query_drop(
         """
         CREATE TABLE test_decimal_types (
+            from_bigint DECIMAL(40,2),
             decimal_val DECIMAL(10,2),
             numeric_val NUMERIC(15,4)
         )
@@ -166,12 +167,16 @@ async def test_decimal_types():
     )
 
     await conn.exec_drop(
-        "INSERT INTO test_decimal_types VALUES (?, ?)",
-        (Decimal("123.45"), Decimal("12345.6789")),
+        "INSERT INTO test_decimal_types VALUES (?, ?, ?)",
+        (123456789012345678901234567890, Decimal("123.45"), Decimal("12345.6789")),
     )
 
     result = await conn.query_first("SELECT * FROM test_decimal_types")
-    assert result.to_tuple() == (Decimal("123.45"), Decimal("12345.6789"))
+    assert result.to_tuple() == (
+        Decimal("123456789012345678901234567890"),
+        Decimal("123.45"),
+        Decimal("12345.6789"),
+    )
 
     await conn.query_drop("DROP TABLE test_decimal_types")
     await conn.disconnect()
