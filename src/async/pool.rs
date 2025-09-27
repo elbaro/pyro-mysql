@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     r#async::conn::AsyncConn,
     r#async::opts::AsyncOpts,
-    util::{mysql_error_to_pyerr, url_error_to_pyerr},
+    util::{PyroFuture, mysql_error_to_pyerr, rust_future_into_py, url_error_to_pyerr},
 };
 use either::Either;
 use mysql_async::Opts;
@@ -35,10 +35,9 @@ impl AsyncPool {
     // For now, we'll leave it as a placeholder
     // }
 
-    fn get_conn<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    fn get_conn<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         let pool = self.pool.clone();
-        let locals = pyo3_async_runtimes::TaskLocals::with_running_loop(py)?;
-        pyo3_async_runtimes::tokio::future_into_py_with_locals(py, locals, async move {
+        rust_future_into_py(py, async move {
             Ok(AsyncConn {
                 inner: Arc::new(RwLock::new(Some(
                     pool.get_conn().await.map_err(mysql_error_to_pyerr)?,
@@ -47,14 +46,13 @@ impl AsyncPool {
         })
     }
 
-    fn acquire<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    fn acquire<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         self.get_conn(py)
     }
 
-    fn disconnect<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    fn disconnect<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         let pool = self.pool.clone();
-        let locals = pyo3_async_runtimes::TaskLocals::with_running_loop(py)?;
-        pyo3_async_runtimes::tokio::future_into_py_with_locals(py, locals, async move {
+        rust_future_into_py(py, async move {
             pool.disconnect().await.map_err(mysql_error_to_pyerr)?;
             Ok(())
         })

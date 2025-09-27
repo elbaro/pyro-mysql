@@ -4,7 +4,6 @@ pub mod r#async;
 pub mod capability_flags;
 pub mod isolation_level;
 pub mod params;
-pub mod queryable;
 pub mod row;
 pub mod sync;
 pub mod util;
@@ -25,6 +24,7 @@ use crate::{
         SyncConn, SyncPool, SyncPoolOpts, SyncPooledConn, SyncTransaction,
         opts::{SyncOpts, SyncOptsBuilder},
     },
+    util::PyroFuture,
 };
 
 #[pyfunction]
@@ -56,6 +56,7 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Row>()?;
     m.add_class::<IsolationLevel>()?;
     m.add_class::<CapabilityFlags>()?;
+    m.add_class::<PyroFuture>()?;
 
     m.add_class::<AsyncPool>()?;
     m.add_class::<AsyncConn>()?;

@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 color-eyre = "0.6.5"
 criterion = "0.7.0"
 either = "1.15.0"
+futures = "0.3.31"
 mysql = "26.0.1"
 mysql_async = "0.36.1"
 mysql_common = "0.35.5"

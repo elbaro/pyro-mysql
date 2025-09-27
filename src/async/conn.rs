@@ -7,12 +7,11 @@ use pyo3::prelude::*;
 use tokio::sync::RwLock;
 
 use crate::r#async::AsyncOpts;
+use crate::r#async::queryable::Queryable;
 use crate::r#async::transaction::AsyncTransaction;
 use crate::isolation_level::IsolationLevel;
 use crate::params::Params;
-use crate::queryable::Queryable;
-use crate::row::Row;
-use crate::util::{mysql_error_to_pyerr, url_error_to_pyerr};
+use crate::util::{PyroFuture, mysql_error_to_pyerr, rust_future_into_py, url_error_to_pyerr};
 use color_eyre::Result;
 
 #[pyclass]
@@ -36,14 +35,13 @@ impl AsyncConn {
     fn new<'py>(
         py: Python<'py>,
         url_or_opts: Either<String, PyRef<AsyncOpts>>,
-    ) -> PyResult<Bound<'py, PyAny>> {
+    ) -> PyResult<Py<PyroFuture>> {
         let opts = match url_or_opts {
             Either::Left(url) => Opts::from_url(&url).map_err(url_error_to_pyerr)?,
             Either::Right(opts) => opts.opts.clone(),
         };
 
-        let locals = pyo3_async_runtimes::TaskLocals::with_running_loop(py)?;
-        pyo3_async_runtimes::tokio::future_into_py_with_locals(py, locals, async move {
+        rust_future_into_py(py, async move {
             Ok(Self {
                 inner: Arc::new(RwLock::new(Some(
                     mysql_async::Conn::new(opts)
@@ -101,40 +99,57 @@ impl AsyncConn {
     }
 
     // ─── Queryable ───────────────────────────────────────────────────────
-    async fn close_prepared_statement(&self, _stmt: String) -> Result<()> {
-        todo!()
-    }
-    async fn ping(&self) -> Result<()> {
-        self.inner.ping().await
+    fn ping<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+        self.inner.ping(py)
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
-    async fn query(&self, query: String) -> Result<Vec<Row>> {
-        self.inner.query(query).await
+    fn query<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
+        self.inner.query(py, query)
     }
-    async fn query_first(&self, query: String) -> Result<Option<Row>> {
-        self.inner.query_first(query).await
+    fn query_first<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
+        self.inner.query_first(py, query)
     }
-    async fn query_drop(&self, query: String) -> Result<()> {
-        self.inner.query_drop(query).await
+    fn query_drop<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
+        self.inner.query_drop(py, query)
     }
 
     // ─── Binary Protocol ─────────────────────────────────────────────────
     #[pyo3(signature = (query, params=Params::default()))]
-    async fn exec(&self, query: String, params: Params) -> Result<Vec<Row>> {
-        self.inner.exec(query, params).await
+    fn exec<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        params: Params,
+    ) -> PyResult<Py<PyroFuture>> {
+        self.inner.exec(py, query, params)
     }
     #[pyo3(signature = (query, params=Params::default()))]
-    async fn exec_first(&self, query: String, params: Params) -> Result<Option<Row>> {
-        self.inner.exec_first(query, params).await
+    fn exec_first<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        params: Params,
+    ) -> PyResult<Py<PyroFuture>> {
+        self.inner.exec_first(py, query, params)
     }
     #[pyo3(signature = (query, params=Params::default()))]
-    async fn exec_drop(&self, query: String, params: Params) -> Result<()> {
-        self.inner.exec_drop(query, params).await
+    fn exec_drop<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        params: Params,
+    ) -> PyResult<Py<PyroFuture>> {
+        self.inner.exec_drop(py, query, params)
     }
     #[pyo3(signature = (query, params=vec![]))]
-    async fn exec_batch(&self, query: String, params: Vec<Params>) -> Result<()> {
-        self.inner.exec_batch(query, params).await
+    fn exec_batch<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        params: Vec<Params>,
+    ) -> PyResult<Py<PyroFuture>> {
+        self.inner.exec_batch(py, query, params)
     }
 
     async fn disconnect(&self) -> Result<()> {
@@ -153,13 +168,16 @@ impl AsyncConn {
         Ok(())
     }
 
-    async fn server_version(&self) -> Result<(u16, u16, u16)> {
-        Ok(self
-            .inner
-            .read()
-            .await
-            .as_ref()
-            .context("Connection is not available")?
-            .server_version())
+    fn server_version<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+        let inner = self.inner.clone();
+        rust_future_into_py(py, async move {
+            Ok(inner
+                .read()
+                .await
+                .as_ref()
+                .context("Connection is not available")
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .server_version())
+        })
     }
 }

@@ -3,7 +3,12 @@ use pyo3::prelude::*;
 use std::sync::Arc;
 use tokio::sync::{RwLock, RwLockWriteGuard};
 
-use crate::{params::Params, queryable::Queryable, row::Row};
+use crate::{
+    r#async::queryable::Queryable,
+    params::Params,
+    row::Row,
+    util::{PyroFuture, rust_future_into_py},
+};
 
 // struct fields are dropped in the same order as declared in the struct
 #[pyclass]
@@ -36,16 +41,14 @@ impl AsyncTransaction {
 // Order or lock: conn -> conn guard -> inner
 #[pymethods]
 impl AsyncTransaction {
-    fn __aenter__<'py>(slf: PyRef<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let locals = pyo3_async_runtimes::TaskLocals::with_running_loop(py)?;
-
+    fn __aenter__<'py>(slf: PyRef<'py, Self>, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         let opts = slf.opts.clone();
         let conn = slf.conn.clone();
         let guard = slf.guard.clone();
         let inner = slf.inner.clone();
         let slf: Py<AsyncTransaction> = slf.into();
 
-        pyo3_async_runtimes::tokio::future_into_py_with_locals(py, locals, async move {
+        rust_future_into_py(py, async move {
             let mut conn = conn.write().await;
             let mut guard = guard.write().await;
             let mut inner = inner.write().await;
@@ -88,11 +91,10 @@ impl AsyncTransaction {
         _exc_type: &crate::Bound<'py, crate::PyAny>,
         _exc_value: &crate::Bound<'py, crate::PyAny>,
         _traceback: &crate::Bound<'py, crate::PyAny>,
-    ) -> PyResult<Bound<'py, PyAny>> {
-        let locals = pyo3_async_runtimes::TaskLocals::with_running_loop(py)?;
+    ) -> PyResult<Py<PyroFuture>> {
         let guard = self.guard.clone();
         let inner = self.inner.clone();
-        pyo3_async_runtimes::tokio::future_into_py_with_locals(py, locals, async move {
+        rust_future_into_py(py, async move {
             // TODO: check if  is not called and normally exiting without exception
 
             let mut guard = guard.write().await;
@@ -108,91 +110,122 @@ impl AsyncTransaction {
         })
     }
 
-    async fn commit(&self) -> Result<()> {
+    fn commit<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         let inner = self.inner.clone();
         let guard = self.guard.clone();
-        pyo3_async_runtimes::tokio::get_runtime()
-            .spawn(async move {
-                let inner = inner
-                    .write()
-                    .await
-                    .take()
-                    .context("transaction is already closed")?;
-                // At this point, no new operation on Transaction can be started
+        rust_future_into_py(py, async move {
+            let inner = inner
+                .write()
+                .await
+                .take()
+                .context("transaction is already closed")
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?;
+            // At this point, no new operation on Transaction can be started
 
-                // TODO: wait for other concurrent ops
-                // Transaction is not yet thread-safe due to this
+            // TODO: wait for other concurrent ops
+            // Transaction is not yet thread-safe due to this
 
-                // Drop the RwLockGuard on conn
-                guard.write().await.take();
+            // Drop the RwLockGuard on conn
+            guard.write().await.take();
 
-                Ok(inner.commit().await?)
-            })
-            .await?
+            inner
+                .commit()
+                .await
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+        })
     }
-    async fn rollback(&self) -> Result<()> {
+    fn rollback<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         let inner = self.inner.clone();
         let guard = self.guard.clone();
-        pyo3_async_runtimes::tokio::get_runtime()
-            .spawn(async move {
-                let inner = inner
-                    .write()
-                    .await
-                    .take()
-                    .context("transaction is already closed")?;
+        rust_future_into_py(py, async move {
+            let inner = inner
+                .write()
+                .await
+                .take()
+                .context("transaction is already closed")
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?;
 
-                // Drop the RwLockGuard on conn
-                guard.write().await.take();
+            // Drop the RwLockGuard on conn
+            guard.write().await.take();
 
-                Ok(inner.rollback().await?)
-            })
-            .await?
+            inner
+                .rollback()
+                .await
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+        })
     }
 
-    async fn affected_rows(&self) -> Result<u64> {
-        Ok(self
-            .inner
-            .read()
-            .await
-            .as_ref()
-            .context("Conn is already closed")?
-            .affected_rows())
+    fn affected_rows<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+        let inner = self.inner.clone();
+        rust_future_into_py(py, async move {
+            Ok(inner
+                .read()
+                .await
+                .as_ref()
+                .context("Conn is already closed")
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .affected_rows())
+        })
     }
 
     // ─── Queryable ───────────────────────────────────────────────────────
-    async fn close_prepared_statement(&self, _stmt: String) -> Result<()> {
+    fn close_prepared_statement<'py>(
+        &self,
+        _py: Python<'py>,
+        _stmt: String,
+    ) -> PyResult<Py<PyroFuture>> {
         todo!()
     }
-    async fn ping(&self) -> Result<()> {
-        self.inner.ping().await
+    fn ping<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+        self.inner.ping(py)
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
-    async fn query(&self, query: String) -> Result<Vec<Row>> {
-        self.inner.query(query).await
+    fn query<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
+        self.inner.query(py, query)
     }
-    async fn query_first(&self, query: String) -> Result<Option<Row>> {
-        self.inner.query_first(query).await
+    fn query_first<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
+        self.inner.query_first(py, query)
     }
-    async fn query_drop(&self, query: String) -> Result<()> {
-        self.inner.query_drop(query).await
+    fn query_drop<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
+        self.inner.query_drop(py, query)
     }
 
     // ─── Binary Protocol ─────────────────────────────────────────────────
     #[pyo3(signature = (query, params=Params::default()))]
-    async fn exec(&self, query: String, params: Params) -> Result<Vec<Row>> {
-        self.inner.exec(query, params).await
+    fn exec<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        params: Params,
+    ) -> PyResult<Py<PyroFuture>> {
+        self.inner.exec(py, query, params)
     }
     #[pyo3(signature = (query, params=Params::default()))]
-    async fn exec_first(&self, query: String, params: Params) -> Result<Option<Row>> {
-        self.inner.exec_first(query, params).await
+    fn exec_first<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        params: Params,
+    ) -> PyResult<Py<PyroFuture>> {
+        self.inner.exec_first(py, query, params)
     }
     #[pyo3(signature = (query, params=Params::default()))]
-    async fn exec_drop(&self, query: String, params: Params) -> Result<()> {
-        self.inner.exec_drop(query, params).await
+    fn exec_drop<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        params: Params,
+    ) -> PyResult<Py<PyroFuture>> {
+        self.inner.exec_drop(py, query, params)
     }
     #[pyo3(signature = (query, params=vec![]))]
-    async fn exec_batch(&self, query: String, params: Vec<Params>) -> Result<()> {
-        self.inner.exec_batch(query, params).await
+    fn exec_batch<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        params: Vec<Params>,
+    ) -> PyResult<Py<PyroFuture>> {
+        self.inner.exec_batch(py, query, params)
     }
 }
