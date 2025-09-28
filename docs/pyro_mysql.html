@@ -24,6 +24,7 @@
 
             <h2>Submodules</h2>
             <ul>
+                    <li><a href="pyro_mysql/error.html">error</a></li>
                     <li><a href="pyro_mysql/async_.html">async_</a></li>
                     <li><a href="pyro_mysql/sync.html">sync</a></li>
             </ul>
@@ -169,6 +170,18 @@
 
             </li>
             <li>
+                    <a class="class" href="#PyroFuture">PyroFuture</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#PyroFuture.cancel">cancel</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#PyroFuture.get_loop">get_loop</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
                     <a class="class" href="#AsyncPool">AsyncPool</a>
                             <ul class="memberlist">
                         <li>
@@ -200,9 +213,6 @@
                         </li>
                         <li>
                                 <a class="function" href="#AsyncConn.last_insert_id">last_insert_id</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#AsyncConn.close_prepared_statement">close_prepared_statement</a>
                         </li>
                         <li>
                                 <a class="function" href="#AsyncConn.ping">ping</a>
@@ -685,7 +695,47 @@
                     <h1 class="modulename">
 pyro_mysql    </h1>
 
-                        <div class="docstring"><p>A Python module implemented in Rust.</p>
+                        <div class="docstring"><p>pyro_mysql - High-performance MySQL driver for Python.</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyro_mysql</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mysql</span>
+
+<span class="n">mysql</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">worker_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">example_select</span><span class="p">():</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="k">await</span> <span class="n">mysql</span><span class="o">.</span><span class="n">Conn</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;mysql://localhost@127.0.0.1:3306/test&quot;</span><span class="p">)</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="k">await</span> <span class="n">conn</span><span class="o">.</span><span class="n">exec</span><span class="p">(</span><span class="s2">&quot;SELECT * from mydb.mytable&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">example_transaction</span><span class="p">():</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="k">await</span> <span class="n">mysql</span><span class="o">.</span><span class="n">Conn</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;mysql://localhost@127.0.0.1:3306/test&quot;</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">start_transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">tx</span><span class="p">:</span>
+        <span class="k">await</span> <span class="n">tx</span><span class="o">.</span><span class="n">exec_drop</span><span class="p">(</span>
+            <span class="s2">&quot;INSERT INTO test.asyncmy(`decimal`, `date`, `datetime`, `float`, `string`, `tinyint`) VALUES (?,?,?,?,?,?)&quot;</span><span class="p">,</span>
+            <span class="p">(</span>
+                <span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;2021-01-01&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;2020-07-16 22:49:54&quot;</span><span class="p">,</span>
+                <span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;asyncmy&quot;</span><span class="p">,</span>
+                <span class="mi">1</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">await</span> <span class="n">tx</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">await</span> <span class="nb">len</span><span class="p">(</span><span class="n">conn</span><span class="o">.</span><span class="n">exec</span><span class="p">(</span><span class="s1">&#39;SELECT * FROM mydb.mytable&#39;</span><span class="p">))</span> <span class="o">==</span> <span class="mi">100</span>
+
+<span class="c1"># The connection pool is not tied to a single event loop.</span>
+<span class="c1"># You can reuse the pool between event loops.</span>
+<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">example_pool</span><span class="p">())</span>
+<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">example_select</span><span class="p">())</span>
+<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">example_transaction</span><span class="p">())</span>
+<span class="o">...</span>
+</code></pre>
+</div>
 </div>
 
                         <input id="mod-pyro_mysql-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
@@ -705,13 +755,21 @@ pyro_mysql    </h1>
                     <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">init</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">worker_threads</span><span class="o">=</span><span class="bp">Ellipsis</span>, </span><span class="param"><span class="n">thread_name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">init</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">worker_threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">1</span>, </span><span class="param"><span class="n">thread_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
         
     </div>
     <a class="headerlink" href="#init"></a>
     
-            <div class="docstring"><p>This function can be called multiple times until any async operation is called.</p>
+            <div class="docstring"><p>Initialize the Tokio runtime for async operations.
+This function can be called multiple times until Any async operation is called.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>worker_threads:</strong>  Number of worker threads for the Tokio runtime. If None, set to the number of CPUs.</li>
+<li><strong>thread_name:</strong>  Name prefix for worker threads.</li>
+</ul>
 </div>
 
 
@@ -726,19 +784,22 @@ pyro_mysql    </h1>
     </div>
     <a class="headerlink" href="#Row"></a>
     
-    
+            <div class="docstring"><p>A row returned from a MySQL query.
+to_tuple() / to_dict() copies the data, and should not be called many times.</p>
+</div>
+
 
                             <div id="Row.to_tuple" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">to_tuple</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">to_tuple</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="n">Value</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>:</span></span>
 
         
     </div>
     <a class="headerlink" href="#Row.to_tuple"></a>
     
-            <div class="docstring"><p>The type of the None singleton.</p>
+            <div class="docstring"><p>Convert the row to a Python list.</p>
 </div>
 
 
@@ -747,7 +808,7 @@ pyro_mysql    </h1>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">to_dict</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">to_dict</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Value</span><span class="p">]</span>:</span></span>
 
         
     </div>
@@ -769,26 +830,28 @@ pyro_mysql    </h1>
     </div>
     <a class="headerlink" href="#IsolationLevel"></a>
     
-    
+            <div class="docstring"><p>Transaction isolation level enum.</p>
+</div>
+
 
                             <div id="IsolationLevel.as_str" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">as_str</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">as_str</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
         
     </div>
     <a class="headerlink" href="#IsolationLevel.as_str"></a>
     
-            <div class="docstring"><p>The type of the None singleton.</p>
+            <div class="docstring"><p>Return the isolation level as a string.</p>
 </div>
 
 
                             </div>
                             <div id="IsolationLevel.ReadUncommitted" class="classattr">
                                 <div class="attr variable">
-            <span class="name">ReadUncommitted</span>        =
+            <span class="name">ReadUncommitted</span><span class="annotation">: <a href="#IsolationLevel">IsolationLevel</a></span>        =
 <span class="default_value"><a href="#IsolationLevel.ReadUncommitted">IsolationLevel.ReadUncommitted</a></span>
 
         
@@ -800,7 +863,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="IsolationLevel.ReadCommitted" class="classattr">
                                 <div class="attr variable">
-            <span class="name">ReadCommitted</span>        =
+            <span class="name">ReadCommitted</span><span class="annotation">: <a href="#IsolationLevel">IsolationLevel</a></span>        =
 <span class="default_value"><a href="#IsolationLevel.ReadCommitted">IsolationLevel.ReadCommitted</a></span>
 
         
@@ -812,7 +875,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="IsolationLevel.RepeatableRead" class="classattr">
                                 <div class="attr variable">
-            <span class="name">RepeatableRead</span>        =
+            <span class="name">RepeatableRead</span><span class="annotation">: <a href="#IsolationLevel">IsolationLevel</a></span>        =
 <span class="default_value"><a href="#IsolationLevel.RepeatableRead">IsolationLevel.RepeatableRead</a></span>
 
         
@@ -824,7 +887,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="IsolationLevel.Serializable" class="classattr">
                                 <div class="attr variable">
-            <span class="name">Serializable</span>        =
+            <span class="name">Serializable</span><span class="annotation">: <a href="#IsolationLevel">IsolationLevel</a></span>        =
 <span class="default_value"><a href="#IsolationLevel.Serializable">IsolationLevel.Serializable</a></span>
 
         
@@ -845,11 +908,13 @@ pyro_mysql    </h1>
     </div>
     <a class="headerlink" href="#CapabilityFlags"></a>
     
-    
+            <div class="docstring"><p>MySQL capability flags for client connections.</p>
+</div>
+
 
                             <div id="CapabilityFlags.CLIENT_LONG_PASSWORD" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_LONG_PASSWORD</span>        =
+            <span class="name">CLIENT_LONG_PASSWORD</span><span class="annotation">: int</span>        =
 <span class="default_value">1</span>
 
         
@@ -861,7 +926,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_FOUND_ROWS" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_FOUND_ROWS</span>        =
+            <span class="name">CLIENT_FOUND_ROWS</span><span class="annotation">: int</span>        =
 <span class="default_value">2</span>
 
         
@@ -873,7 +938,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_LONG_FLAG" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_LONG_FLAG</span>        =
+            <span class="name">CLIENT_LONG_FLAG</span><span class="annotation">: int</span>        =
 <span class="default_value">4</span>
 
         
@@ -885,7 +950,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_CONNECT_WITH_DB" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_CONNECT_WITH_DB</span>        =
+            <span class="name">CLIENT_CONNECT_WITH_DB</span><span class="annotation">: int</span>        =
 <span class="default_value">8</span>
 
         
@@ -897,7 +962,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_NO_SCHEMA" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_NO_SCHEMA</span>        =
+            <span class="name">CLIENT_NO_SCHEMA</span><span class="annotation">: int</span>        =
 <span class="default_value">16</span>
 
         
@@ -909,7 +974,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_COMPRESS" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_COMPRESS</span>        =
+            <span class="name">CLIENT_COMPRESS</span><span class="annotation">: int</span>        =
 <span class="default_value">32</span>
 
         
@@ -921,7 +986,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_ODBC" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_ODBC</span>        =
+            <span class="name">CLIENT_ODBC</span><span class="annotation">: int</span>        =
 <span class="default_value">64</span>
 
         
@@ -933,7 +998,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_LOCAL_FILES" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_LOCAL_FILES</span>        =
+            <span class="name">CLIENT_LOCAL_FILES</span><span class="annotation">: int</span>        =
 <span class="default_value">128</span>
 
         
@@ -945,7 +1010,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_IGNORE_SPACE" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_IGNORE_SPACE</span>        =
+            <span class="name">CLIENT_IGNORE_SPACE</span><span class="annotation">: int</span>        =
 <span class="default_value">256</span>
 
         
@@ -957,7 +1022,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_PROTOCOL_41" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_PROTOCOL_41</span>        =
+            <span class="name">CLIENT_PROTOCOL_41</span><span class="annotation">: int</span>        =
 <span class="default_value">512</span>
 
         
@@ -969,7 +1034,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_INTERACTIVE" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_INTERACTIVE</span>        =
+            <span class="name">CLIENT_INTERACTIVE</span><span class="annotation">: int</span>        =
 <span class="default_value">1024</span>
 
         
@@ -981,7 +1046,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_SSL" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_SSL</span>        =
+            <span class="name">CLIENT_SSL</span><span class="annotation">: int</span>        =
 <span class="default_value">2048</span>
 
         
@@ -993,7 +1058,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_IGNORE_SIGPIPE" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_IGNORE_SIGPIPE</span>        =
+            <span class="name">CLIENT_IGNORE_SIGPIPE</span><span class="annotation">: int</span>        =
 <span class="default_value">4096</span>
 
         
@@ -1005,7 +1070,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_TRANSACTIONS" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_TRANSACTIONS</span>        =
+            <span class="name">CLIENT_TRANSACTIONS</span><span class="annotation">: int</span>        =
 <span class="default_value">8192</span>
 
         
@@ -1017,7 +1082,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_RESERVED" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_RESERVED</span>        =
+            <span class="name">CLIENT_RESERVED</span><span class="annotation">: int</span>        =
 <span class="default_value">16384</span>
 
         
@@ -1029,7 +1094,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_SECURE_CONNECTION" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_SECURE_CONNECTION</span>        =
+            <span class="name">CLIENT_SECURE_CONNECTION</span><span class="annotation">: int</span>        =
 <span class="default_value">32768</span>
 
         
@@ -1041,7 +1106,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_MULTI_STATEMENTS" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_MULTI_STATEMENTS</span>        =
+            <span class="name">CLIENT_MULTI_STATEMENTS</span><span class="annotation">: int</span>        =
 <span class="default_value">65536</span>
 
         
@@ -1053,7 +1118,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_MULTI_RESULTS" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_MULTI_RESULTS</span>        =
+            <span class="name">CLIENT_MULTI_RESULTS</span><span class="annotation">: int</span>        =
 <span class="default_value">131072</span>
 
         
@@ -1065,7 +1130,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_PS_MULTI_RESULTS" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_PS_MULTI_RESULTS</span>        =
+            <span class="name">CLIENT_PS_MULTI_RESULTS</span><span class="annotation">: int</span>        =
 <span class="default_value">262144</span>
 
         
@@ -1077,7 +1142,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_PLUGIN_AUTH" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_PLUGIN_AUTH</span>        =
+            <span class="name">CLIENT_PLUGIN_AUTH</span><span class="annotation">: int</span>        =
 <span class="default_value">524288</span>
 
         
@@ -1089,7 +1154,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_CONNECT_ATTRS" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_CONNECT_ATTRS</span>        =
+            <span class="name">CLIENT_CONNECT_ATTRS</span><span class="annotation">: int</span>        =
 <span class="default_value">1048576</span>
 
         
@@ -1101,7 +1166,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA</span>        =
+            <span class="name">CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA</span><span class="annotation">: int</span>        =
 <span class="default_value">2097152</span>
 
         
@@ -1113,7 +1178,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS</span>        =
+            <span class="name">CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS</span><span class="annotation">: int</span>        =
 <span class="default_value">4194304</span>
 
         
@@ -1125,7 +1190,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_SESSION_TRACK" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_SESSION_TRACK</span>        =
+            <span class="name">CLIENT_SESSION_TRACK</span><span class="annotation">: int</span>        =
 <span class="default_value">8388608</span>
 
         
@@ -1137,7 +1202,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_DEPRECATE_EOF" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_DEPRECATE_EOF</span>        =
+            <span class="name">CLIENT_DEPRECATE_EOF</span><span class="annotation">: int</span>        =
 <span class="default_value">16777216</span>
 
         
@@ -1149,7 +1214,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_OPTIONAL_RESULTSET_METADATA" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_OPTIONAL_RESULTSET_METADATA</span>        =
+            <span class="name">CLIENT_OPTIONAL_RESULTSET_METADATA</span><span class="annotation">: int</span>        =
 <span class="default_value">33554432</span>
 
         
@@ -1161,7 +1226,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_ZSTD_COMPRESSION_ALGORITHM" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_ZSTD_COMPRESSION_ALGORITHM</span>        =
+            <span class="name">CLIENT_ZSTD_COMPRESSION_ALGORITHM</span><span class="annotation">: int</span>        =
 <span class="default_value">67108864</span>
 
         
@@ -1173,7 +1238,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_QUERY_ATTRIBUTES" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_QUERY_ATTRIBUTES</span>        =
+            <span class="name">CLIENT_QUERY_ATTRIBUTES</span><span class="annotation">: int</span>        =
 <span class="default_value">134217728</span>
 
         
@@ -1185,7 +1250,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.MULTI_FACTOR_AUTHENTICATION" class="classattr">
                                 <div class="attr variable">
-            <span class="name">MULTI_FACTOR_AUTHENTICATION</span>        =
+            <span class="name">MULTI_FACTOR_AUTHENTICATION</span><span class="annotation">: int</span>        =
 <span class="default_value">268435456</span>
 
         
@@ -1197,7 +1262,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_PROGRESS_OBSOLETE" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_PROGRESS_OBSOLETE</span>        =
+            <span class="name">CLIENT_PROGRESS_OBSOLETE</span><span class="annotation">: int</span>        =
 <span class="default_value">536870912</span>
 
         
@@ -1209,7 +1274,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_SSL_VERIFY_SERVER_CERT" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_SSL_VERIFY_SERVER_CERT</span>        =
+            <span class="name">CLIENT_SSL_VERIFY_SERVER_CERT</span><span class="annotation">: int</span>        =
 <span class="default_value">1073741824</span>
 
         
@@ -1221,7 +1286,7 @@ pyro_mysql    </h1>
                             </div>
                             <div id="CapabilityFlags.CLIENT_REMEMBER_OPTIONS" class="classattr">
                                 <div class="attr variable">
-            <span class="name">CLIENT_REMEMBER_OPTIONS</span>        =
+            <span class="name">CLIENT_REMEMBER_OPTIONS</span><span class="annotation">: int</span>        =
 <span class="default_value">2147483648</span>
 
         
@@ -1229,6 +1294,51 @@ pyro_mysql    </h1>
     <a class="headerlink" href="#CapabilityFlags.CLIENT_REMEMBER_OPTIONS"></a>
     
     
+
+                            </div>
+                </section>
+                <section id="PyroFuture">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">PyroFuture</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#PyroFuture"></a>
+    
+            <div class="docstring"><p>A wrapper around a Python future that cancels the associated Rust future when dropped.</p>
+</div>
+
+
+                            <div id="PyroFuture.cancel" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">cancel</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#PyroFuture.cancel"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="PyroFuture.get_loop" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_loop</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#PyroFuture.get_loop"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
 
                             </div>
                 </section>
@@ -1376,21 +1486,6 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
         
     </div>
     <a class="headerlink" href="#AsyncConn.last_insert_id"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
-                            <div id="AsyncConn.close_prepared_statement" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">close_prepared_statement</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">_stmt</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#AsyncConn.close_prepared_statement"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
