@@ -494,7 +494,7 @@ pub fn value_to_python<'py>(
                 }
 
                 // GEOMETRY type - return as bytes (WKB format)
-                ColumnType::MYSQL_TYPE_GEOMETRY => PyBytes::new(py, &b).into_any(),
+                ColumnType::MYSQL_TYPE_GEOMETRY => PyBytes::new(py, b).into_any(),
 
                 // Default: try string, fall back to bytes
                 _ => {

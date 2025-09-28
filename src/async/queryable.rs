@@ -1,4 +1,4 @@
-use color_eyre::{Result, eyre::ContextCompat};
+use color_eyre::eyre::ContextCompat;
 use pyo3::prelude::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;

@@ -1,4 +1,4 @@
-use color_eyre::{Result, eyre::ContextCompat};
+use color_eyre::eyre::ContextCompat;
 use pyo3::prelude::*;
 use std::sync::Arc;
 use tokio::sync::{RwLock, RwLockWriteGuard};
@@ -6,7 +6,6 @@ use tokio::sync::{RwLock, RwLockWriteGuard};
 use crate::{
     r#async::queryable::Queryable,
     params::Params,
-    row::Row,
     util::{PyroFuture, rust_future_into_py},
 };
 
