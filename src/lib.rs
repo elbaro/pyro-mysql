@@ -82,8 +82,16 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     error.add("UrlError", py.get_type::<error::UrlError>())?;
     error.add(
+        "ConnectionClosedError",
+        py.get_type::<error::ConnectionClosedError>(),
+    )?;
+    error.add(
         "TransactionClosedError",
         py.get_type::<error::TransactionClosedError>(),
+    )?;
+    error.add(
+        "BuilderConsumedError",
+        py.get_type::<error::BuilderConsumedError>(),
     )?;
     error.add("DecodeError", py.get_type::<error::DecodeError>())?;
     pyo3::py_run!(
