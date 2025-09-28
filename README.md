@@ -2,7 +2,7 @@
 
 A high-performance MySQL driver for Python, backed by Rust.
 
-- [API Reference](https://htmlpreview.github.io/?https://github.com/elbaro/pyro-mysql/blob/main/docs.html)
+- [API Reference](https://htmlpreview.github.io/?https://github.com/elbaro/pyro-mysql/blob/main/docs/index.html)
 - [Benchmark](https://htmlpreview.github.io/?https://github.com/elbaro/pyro-mysql/blob/main/report/report/index.html)
 
 
@@ -28,7 +28,12 @@ from pyro_mysql import SyncConn, SyncTransaction
 
 
 ```py
+import pyro_mysql
 from pyro_mysql.async_ import Conn, Pool, OptsBuilder
+
+
+# Optionally configure the number of Rust threads
+# pyro_mysql.init(worker_threads=1)
 
 def example1():
     conn = await Conn.new(f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
@@ -120,7 +125,7 @@ conn.run_transaction(func)
 | `TIMESTAMP` | `datetime.datetime` |
 | `CHAR` / `VARCHAR` / `TEXT` / `TINYTEXT` / `MEDIUMTEXT` / `LONGTEXT` | `str` |
 | `BINARY` / `VARBINARY` / `BLOB` / `TINYBLOB` / `MEDIUMBLOB` / `LONGBLOB` | `bytes` |
-| `JSON` | `dict` / `list` (parsed JSON) |
+| `JSON` | the result of json.loads() |
 | `ENUM` / `SET` | `str` |
 | `BIT` | `bytes` |
 | `GEOMETRY` | `bytes` (WKB format) |
