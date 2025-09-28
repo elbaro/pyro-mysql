@@ -1,3 +1,4 @@
+use crate::error::Error;
 use mysql_common::Value as MySqlValue;
 use mysql_common::constants::ColumnFlags;
 use mysql_common::constants::ColumnType;
@@ -308,34 +309,32 @@ pub fn value_to_python<'py>(
                 ColumnType::MYSQL_TYPE_BIT => PyBytes::new(py, &b).into_any(),
 
                 ColumnType::MYSQL_TYPE_DATE => {
-                    let date_str = std::str::from_utf8(b)
-                        .map_err(|_| color_eyre::eyre::eyre!("Invalid UTF-8 in DATE column"))?;
+                    let date_str =
+                        std::str::from_utf8(b).map_err(|_| Error::decode_error(col_type, b))?;
 
                     // Parse MySQL date format: YYYY-MM-DD
                     let parts: Vec<&str> = date_str.split('-').collect();
                     if parts.len() != 3 {
-                        return Err(
-                            color_eyre::eyre::eyre!("Invalid DATE format: {}", date_str).into()
-                        );
+                        return Err(Error::decode_error(col_type, b).into());
                     }
 
-                    let year = parts[0].parse::<u16>().map_err(|_| {
-                        color_eyre::eyre::eyre!("Invalid year in DATE: {}", parts[0])
-                    })?;
-                    let month = parts[1].parse::<u8>().map_err(|_| {
-                        color_eyre::eyre::eyre!("Invalid month in DATE: {}", parts[1])
-                    })?;
-                    let day = parts[2].parse::<u8>().map_err(|_| {
-                        color_eyre::eyre::eyre!("Invalid day in DATE: {}", parts[2])
-                    })?;
+                    let year = parts[0]
+                        .parse::<u16>()
+                        .map_err(|_| Error::decode_error(col_type, b))?;
+                    let month = parts[1]
+                        .parse::<u8>()
+                        .map_err(|_| Error::decode_error(col_type, b))?;
+                    let day = parts[2]
+                        .parse::<u8>()
+                        .map_err(|_| Error::decode_error(col_type, b))?;
 
                     py.import("datetime")?
                         .getattr("date")?
                         .call1((year, month, day))?
                 }
                 ColumnType::MYSQL_TYPE_TIME => {
-                    let time_str = std::str::from_utf8(b)
-                        .map_err(|_| color_eyre::eyre::eyre!("Invalid UTF-8 in TIME column"))?;
+                    let time_str =
+                        std::str::from_utf8(b).map_err(|_| Error::decode_error(col_type, b))?;
 
                     // Parse MySQL time format: HH:MM:SS or HH:MM:SS.ffffff
                     // Can also be negative and exceed 24 hours for TIME type
@@ -347,33 +346,31 @@ pub fn value_to_python<'py>(
 
                     let parts: Vec<&str> = time_part.split(':').collect();
                     if parts.len() != 3 {
-                        return Err(
-                            color_eyre::eyre::eyre!("Invalid TIME format: {}", time_str).into()
-                        );
+                        return Err(Error::decode_error(col_type, b).into());
                     }
 
-                    let hour = parts[0].parse::<u32>().map_err(|_| {
-                        color_eyre::eyre::eyre!("Invalid hour in TIME: {}", parts[0])
-                    })?;
-                    let minute = parts[1].parse::<u8>().map_err(|_| {
-                        color_eyre::eyre::eyre!("Invalid minute in TIME: {}", parts[1])
-                    })?;
+                    let hour = parts[0]
+                        .parse::<u32>()
+                        .map_err(|_| Error::decode_error(col_type, b))?;
+                    let minute = parts[1]
+                        .parse::<u8>()
+                        .map_err(|_| Error::decode_error(col_type, b))?;
 
                     let (second, microsecond) = if let Some((sec_str, micro_str)) =
                         parts[2].split_once('.')
                     {
-                        let second = sec_str.parse::<u8>().map_err(|_| {
-                            color_eyre::eyre::eyre!("Invalid second in TIME: {}", sec_str)
-                        })?;
+                        let second = sec_str
+                            .parse::<u8>()
+                            .map_err(|_| Error::decode_error(col_type, b))?;
                         let micro_padded = format!("{:0<6}", &micro_str[..micro_str.len().min(6)]);
-                        let microsecond = micro_padded.parse::<u32>().map_err(|_| {
-                            color_eyre::eyre::eyre!("Invalid microsecond in TIME: {}", micro_str)
-                        })?;
+                        let microsecond = micro_padded
+                            .parse::<u32>()
+                            .map_err(|_| Error::decode_error(col_type, b))?;
                         (second, microsecond)
                     } else {
-                        let second = parts[2].parse::<u8>().map_err(|_| {
-                            color_eyre::eyre::eyre!("Invalid second in TIME: {}", parts[2])
-                        })?;
+                        let second = parts[2]
+                            .parse::<u8>()
+                            .map_err(|_| Error::decode_error(col_type, b))?;
                         (second, 0)
                     };
 
@@ -391,93 +388,56 @@ pub fn value_to_python<'py>(
                     }
                 }
                 ColumnType::MYSQL_TYPE_DATETIME | ColumnType::MYSQL_TYPE_TIMESTAMP => {
-                    let datetime_str = std::str::from_utf8(b).map_err(|_| {
-                        color_eyre::eyre::eyre!("Invalid UTF-8 in DATETIME/TIMESTAMP column")
-                    })?;
+                    let datetime_str =
+                        std::str::from_utf8(b).map_err(|_| Error::decode_error(col_type, b))?;
 
                     // Parse MySQL datetime format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DD HH:MM:SS.ffffff
                     let parts: Vec<&str> = datetime_str.split(' ').collect();
                     if parts.len() != 2 {
-                        return Err(color_eyre::eyre::eyre!(
-                            "Invalid DATETIME/TIMESTAMP format: {}",
-                            datetime_str
-                        )
-                        .into());
+                        return Err(Error::decode_error(col_type, b).into());
                     }
 
                     let date_parts: Vec<&str> = parts[0].split('-').collect();
                     if date_parts.len() != 3 {
-                        return Err(color_eyre::eyre::eyre!(
-                            "Invalid date part in DATETIME/TIMESTAMP: {}",
-                            parts[0]
-                        )
-                        .into());
+                        return Err(Error::decode_error(col_type, b).into());
                     }
 
                     let time_parts: Vec<&str> = parts[1].split(':').collect();
                     if time_parts.len() != 3 {
-                        return Err(color_eyre::eyre::eyre!(
-                            "Invalid time part in DATETIME/TIMESTAMP: {}",
-                            parts[1]
-                        )
-                        .into());
+                        return Err(Error::decode_error(col_type, b).into());
                     }
 
-                    let year = date_parts[0].parse::<u16>().map_err(|_| {
-                        color_eyre::eyre::eyre!(
-                            "Invalid year in DATETIME/TIMESTAMP: {}",
-                            date_parts[0]
-                        )
-                    })?;
-                    let month = date_parts[1].parse::<u8>().map_err(|_| {
-                        color_eyre::eyre::eyre!(
-                            "Invalid month in DATETIME/TIMESTAMP: {}",
-                            date_parts[1]
-                        )
-                    })?;
-                    let day = date_parts[2].parse::<u8>().map_err(|_| {
-                        color_eyre::eyre::eyre!(
-                            "Invalid day in DATETIME/TIMESTAMP: {}",
-                            date_parts[2]
-                        )
-                    })?;
-                    let hour = time_parts[0].parse::<u8>().map_err(|_| {
-                        color_eyre::eyre::eyre!(
-                            "Invalid hour in DATETIME/TIMESTAMP: {}",
-                            time_parts[0]
-                        )
-                    })?;
-                    let minute = time_parts[1].parse::<u8>().map_err(|_| {
-                        color_eyre::eyre::eyre!(
-                            "Invalid minute in DATETIME/TIMESTAMP: {}",
-                            time_parts[1]
-                        )
-                    })?;
+                    let year = date_parts[0]
+                        .parse::<u16>()
+                        .map_err(|_| Error::decode_error(col_type, b))?;
+                    let month = date_parts[1]
+                        .parse::<u8>()
+                        .map_err(|_| Error::decode_error(col_type, b))?;
+                    let day = date_parts[2]
+                        .parse::<u8>()
+                        .map_err(|_| Error::decode_error(col_type, b))?;
+                    let hour = time_parts[0]
+                        .parse::<u8>()
+                        .map_err(|_| Error::decode_error(col_type, b))?;
+                    let minute = time_parts[1]
+                        .parse::<u8>()
+                        .map_err(|_| Error::decode_error(col_type, b))?;
 
                     let (second, microsecond) = if let Some((sec_str, micro_str)) =
                         time_parts[2].split_once('.')
                     {
-                        let second = sec_str.parse::<u8>().map_err(|_| {
-                            color_eyre::eyre::eyre!(
-                                "Invalid second in DATETIME/TIMESTAMP: {}",
-                                sec_str
-                            )
-                        })?;
+                        let second = sec_str
+                            .parse::<u8>()
+                            .map_err(|_| Error::decode_error(col_type, b))?;
                         let micro_padded = format!("{:0<6}", &micro_str[..micro_str.len().min(6)]);
-                        let microsecond = micro_padded.parse::<u32>().map_err(|_| {
-                            color_eyre::eyre::eyre!(
-                                "Invalid microsecond in DATETIME/TIMESTAMP: {}",
-                                micro_str
-                            )
-                        })?;
+                        let microsecond = micro_padded
+                            .parse::<u32>()
+                            .map_err(|_| Error::decode_error(col_type, b))?;
                         (second, microsecond)
                     } else {
-                        let second = time_parts[2].parse::<u8>().map_err(|_| {
-                            color_eyre::eyre::eyre!(
-                                "Invalid second in DATETIME/TIMESTAMP: {}",
-                                time_parts[2]
-                            )
-                        })?;
+                        let second = time_parts[2]
+                            .parse::<u8>()
+                            .map_err(|_| Error::decode_error(col_type, b))?;
                         (second, 0)
                     };
 

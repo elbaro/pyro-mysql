@@ -1,3 +1,4 @@
+use mysql::consts::ColumnType;
 use pyo3::{create_exception, exceptions::PyException};
 use thiserror::Error;
 
@@ -7,6 +8,7 @@ create_exception!(pyro_mysql.error, IncorrectApiUsageError, PyException);
 create_exception!(pyro_mysql.error, UrlError, PyException);
 create_exception!(pyro_mysql.error, ConnectionClosedError, PyException);
 create_exception!(pyro_mysql.error, TransactionClosedError, PyException);
+create_exception!(pyro_mysql.error, DecodeError, PyException);
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -27,10 +29,28 @@ pub enum Error {
     TransactionClosedError,
 
     #[error("The future is cancelled")]
-    PythonCancelledError, // #[error("")]
-                          // NetworkTimeoutError(String),
-                          // #[error("invalid header (expected {expected:?}, found {found:?})")]
-                          // InvalidHeader { expected: String, found: String },
+    PythonCancelledError,
+
+    #[error(
+        "Failed to decode the received value: ColumnType = {column_type:?}, encoded = {encoded}"
+    )]
+    DecodeError {
+        column_type: ColumnType,
+        encoded: String,
+    },
+    // #[error("")]
+    // NetworkTimeoutError(String),
+    // #[error("invalid header (expected {expected:?}, found {found:?})")]
+    // InvalidHeader { expected: String, found: String },
+}
+
+impl Error {
+    pub fn decode_error(column_type: ColumnType, value: impl std::fmt::Debug) -> Self {
+        Self::DecodeError {
+            column_type,
+            encoded: format!("{:?}", value),
+        }
+    }
 }
 
 impl From<Error> for pyo3::PyErr {
@@ -47,6 +67,7 @@ impl From<Error> for pyo3::PyErr {
                 TransactionClosedError::new_err(err.to_string()).into()
             }
             Error::PythonCancelledError => pyo3::exceptions::asyncio::CancelledError::new_err(()),
+            Error::DecodeError { .. } => DecodeError::new_err(err.to_string()).into(),
         }
     }
 }
