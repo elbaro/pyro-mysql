@@ -1,5 +1,4 @@
 use crate::value::value_to_python;
-use color_eyre::Result;
 use pyo3::{
     prelude::*,
     types::{PyDict, PyTuple},
@@ -21,7 +20,7 @@ impl mysql_common::prelude::FromRow for Row {
 
 #[pymethods]
 impl Row {
-    pub fn to_tuple<'py>(&self, py: Python<'py>) -> Result<Bound<'py, PyTuple>> {
+    pub fn to_tuple<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         let n = self.inner.len();
         let columns = self.inner.columns_ref();
         let mut vec = Vec::with_capacity(n);
@@ -31,7 +30,7 @@ impl Row {
         Ok(PyTuple::new(py, vec)?)
     }
 
-    pub fn to_dict<'py>(&self, py: Python<'py>) -> Result<Bound<'py, PyDict>> {
+    pub fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let n = self.inner.len();
         let columns = self.inner.columns_ref();
         let dict = PyDict::new(py);

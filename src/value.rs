@@ -1,4 +1,3 @@
-use color_eyre::Result;
 use mysql_common::Value as MySqlValue;
 use mysql_common::constants::ColumnFlags;
 use mysql_common::constants::ColumnType;
@@ -191,7 +190,7 @@ pub fn value_to_python<'py>(
     py: Python<'py>,
     value: &MySqlValue,
     column: &Column,
-) -> Result<Bound<'py, PyAny>> {
+) -> PyResult<Bound<'py, PyAny>> {
     let bound = match value {
         MySqlValue::NULL => py.None().into_bound(py),
         MySqlValue::Int(i) => i.into_bound_py_any(py)?,

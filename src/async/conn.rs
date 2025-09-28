@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use color_eyre::eyre::ContextCompat;
 use either::Either;
 use mysql_async::Opts;
 use pyo3::prelude::*;
@@ -9,10 +8,10 @@ use tokio::sync::RwLock;
 use crate::r#async::AsyncOpts;
 use crate::r#async::queryable::Queryable;
 use crate::r#async::transaction::AsyncTransaction;
+use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
 use crate::params::Params;
-use crate::util::{PyroFuture, mysql_error_to_pyerr, rust_future_into_py, url_error_to_pyerr};
-use color_eyre::Result;
+use crate::util::{PyroFuture, rust_future_into_py, url_error_to_pyerr};
 
 #[pyclass]
 /// ### Concurrency
@@ -25,9 +24,9 @@ pub struct AsyncConn {
 #[pymethods]
 impl AsyncConn {
     #[new]
-    fn _new() -> PyResult<Self> {
-        Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-            "Please use `await Conn.new(url) instead of Conn().`.",
+    fn _new() -> PyroResult<Self> {
+        Err(Error::IncorrectApiUsageError(
+            "use `await Conn.new(url) instead of Conn()`.",
         ))
     }
 
@@ -43,11 +42,7 @@ impl AsyncConn {
 
         rust_future_into_py(py, async move {
             Ok(Self {
-                inner: Arc::new(RwLock::new(Some(
-                    mysql_async::Conn::new(opts)
-                        .await
-                        .map_err(mysql_error_to_pyerr)?,
-                ))),
+                inner: Arc::new(RwLock::new(Some(mysql_async::Conn::new(opts).await?))),
             })
         })
     }
@@ -68,33 +63,33 @@ impl AsyncConn {
         AsyncTransaction::new(self.inner.clone(), opts)
     }
 
-    async fn id(&self) -> Result<u32> {
+    async fn id(&self) -> PyResult<u32> {
         Ok(self
             .inner
             .read()
             .await
             .as_ref()
-            .context("Conn is already closed")?
+            .ok_or_else(|| Error::ConnectionClosedError)?
             .id())
     }
 
-    async fn affected_rows(&self) -> Result<u64> {
+    async fn affected_rows(&self) -> PyResult<u64> {
         Ok(self
             .inner
             .read()
             .await
             .as_ref()
-            .context("Conn is already closed")?
+            .ok_or_else(|| Error::ConnectionClosedError)?
             .affected_rows())
     }
 
-    async fn last_insert_id(&self) -> Result<Option<u64>> {
+    async fn last_insert_id(&self) -> PyResult<Option<u64>> {
         Ok(self
             .inner
             .read()
             .await
             .as_ref()
-            .context("Conn is already closed")?
+            .ok_or_else(|| Error::ConnectionClosedError)?
             .last_insert_id())
     }
 
@@ -152,7 +147,7 @@ impl AsyncConn {
         self.inner.exec_batch(py, query, params)
     }
 
-    async fn disconnect(&self) -> Result<()> {
+    async fn disconnect(&self) -> PyroResult<()> {
         let mut inner = self.inner.write().await;
         if let Some(conn) = inner.take() {
             conn.disconnect().await?;
@@ -160,11 +155,13 @@ impl AsyncConn {
         Ok(())
     }
 
-    async fn reset(&self) -> Result<()> {
+    async fn reset(&self) -> PyroResult<()> {
         let mut inner = self.inner.write().await;
-        if let Some(conn) = inner.as_mut() {
-            conn.reset().await?;
-        }
+        inner
+            .as_mut()
+            .ok_or_else(|| Error::ConnectionClosedError)?
+            .reset()
+            .await?;
         Ok(())
     }
 
@@ -175,8 +172,7 @@ impl AsyncConn {
                 .read()
                 .await
                 .as_ref()
-                .context("Connection is not available")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .ok_or_else(|| Error::ConnectionClosedError)?
                 .server_version())
         })
     }

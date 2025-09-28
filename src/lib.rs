@@ -2,6 +2,7 @@
 
 pub mod r#async;
 pub mod capability_flags;
+pub mod error;
 pub mod isolation_level;
 pub mod params;
 pub mod row;

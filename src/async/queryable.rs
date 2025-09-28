@@ -1,9 +1,9 @@
-use color_eyre::eyre::ContextCompat;
 use pyo3::prelude::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::{
+    error::Error,
     params::Params,
     row::Row,
     util::{PyroFuture, rust_future_into_py},
@@ -58,13 +58,11 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         let inner = self.clone();
         rust_future_into_py(py, async move {
             let mut inner = inner.write().await;
-            inner
+            Ok(inner
                 .as_mut()
-                .context("connection is already closed")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .ok_or_else(|| Error::ConnectionClosedError)?
                 .ping()
-                .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+                .await?)
         })
     }
 
@@ -76,13 +74,11 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         let inner = self.clone();
         rust_future_into_py(py, async move {
             let mut inner = inner.write().await;
-            inner
+            Ok(inner
                 .as_mut()
-                .context("connection is already closed")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .ok_or_else(|| Error::ConnectionClosedError)?
                 .close(stmt)
-                .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+                .await?)
         })
     }
 
@@ -91,13 +87,11 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         let inner = self.clone();
         rust_future_into_py::<_, Vec<Row>>(py, async move {
             let mut inner = inner.write().await;
-            inner
+            Ok(inner
                 .as_mut()
-                .context("connection is already closed")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .ok_or_else(|| Error::ConnectionClosedError)?
                 .query(query)
-                .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+                .await?)
         })
     }
 
@@ -105,13 +99,11 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         let inner = self.clone();
         rust_future_into_py::<_, Option<Row>>(py, async move {
             let mut inner = inner.write().await;
-            inner
+            Ok(inner
                 .as_mut()
-                .context("connection is already closed")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .ok_or_else(|| Error::ConnectionClosedError)?
                 .query_first(query)
-                .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+                .await?)
         })
     }
 
@@ -119,13 +111,11 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         let inner = self.clone();
         rust_future_into_py::<_, ()>(py, async move {
             let mut inner = inner.write().await;
-            inner
+            Ok(inner
                 .as_mut()
-                .context("connection is already closed")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .ok_or_else(|| Error::ConnectionClosedError)?
                 .query_drop(query)
-                .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+                .await?)
         })
     }
 
@@ -139,13 +129,11 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         let inner = self.clone();
         rust_future_into_py::<_, Vec<Row>>(py, async move {
             let mut inner = inner.write().await;
-            inner
+            Ok(inner
                 .as_mut()
-                .context("connection is already closed")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .ok_or_else(|| Error::ConnectionClosedError)?
                 .exec(query, params)
-                .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+                .await?)
         })
     }
 
@@ -158,13 +146,11 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         let inner = self.clone();
         rust_future_into_py::<_, Option<Row>>(py, async move {
             let mut inner = inner.write().await;
-            inner
+            Ok(inner
                 .as_mut()
-                .context("connection is already closed")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .ok_or_else(|| Error::ConnectionClosedError)?
                 .exec_first(query, params)
-                .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+                .await?)
         })
     }
 
@@ -177,13 +163,11 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         let inner = self.clone();
         rust_future_into_py::<_, ()>(py, async move {
             let mut inner = inner.write().await;
-            inner
+            Ok(inner
                 .as_mut()
-                .context("connection is already closed")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .ok_or_else(|| Error::ConnectionClosedError)?
                 .exec_drop(query, params)
-                .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+                .await?)
         })
     }
 
@@ -196,13 +180,11 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         let inner = self.clone();
         rust_future_into_py::<_, ()>(py, async move {
             let mut inner = inner.write().await;
-            inner
+            Ok(inner
                 .as_mut()
-                .context("connection is already closed")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .ok_or_else(|| Error::ConnectionClosedError)?
                 .exec_batch(query, params)
-                .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+                .await?)
         })
     }
 

@@ -1,10 +1,10 @@
-use color_eyre::eyre::ContextCompat;
 use pyo3::prelude::*;
 use std::sync::Arc;
 use tokio::sync::{RwLock, RwLockWriteGuard};
 
 use crate::{
     r#async::queryable::Queryable,
+    error::Error,
     params::Params,
     util::{PyroFuture, rust_future_into_py},
 };
@@ -117,8 +117,7 @@ impl AsyncTransaction {
                 .write()
                 .await
                 .take()
-                .context("transaction is already closed")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?;
+                .ok_or_else(|| Error::TransactionClosedError)?;
             // At this point, no new operation on Transaction can be started
 
             // TODO: wait for other concurrent ops
@@ -127,10 +126,7 @@ impl AsyncTransaction {
             // Drop the RwLockGuard on conn
             guard.write().await.take();
 
-            inner
-                .commit()
-                .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+            Ok(inner.commit().await?)
         })
     }
     fn rollback<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
@@ -141,16 +137,12 @@ impl AsyncTransaction {
                 .write()
                 .await
                 .take()
-                .context("transaction is already closed")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?;
+                .ok_or_else(|| Error::TransactionClosedError)?;
 
             // Drop the RwLockGuard on conn
             guard.write().await.take();
 
-            inner
-                .rollback()
-                .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))
+            Ok(inner.rollback().await?)
         })
     }
 
@@ -161,8 +153,7 @@ impl AsyncTransaction {
                 .read()
                 .await
                 .as_ref()
-                .context("Conn is already closed")
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string()))?
+                .ok_or_else(|| Error::TransactionClosedError)?
                 .affected_rows())
         })
     }
