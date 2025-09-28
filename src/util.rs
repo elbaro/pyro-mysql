@@ -5,6 +5,9 @@ use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 
+use crate::error::Error;
+use crate::error::PyroResult;
+
 pub fn mysql_error_to_pyerr(error: mysql_async::Error) -> PyErr {
     PyErr::new::<pyo3::exceptions::PyException, _>(format!("MySQL Error: {}", error))
 }
@@ -102,7 +105,7 @@ impl PyroFuture {
 /// Convert a Rust future into a Python future wrapped with RaiiFuture for automatic cancellation.
 pub fn rust_future_into_py<F, T>(py: Python<'_>, fut: F) -> PyResult<Py<PyroFuture>>
 where
-    F: Future<Output = PyResult<T>> + Send + 'static,
+    F: Future<Output = PyroResult<T>> + Send + 'static,
     T: for<'py> IntoPyObject<'py>,
 {
     // Get the event loop and create a future
@@ -119,9 +122,7 @@ where
     pyo3_async_runtimes::tokio::get_runtime().spawn(async move {
         let result = match abortable_fut.await {
             Ok(result) => result,
-            Err(_) => Err(PyErr::new::<pyo3::exceptions::asyncio::CancelledError, _>(
-                "Task was cancelled",
-            )),
+            Err(_) => Err(Error::PythonCancelledError),
         };
 
         // Set the result on the Python future
@@ -159,7 +160,7 @@ where
                             "call_soon_threadsafe",
                             (
                                 py_fut.getattr("set_exception").unwrap(),
-                                err.into_bound_py_any(py).unwrap(),
+                                pyo3::PyErr::from(err).into_bound_py_any(py).unwrap(),
                             ),
                         )
                         .unwrap();

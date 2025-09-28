@@ -2,6 +2,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyDeltaAccess;
 use std::time::Duration;
 
+use crate::error::{Error, PyroResult};
+
 #[pyclass]
 #[derive(Clone, Debug)]
 pub struct AsyncPoolOpts {
@@ -17,13 +19,13 @@ impl AsyncPoolOpts {
         }
     }
 
-    pub fn with_constraints(&self, constraints: (usize, usize)) -> PyResult<Self> {
+    pub fn with_constraints(&self, constraints: (usize, usize)) -> PyroResult<Self> {
         let (min, max) = constraints;
         match mysql_async::PoolConstraints::new(min, max) {
             Some(pool_constraints) => Ok(Self {
                 inner: self.inner.clone().with_constraints(pool_constraints),
             }),
-            None => Err(pyo3::exceptions::PyValueError::new_err(
+            None => Err(Error::IncorrectApiUsageError(
                 "Invalid pool constraints: min must be <= max",
             )),
         }

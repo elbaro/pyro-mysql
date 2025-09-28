@@ -1,9 +1,8 @@
-use color_eyre::Result;
 use either::Either;
 use mysql::{Binary, QueryResult, ResultSet, Text};
 use pyo3::{exceptions::PyStopIteration, prelude::*};
 
-use crate::row::Row;
+use crate::{error::Error, row::Row};
 
 // TODO: cover both Text and Binary
 #[pyclass]
@@ -54,12 +53,13 @@ impl RowIterator {
     fn __iter__(slf: Py<Self>) -> Py<Self> {
         slf
     }
-    fn __next__(&mut self) -> Result<Row> {
+    fn __next__(&mut self) -> PyResult<Row> {
         Ok(Row {
             inner: self
                 .inner
                 .next()
-                .ok_or_else(|| PyStopIteration::new_err("Row exhausted"))??,
+                .ok_or_else(|| PyStopIteration::new_err("Row exhausted"))?
+                .map_err(Error::from)?,
         })
     }
 }

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     r#async::conn::AsyncConn,
     r#async::opts::AsyncOpts,
-    util::{PyroFuture, mysql_error_to_pyerr, rust_future_into_py, url_error_to_pyerr},
+    util::{PyroFuture, rust_future_into_py, url_error_to_pyerr},
 };
 use either::Either;
 use mysql_async::Opts;
@@ -39,9 +39,7 @@ impl AsyncPool {
         let pool = self.pool.clone();
         rust_future_into_py(py, async move {
             Ok(AsyncConn {
-                inner: Arc::new(RwLock::new(Some(
-                    pool.get_conn().await.map_err(mysql_error_to_pyerr)?,
-                ))),
+                inner: Arc::new(RwLock::new(Some(pool.get_conn().await?))),
             })
         })
     }
@@ -53,7 +51,7 @@ impl AsyncPool {
     fn disconnect<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         let pool = self.pool.clone();
         rust_future_into_py(py, async move {
-            pool.disconnect().await.map_err(mysql_error_to_pyerr)?;
+            pool.disconnect().await?;
             Ok(())
         })
     }

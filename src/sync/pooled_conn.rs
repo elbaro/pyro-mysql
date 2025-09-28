@@ -1,9 +1,8 @@
-use color_eyre::Result;
-use color_eyre::eyre::ContextCompat;
 use either::Either;
 use mysql::{AccessMode, prelude::*};
 use pyo3::prelude::*;
 
+use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
 use crate::params::Params;
 use crate::row::Row;
@@ -31,7 +30,7 @@ impl SyncPooledConn {
         consistent_snapshot: bool,
         isolation_level: Option<IsolationLevel>,
         readonly: Option<bool>,
-    ) -> Result<Py<PyAny>> {
+    ) -> PyResult<Py<PyAny>> {
         let isolation_level: Option<mysql::IsolationLevel> =
             isolation_level.map(|l| mysql::IsolationLevel::from(&l));
         let opts = mysql::TxOpts::default()
@@ -45,8 +44,11 @@ impl SyncPooledConn {
                 }
             }));
 
-        let inner = self.inner.as_mut().context("Connection is not available")?;
-        let tx = inner.start_transaction(opts)?;
+        let inner = self
+            .inner
+            .as_mut()
+            .ok_or_else(|| Error::ConnectionClosedError)?;
+        let tx = inner.start_transaction(opts).map_err(Error::from)?;
 
         Ok(Python::attach(|py| {
             callable.call1(
@@ -69,48 +71,48 @@ impl SyncPooledConn {
         Ok(conn.affected_rows())
     }
 
-    fn ping(&mut self) -> Result<()> {
+    fn ping(&mut self) -> PyroResult<()> {
         Ok(self
             .inner
             .as_mut()
-            .context("Connection is not available")?
+            .ok_or_else(|| Error::ConnectionClosedError)?
             .as_mut()
             .ping()?)
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
 
-    fn query(&mut self, query: String) -> Result<Vec<Row>> {
+    fn query(&mut self, query: String) -> PyroResult<Vec<Row>> {
         Ok(self
             .inner
             .as_mut()
-            .context("Connection is not available")?
+            .ok_or_else(|| Error::ConnectionClosedError)?
             .query(query)?)
     }
 
-    fn query_first(&mut self, query: String) -> Result<Option<Row>> {
+    fn query_first(&mut self, query: String) -> PyroResult<Option<Row>> {
         Ok(self
             .inner
             .as_mut()
-            .context("Connection is not available")?
+            .ok_or_else(|| Error::ConnectionClosedError)?
             .query_first(query)?)
     }
 
-    fn query_drop(&mut self, query: String) -> Result<()> {
+    fn query_drop(&mut self, query: String) -> PyroResult<()> {
         Ok(self
             .inner
             .as_mut()
-            .context("Connection is not available")?
+            .ok_or_else(|| Error::ConnectionClosedError)?
             .query_drop(query)?)
     }
 
-    fn query_iter(slf: Py<Self>, query: String) -> Result<ResultSetIterator> {
+    fn query_iter(slf: Py<Self>, query: String) -> PyroResult<ResultSetIterator> {
         Python::attach(|py| {
             let mut slf_ref = slf.borrow_mut(py);
             let query_result = slf_ref
                 .inner
                 .as_mut()
-                .context("Connection is not available")?
+                .ok_or_else(|| Error::ConnectionClosedError)?
                 .query_iter(query)?;
 
             Ok(ResultSetIterator {
@@ -123,49 +125,49 @@ impl SyncPooledConn {
     // ─── Binary Protocol ─────────────────────────────────────────────────
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec(&mut self, query: String, params: Params) -> Result<Vec<Row>> {
+    fn exec(&mut self, query: String, params: Params) -> PyroResult<Vec<Row>> {
         Ok(self
             .inner
             .as_mut()
-            .context("Connection is not available")?
+            .ok_or_else(|| Error::ConnectionClosedError)?
             .exec(query, params)?)
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_first(&mut self, query: String, params: Params) -> Result<Option<Row>> {
+    fn exec_first(&mut self, query: String, params: Params) -> PyroResult<Option<Row>> {
         Ok(self
             .inner
             .as_mut()
-            .context("Connection is not available")?
+            .ok_or_else(|| Error::ConnectionClosedError)?
             .exec_first(query, params)?)
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_drop(&mut self, query: String, params: Params) -> Result<()> {
+    fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
         Ok(self
             .inner
             .as_mut()
-            .context("Connection is not available")?
+            .ok_or_else(|| Error::ConnectionClosedError)?
             .exec_drop(query, params)?)
     }
 
     #[pyo3(signature = (query, params_list=vec![]))]
-    fn exec_batch(&mut self, query: String, params_list: Vec<Params>) -> Result<()> {
+    fn exec_batch(&mut self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
         Ok(self
             .inner
             .as_mut()
-            .context("Connection is not available")?
+            .ok_or_else(|| Error::ConnectionClosedError)?
             .exec_batch(query, params_list)?)
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_iter(slf: Py<Self>, query: String, params: Params) -> Result<ResultSetIterator> {
+    fn exec_iter(slf: Py<Self>, query: String, params: Params) -> PyroResult<ResultSetIterator> {
         Python::attach(|py| {
             let mut slf_ref = slf.borrow_mut(py);
             let query_result = slf_ref
                 .inner
                 .as_mut()
-                .context("Connection is not available")?
+                .ok_or_else(|| Error::ConnectionClosedError)?
                 .exec_iter(query, params)?;
 
             Ok(ResultSetIterator {

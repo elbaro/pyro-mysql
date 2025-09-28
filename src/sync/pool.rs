@@ -1,4 +1,7 @@
-use crate::{sync::opts::SyncOpts, sync::pooled_conn::SyncPooledConn};
+use crate::{
+    error::PyroResult,
+    sync::{opts::SyncOpts, pooled_conn::SyncPooledConn},
+};
 use either::Either;
 use mysql::{Opts, Pool};
 use pyo3::prelude::*;
@@ -13,27 +16,22 @@ impl SyncPool {
     /// new() won't assert server availability.
     /// Can accept either a URL string or SyncOpts object
     #[new]
-    pub fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> PyResult<Self> {
+    pub fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> PyroResult<Self> {
         let opts = match url_or_opts {
-            Either::Left(url) => Opts::from_url(&url)
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?,
+            Either::Left(url) => Opts::from_url(&url)?,
             Either::Right(opts) => opts.opts.clone(),
         };
 
-        let pool = Pool::new(opts)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+        let pool = Pool::new(opts)?;
         Ok(Self { pool })
     }
 
-    fn get_conn(&self) -> PyResult<SyncPooledConn> {
-        let conn = self
-            .pool
-            .get_conn()
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+    fn get_conn(&self) -> PyroResult<SyncPooledConn> {
+        let conn = self.pool.get_conn()?;
         Ok(SyncPooledConn { inner: Some(conn) })
     }
 
-    fn acquire(&self) -> PyResult<SyncPooledConn> {
+    fn acquire(&self) -> PyroResult<SyncPooledConn> {
         self.get_conn()
     }
 }
