@@ -74,6 +74,25 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<SyncOpts>()?;
     m.add_class::<SyncOptsBuilder>()?;
 
+    // error
+    let error = PyModule::new(py, "error")?;
+    error.add(
+        "IncorrectApiUsageError",
+        py.get_type::<error::IncorrectApiUsageError>(),
+    )?;
+    error.add("UrlError", py.get_type::<error::UrlError>())?;
+    error.add(
+        "TransactionClosedError",
+        py.get_type::<error::TransactionClosedError>(),
+    )?;
+    error.add("DecodeError", py.get_type::<error::DecodeError>())?;
+    pyo3::py_run!(
+        py,
+        error,
+        "import sys; sys.modules['pyro_mysql.error'] = error"
+    );
+    m.add_submodule(&error)?;
+
     // async
     let async_ = PyModule::new(py, "async_")?;
     async_.add("Pool", py.get_type::<AsyncPool>())?;
@@ -103,6 +122,7 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("pyro_mysql.async_", async_)?;
     sys_modules.set_item("pyro_mysql.sync", sync)?;
+    sys_modules.set_item("pyro_mysql.error", error)?;
 
     Ok(())
 }

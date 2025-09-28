@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::time::Duration;
 
+use crate::error::{Error, PyroResult};
+
 #[pyclass]
 #[derive(Clone)]
 pub struct SyncOpts {
@@ -46,13 +48,8 @@ impl SyncOptsBuilder {
     }
 
     #[staticmethod]
-    fn from_url(url: &str) -> PyResult<Self> {
-        let opts = mysql::Opts::from_url(url).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-                "Invalid connection URL: {}",
-                e
-            ))
-        })?;
+    fn from_url(url: &str) -> PyroResult<Self> {
+        let opts = mysql::Opts::from_url(url)?;
         Ok(Self {
             builder: Some(mysql::OptsBuilder::from_opts(opts)),
         })
@@ -61,15 +58,12 @@ impl SyncOptsBuilder {
     fn from_hash_map(
         mut self_: PyRefMut<Self>,
         params: HashMap<String, String>,
-    ) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
-        self_.builder = Some(
-            builder
-                .from_hash_map(&params)
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?,
-        );
+    ) -> PyroResult<PyRefMut<Self>> {
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
+        self_.builder = Some(builder.from_hash_map(&params)?);
         Ok(self_)
     }
 
@@ -78,25 +72,28 @@ impl SyncOptsBuilder {
         mut self_: PyRefMut<Self>,
         hostname: Option<String>,
     ) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.ip_or_hostname(hostname));
         Ok(self_)
     }
 
     fn tcp_port(mut self_: PyRefMut<Self>, port: u16) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.tcp_port(port));
         Ok(self_)
     }
 
     fn socket(mut self_: PyRefMut<Self>, path: Option<String>) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.socket(path));
         Ok(self_)
     }
@@ -115,42 +112,47 @@ impl SyncOptsBuilder {
         } else {
             None
         };
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.bind_address(addr));
         Ok(self_)
     }
 
     // Authentication Options
     fn user(mut self_: PyRefMut<Self>, username: Option<String>) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.user(username));
         Ok(self_)
     }
 
     fn password(mut self_: PyRefMut<Self>, password: Option<String>) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.pass(password));
         Ok(self_)
     }
 
     fn db_name(mut self_: PyRefMut<Self>, database: Option<String>) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.db_name(database));
         Ok(self_)
     }
 
     fn secure_auth(mut self_: PyRefMut<Self>, enable: bool) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.secure_auth(enable));
         Ok(self_)
     }
@@ -158,18 +160,20 @@ impl SyncOptsBuilder {
     // Performance/Timeout Options
     fn read_timeout(mut self_: PyRefMut<Self>, seconds: Option<f64>) -> PyResult<PyRefMut<Self>> {
         let duration = seconds.map(|s| Duration::from_secs_f64(s));
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.read_timeout(duration));
         Ok(self_)
     }
 
     fn write_timeout(mut self_: PyRefMut<Self>, seconds: Option<f64>) -> PyResult<PyRefMut<Self>> {
         let duration = seconds.map(|s| Duration::from_secs_f64(s));
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.write_timeout(duration));
         Ok(self_)
     }
@@ -179,26 +183,29 @@ impl SyncOptsBuilder {
         seconds: Option<f64>,
     ) -> PyResult<PyRefMut<Self>> {
         let duration = seconds.map(|s| Duration::from_secs_f64(s));
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.tcp_connect_timeout(duration));
         Ok(self_)
     }
 
     fn stmt_cache_size(mut self_: PyRefMut<Self>, size: usize) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.stmt_cache_size(size));
         Ok(self_)
     }
 
     // Additional Options
     fn tcp_nodelay(mut self_: PyRefMut<Self>, enable: bool) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.tcp_nodelay(enable));
         Ok(self_)
     }
@@ -207,9 +214,10 @@ impl SyncOptsBuilder {
         mut self_: PyRefMut<Self>,
         time_ms: Option<u32>,
     ) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.tcp_keepalive_time_ms(time_ms));
         Ok(self_)
     }
@@ -218,9 +226,10 @@ impl SyncOptsBuilder {
         mut self_: PyRefMut<Self>,
         interval_secs: Option<u32>,
     ) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.tcp_keepalive_probe_interval_secs(interval_secs));
         Ok(self_)
     }
@@ -229,9 +238,10 @@ impl SyncOptsBuilder {
         mut self_: PyRefMut<Self>,
         count: Option<u32>,
     ) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.tcp_keepalive_probe_count(count));
         Ok(self_)
     }
@@ -240,9 +250,10 @@ impl SyncOptsBuilder {
         mut self_: PyRefMut<Self>,
         timeout_ms: Option<u32>,
     ) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.tcp_user_timeout_ms(timeout_ms));
         Ok(self_)
     }
@@ -251,25 +262,28 @@ impl SyncOptsBuilder {
         mut self_: PyRefMut<Self>,
         max_allowed_packet: Option<usize>,
     ) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.max_allowed_packet(max_allowed_packet));
         Ok(self_)
     }
 
     fn prefer_socket(mut self_: PyRefMut<Self>, prefer_socket: bool) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.prefer_socket(prefer_socket));
         Ok(self_)
     }
 
     fn init(mut self_: PyRefMut<Self>, commands: Vec<String>) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.init(commands));
         Ok(self_)
     }
@@ -278,17 +292,19 @@ impl SyncOptsBuilder {
         mut self_: PyRefMut<Self>,
         attrs: Option<HashMap<String, String>>,
     ) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.connect_attrs(attrs));
         Ok(self_)
     }
 
     fn compress(mut self_: PyRefMut<Self>, level: Option<u32>) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
 
         if let Some(level) = level {
             if level > 9 {
@@ -320,9 +336,10 @@ impl SyncOptsBuilder {
         mut self_: PyRefMut<Self>,
         opts: crate::sync::pool_opts::SyncPoolOpts,
     ) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.pool_opts(opts.inner));
         Ok(self_)
     }
@@ -332,9 +349,10 @@ impl SyncOptsBuilder {
         capabilities: u32,
     ) -> PyResult<PyRefMut<Self>> {
         // Note: This would need CapabilityFlags wrapper, using u32 for now
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.additional_capabilities(
             mysql_common::constants::CapabilityFlags::from_bits_truncate(capabilities),
         ));
@@ -345,18 +363,20 @@ impl SyncOptsBuilder {
         mut self_: PyRefMut<Self>,
         enable: bool,
     ) -> PyResult<PyRefMut<Self>> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         self_.builder = Some(builder.enable_cleartext_plugin(enable));
         Ok(self_)
     }
 
     // Build the final Opts
     fn build(mut self_: PyRefMut<Self>) -> PyResult<SyncOpts> {
-        let builder = self_.builder.take().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Builder already consumed")
-        })?;
+        let builder = self_
+            .builder
+            .take()
+            .ok_or_else(|| Error::BuilderConsumedError)?;
         Ok(SyncOpts {
             opts: builder.into(),
         })

@@ -18,14 +18,12 @@ pub struct SyncConn {
 #[pymethods]
 impl SyncConn {
     #[new]
-    fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> PyResult<Self> {
+    fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> PyroResult<Self> {
         let opts = match url_or_opts {
-            Either::Left(url) => Opts::from_url(&url)
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?,
+            Either::Left(url) => Opts::from_url(&url)?,
             Either::Right(opts) => opts.opts.clone(),
         };
-        let conn = mysql::Conn::new(opts)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+        let conn = mysql::Conn::new(opts)?;
 
         Ok(Self { inner: Some(conn) })
     }

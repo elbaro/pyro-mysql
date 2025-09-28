@@ -8,6 +8,7 @@ create_exception!(pyro_mysql.error, IncorrectApiUsageError, PyException);
 create_exception!(pyro_mysql.error, UrlError, PyException);
 create_exception!(pyro_mysql.error, ConnectionClosedError, PyException);
 create_exception!(pyro_mysql.error, TransactionClosedError, PyException);
+create_exception!(pyro_mysql.error, BuilderConsumedError, PyException);
 create_exception!(pyro_mysql.error, DecodeError, PyException);
 
 #[derive(Error, Debug)]
@@ -27,6 +28,8 @@ pub enum Error {
     ConnectionClosedError,
     #[error("Transaction is already closed")]
     TransactionClosedError,
+    #[error("Builder is already consumed")]
+    BuilderConsumedError,
 
     #[error("The future is cancelled")]
     PythonCancelledError,
@@ -66,6 +69,7 @@ impl From<Error> for pyo3::PyErr {
             Error::TransactionClosedError => {
                 TransactionClosedError::new_err(err.to_string()).into()
             }
+            Error::BuilderConsumedError => BuilderConsumedError::new_err(err.to_string()).into(),
             Error::PythonCancelledError => pyo3::exceptions::asyncio::CancelledError::new_err(()),
             Error::DecodeError { .. } => DecodeError::new_err(err.to_string()).into(),
         }
