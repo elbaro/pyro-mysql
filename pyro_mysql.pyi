@@ -1,4 +1,8 @@
-"""pyro_mysql - High-performance MySQL driver for Python.
+"""pyro_mysql - High-performance MySQL driver for Python, written in Rust.
+
+- pyro_mysql.sync: The synchronous API using the `mysql` crate.
+- pyro_mysql.async_: The asynchronous API using the `mysql_async` crate.
+- pyro_mysql.error: Exceptions.
 
 ```py
 import asyncio
@@ -45,7 +49,7 @@ import datetime
 import decimal
 import time
 from types import TracebackType
-from typing import Any, Self
+from typing import Any, Callable, Self
 
 __all__ = [
     "init",
@@ -1177,7 +1181,7 @@ class sync:
 
         def run_transaction(
             self,
-            callable: Any,
+            callable: Callable[["SyncTransaction"], Any],
             consistent_snapshot: bool = False,
             isolation_level: IsolationLevel | None = None,
             readonly: bool | None = None,

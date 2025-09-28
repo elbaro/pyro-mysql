@@ -6,9 +6,6 @@ import pdoc
 import pdoc.doc
 import pdoc.render
 
-# Import the actual module
-import pyro_mysql
-
 # Configure pdoc to parse Google-style docstrings
 output_directory = Path("./docs")
 modules = ["pyro_mysql"]
@@ -22,22 +19,22 @@ value_doc = pdoc.doc.Variable(
     docstring="""Type alias for the purpose of documenation.
 
 These Python types can be converted to MySQL values:
-- None
-- bool
-- int
-- float  
-- str
-- bytes
-- bytearray
-- tuple[Any, ...]
-- list[Any]
-- dict[str, Any]
-- datetime.datetime
-- datetime.date
-- datetime.time
-- datetime.timedelta
-- time.struct_time
-- decimal.Decimal
+- `None`
+- `bool`
+- `int`
+- `float  `
+- `str`
+- `bytes`
+- `bytearray`
+- `tuple[Any, ...]`
+- `list[Any]`
+- `dict[str, Any]`
+- `datetime.datetime`
+- `datetime.date`
+- `datetime.time`
+- `datetime.timedelta`
+- `time.struct_time`
+- `decimal.Decimal`
 """,
     annotation="type[None | bool | int | float | str | bytes | bytearray | tuple[Any, ...] | list[Any] | dict[str, Any] | datetime.datetime | datetime.date | datetime.time | datetime.timedelta | time.struct_time | decimal.Decimal]",
     default_value=pdoc.doc.empty,
@@ -51,27 +48,27 @@ params_doc = pdoc.doc.Variable(
     docstring="""Type alias for the purpose of documenation.
 
 Parameters that can be passed to query execution methods:
-- None: No parameters
-- tuple[Value, ...]: Positional parameters for queries with ? placeholders
-- list[Value]: List of parameters for queries with ? placeholders  
-- dict[str, Value]: Named parameters for queries with named placeholders
+- `None`: No parameters
+- `tuple[Value, ...]`: Positional parameters for queries with ? placeholders
+- `list[Value]`: List of parameters for queries with ? placeholders  
+- `dict[str, Value]`: Named parameters for queries with named placeholders
 
 Examples:
 No parameters:
 
-    await conn.exec("SELECT * FROM users")
+    `await conn.exec("SELECT * FROM users")`
 
 Positional parameters:
 
-    await conn.exec("SELECT * FROM users WHERE id = ?", (123,))
+    `await conn.exec("SELECT * FROM users WHERE id = ?", (123,))`
 
 Multiple positional parameters:
 
-    await conn.exec("SELECT * FROM users WHERE age > ? AND city = ?", (18, "NYC"))
+    `await conn.exec("SELECT * FROM users WHERE age > ? AND city = ?", (18, "NYC"))`
 
 Named parameters:
 
-    await conn.exec("SELECT * FROM users WHERE age > :age AND city = :city", dict(age=18, name="NYC"))
+    `await conn.exec("SELECT * FROM users WHERE age > :age AND city = :city", dict(age=18, name="NYC"))`
 """,
     annotation="type[None | tuple[Value, ...] | list[Value] | dict[str, Value]]",
     default_value=pdoc.doc.empty,
