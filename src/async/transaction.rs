@@ -85,14 +85,20 @@ impl AsyncTransaction {
         })
     }
     fn __aexit__<'py>(
-        &self,
+        slf: &Bound<'py, Self>,
         py: Python<'py>,
         _exc_type: &crate::Bound<'py, crate::PyAny>,
         _exc_value: &crate::Bound<'py, crate::PyAny>,
         _traceback: &crate::Bound<'py, crate::PyAny>,
     ) -> PyResult<Py<PyroFuture>> {
-        let guard = self.guard.clone();
-        let inner = self.inner.clone();
+        // Check reference count of the transaction object
+        let refcnt = slf.get_refcnt();
+        if refcnt != 1 {
+            eprintln!("Warning: AsyncTransaction reference count is {} (expected 1) in __aexit__. Transaction may be referenced elsewhere.", refcnt);
+        }
+
+        let guard = slf.borrow().guard.clone();
+        let inner = slf.borrow().inner.clone();
         rust_future_into_py(py, async move {
             // TODO: check if  is not called and normally exiting without exception
 

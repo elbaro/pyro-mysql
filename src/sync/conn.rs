@@ -28,6 +28,43 @@ impl SyncConn {
         Ok(Self { inner: Some(conn) })
     }
 
+    #[pyo3(signature=(consistent_snapshot=false, isolation_level=None, readonly=None))]
+    fn start_transaction(
+        slf: Py<Self>,
+        consistent_snapshot: bool,
+        isolation_level: Option<IsolationLevel>,
+        readonly: Option<bool>,
+    ) -> PyroResult<SyncTransaction> {
+        Python::attach(|py| {
+            let mut slf_ref = slf.borrow_mut(py);
+            let isolation_level: Option<mysql::IsolationLevel> =
+                isolation_level.map(|l| mysql::IsolationLevel::from(&l));
+            let opts = mysql::TxOpts::default()
+                .set_with_consistent_snapshot(consistent_snapshot)
+                .set_isolation_level(isolation_level)
+                .set_access_mode(readonly.map(|flag| {
+                    if flag {
+                        AccessMode::ReadOnly
+                    } else {
+                        AccessMode::ReadWrite
+                    }
+                }));
+
+            let inner = slf_ref
+                .inner
+                .as_mut()
+                .ok_or_else(|| Error::ConnectionClosedError)?;
+            let tx = inner.start_transaction(opts).map_err(Error::from)?;
+
+            Ok(SyncTransaction::new(
+                unsafe {
+                    std::mem::transmute::<mysql::Transaction<'_>, mysql::Transaction<'static>>(tx)
+                },
+                slf.clone_ref(py).into_any(),
+            ))
+        })
+    }
+
     #[pyo3(signature=(callable, consistent_snapshot=false, isolation_level=None, readonly=None))]
     fn run_transaction(
         &mut self,
@@ -56,16 +93,13 @@ impl SyncConn {
         let tx = inner.start_transaction(opts).map_err(Error::from)?;
 
         Ok(Python::attach(|py| {
-            callable.call1(
-                py,
-                (SyncTransaction {
-                    inner: Some(unsafe {
-                        std::mem::transmute::<mysql::Transaction<'_>, mysql::Transaction<'static>>(
-                            tx,
-                        )
-                    }),
-                },),
-            )
+            // run_transaction doesn't need to hold a reference since it's scoped
+            let tx_static = unsafe {
+                std::mem::transmute::<mysql::Transaction<'_>, mysql::Transaction<'static>>(tx)
+            };
+            // Pass a dummy PyAny since run_transaction manages the lifetime
+            let none_py = py.None();
+            callable.call1(py, (SyncTransaction::new(tx_static, none_py),))
         })?)
     }
 

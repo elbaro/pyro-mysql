@@ -9,10 +9,48 @@ use crate::{params::Params, row::Row};
 #[pyclass]
 pub struct SyncTransaction {
     pub inner: Option<mysql::Transaction<'static>>,
+    // Hold a reference to the connection Python object to prevent it from being dropped
+    _conn: Option<Py<PyAny>>,
+}
+
+impl SyncTransaction {
+    pub fn new(tx: mysql::Transaction<'static>, conn: Py<PyAny>) -> Self {
+        SyncTransaction {
+            inner: Some(tx),
+            _conn: Some(conn),
+        }
+    }
 }
 
 #[pymethods]
 impl SyncTransaction {
+    fn __enter__(slf: Py<Self>) -> Py<Self> {
+        slf
+    }
+
+    fn __exit__(
+        slf: &Bound<'_, Self>,
+        _exc_type: Option<&Bound<'_, PyAny>>,
+        _exc_value: Option<&Bound<'_, PyAny>>,
+        _traceback: Option<&Bound<'_, PyAny>>,
+    ) -> PyroResult<bool> {
+        // Check reference count of the transaction object
+        let refcnt = slf.get_refcnt();
+        if refcnt != 1 {
+            eprintln!(
+                "Warning: Transaction reference count is {refcnt} (expected 1) in __exit__. Transaction may be referenced elsewhere."
+            );
+        }
+
+        let mut slf_mut = slf.borrow_mut();
+        // If there's an uncaught exception or transaction wasn't explicitly committed/rolled back, roll back
+        if slf_mut.inner.is_some() {
+            eprintln!("commit() or rollback() is not called. rolling back.");
+            slf_mut.rollback()?;
+        }
+        Ok(false) // Don't suppress exceptions
+    }
+
     fn commit(&mut self) -> PyroResult<()> {
         let inner = self
             .inner
