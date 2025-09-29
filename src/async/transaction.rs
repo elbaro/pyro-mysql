@@ -93,8 +93,11 @@ impl AsyncTransaction {
     ) -> PyResult<Py<PyroFuture>> {
         // Check reference count of the transaction object
         let refcnt = slf.get_refcnt();
-        if refcnt != 1 {
-            eprintln!("Warning: AsyncTransaction reference count is {} (expected 1) in __aexit__. Transaction may be referenced elsewhere.", refcnt);
+        if refcnt != 2 {
+            eprintln!(
+                "Warning: AsyncTransaction reference count is {} (expected 2) in __aexit__. Transaction may be referenced elsewhere.",
+                refcnt
+            );
         }
 
         let guard = slf.borrow().guard.clone();

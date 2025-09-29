@@ -36,9 +36,9 @@ impl SyncTransaction {
     ) -> PyroResult<bool> {
         // Check reference count of the transaction object
         let refcnt = slf.get_refcnt();
-        if refcnt != 1 {
+        if refcnt != 2 {
             eprintln!(
-                "Warning: Transaction reference count is {refcnt} (expected 1) in __exit__. Transaction may be referenced elsewhere."
+                "Warning: Transaction reference count is {refcnt} (expected 2) in __exit__. Transaction may be referenced elsewhere."
             );
         }
 
