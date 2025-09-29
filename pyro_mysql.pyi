@@ -1047,6 +1047,8 @@ class sync:
         Represents a synchronous MySQL transaction.
         """
 
+        def __enter__(self) -> Self: ...
+        def __exit__(self) -> None: ...
         def commit(self) -> None:
             """Commit the transaction."""
             ...
@@ -1200,6 +1202,12 @@ class sync:
             """
             ...
 
+        def start_transaction(
+            self,
+            consistent_snapshot: bool = False,
+            isolation_level: IsolationLevel | None = None,
+            readonly: bool | None = None,
+        ) -> "sync.Transaction": ...
         def affected_rows(self) -> int:
             """Get the number of affected rows from the last operation."""
             ...

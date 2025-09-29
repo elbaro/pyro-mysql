@@ -15,6 +15,7 @@ mysql = "26.0.1"
 mysql_async = "0.36.1"
 mysql_common = "0.35.5"
 pyo3 = { version = "0.26", features = [
+    "extension-module",
     "experimental-async",
     "experimental-inspect",
     "either",
@@ -26,10 +27,7 @@ tokio = "1.47.1"
 
 
 [patch.crates-io]
-pyo3 = { git = "https://github.com/elbaro/pyo3.git", rev = "e219540adf7bd00d03c251d53cb8d10cd3a5d16c", features = [
-    "experimental-async",
-    "extension-module",
-] }
+pyo3 = { git = "https://github.com/elbaro/pyo3.git", rev = "e219540adf7bd00d03c251d53cb8d10cd3a5d16c" }
 pyo3-ffi = { git = "https://github.com/elbaro/pyo3.git", rev = "e219540adf7bd00d03c251d53cb8d10cd3a5d16c" }
 
 

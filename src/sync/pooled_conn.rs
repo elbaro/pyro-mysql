@@ -23,6 +23,11 @@ impl SyncPooledConn {
         ))
     }
 
+    // TODO
+    // fn __enter__() -> Self {
+    // self
+    // }
+
     #[pyo3(signature=(consistent_snapshot=false, isolation_level=None, readonly=None))]
     fn start_transaction(
         slf: Py<Self>,

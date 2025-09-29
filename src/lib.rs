@@ -81,6 +81,7 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
         py.get_type::<error::IncorrectApiUsageError>(),
     )?;
     error.add("UrlError", py.get_type::<error::UrlError>())?;
+    error.add("MysqlError", py.get_type::<error::MysqlError>())?;
     error.add(
         "ConnectionClosedError",
         py.get_type::<error::ConnectionClosedError>(),

@@ -1,3 +1,5 @@
+use std::sync::RwLock;
+
 use either::Either;
 use mysql::{AccessMode, Opts, prelude::*};
 use pyo3::prelude::*;
@@ -12,7 +14,7 @@ use crate::sync::transaction::SyncTransaction;
 
 #[pyclass]
 pub struct SyncConn {
-    pub inner: Option<mysql::Conn>,
+    pub inner: RwLock<Option<mysql::Conn>>,
 }
 
 #[pymethods]
@@ -25,7 +27,9 @@ impl SyncConn {
         };
         let conn = mysql::Conn::new(opts)?;
 
-        Ok(Self { inner: Some(conn) })
+        Ok(Self {
+            inner: RwLock::new(Some(conn)),
+        })
     }
 
     #[pyo3(signature=(consistent_snapshot=false, isolation_level=None, readonly=None))]
@@ -36,7 +40,7 @@ impl SyncConn {
         readonly: Option<bool>,
     ) -> PyroResult<SyncTransaction> {
         Python::attach(|py| {
-            let mut slf_ref = slf.borrow_mut(py);
+            let slf_ref = slf.borrow(py);
             let isolation_level: Option<mysql::IsolationLevel> =
                 isolation_level.map(|l| mysql::IsolationLevel::from(&l));
             let opts = mysql::TxOpts::default()
@@ -50,10 +54,8 @@ impl SyncConn {
                     }
                 }));
 
-            let inner = slf_ref
-                .inner
-                .as_mut()
-                .ok_or_else(|| Error::ConnectionClosedError)?;
+            let mut guard = slf_ref.inner.write()?;
+            let inner = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
             let tx = inner.start_transaction(opts).map_err(Error::from)?;
 
             Ok(SyncTransaction::new(
@@ -67,7 +69,7 @@ impl SyncConn {
 
     #[pyo3(signature=(callable, consistent_snapshot=false, isolation_level=None, readonly=None))]
     fn run_transaction(
-        &mut self,
+        &self,
         callable: Py<PyAny>,
         consistent_snapshot: bool,
         isolation_level: Option<IsolationLevel>,
@@ -86,10 +88,8 @@ impl SyncConn {
                 }
             }));
 
-        let inner = self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::ConnectionClosedError)?;
+        let mut guard = self.inner.write().map_err(Error::from)?;
+        let inner = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         let tx = inner.start_transaction(opts).map_err(Error::from)?;
 
         Ok(Python::attach(|py| {
@@ -104,77 +104,63 @@ impl SyncConn {
     }
 
     fn id(&self) -> PyroResult<u32> {
-        Ok(self
-            .inner
-            .as_ref()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .connection_id())
+        let guard = self.inner.read()?;
+        let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
+        Ok(conn.connection_id())
     }
 
     fn affected_rows(&self) -> PyResult<u64> {
-        let conn = self.inner.as_ref().ok_or_else(|| {
+        let guard = self.inner.read().map_err(Error::from)?;
+        let conn = guard.as_ref().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Connection is not available")
         })?;
         Ok(conn.affected_rows())
     }
 
     fn last_insert_id(&self) -> PyroResult<Option<u64>> {
-        match self
-            .inner
-            .as_ref()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .last_insert_id()
-        {
+        let guard = self.inner.read()?;
+        let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
+        match conn.last_insert_id() {
             0 => Ok(None),
             x => Ok(Some(x)),
         }
     }
 
-    fn ping(&mut self) -> PyroResult<()> {
-        Ok(self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .ping()?)
+    fn ping(&self) -> PyroResult<()> {
+        let mut guard = self.inner.write()?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        Ok(conn.ping()?)
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
 
     #[pyo3(signature = (query))]
-    fn query(&mut self, query: String) -> PyroResult<Vec<Row>> {
-        Ok(self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .query(query)?)
+    fn query(&self, query: String) -> PyroResult<Vec<Row>> {
+        let mut guard = self.inner.write()?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        Ok(conn.query(query)?)
     }
 
     #[pyo3(signature = (query))]
-    fn query_first(&mut self, query: String) -> PyroResult<Option<Row>> {
-        Ok(self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .query_first(query)?)
+    fn query_first(&self, query: String) -> PyroResult<Option<Row>> {
+        let mut guard = self.inner.write()?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        Ok(conn.query_first(query)?)
     }
 
     #[pyo3(signature = (query))]
-    fn query_drop(&mut self, query: String) -> PyroResult<()> {
-        Ok(self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .query_drop(query)?)
+    fn query_drop(&self, query: String) -> PyroResult<()> {
+        let mut guard = self.inner.write()?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        Ok(conn.query_drop(query)?)
     }
     #[pyo3(signature = (query))]
     fn query_iter(slf: Py<Self>, query: String) -> PyroResult<ResultSetIterator> {
         Python::attach(|py| {
-            let mut slf_ref = slf.borrow_mut(py);
-            let query_result = slf_ref
-                .inner
-                .as_mut()
-                .ok_or_else(|| Error::ConnectionClosedError)?
-                .query_iter(query)?;
+            let slf_ref = slf.borrow(py);
+            let mut guard = slf_ref.inner.write()?;
+            let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+            let query_result = conn.query_iter(query)?;
 
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
@@ -186,50 +172,40 @@ impl SyncConn {
     // ─── Binary Protocol ─────────────────────────────────────────────────
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec(&mut self, query: String, params: Params) -> PyroResult<Vec<Row>> {
-        Ok(self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .exec(query, params)?)
+    fn exec(&self, query: String, params: Params) -> PyroResult<Vec<Row>> {
+        let mut guard = self.inner.write()?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        Ok(conn.exec(query, params)?)
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_first(&mut self, query: String, params: Params) -> PyroResult<Option<Row>> {
-        Ok(self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .exec_first(query, params)?)
+    fn exec_first(&self, query: String, params: Params) -> PyroResult<Option<Row>> {
+        let mut guard = self.inner.write()?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        Ok(conn.exec_first(query, params)?)
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
-        Ok(self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .exec_drop(query, params)?)
+    fn exec_drop(&self, query: String, params: Params) -> PyroResult<()> {
+        let mut guard = self.inner.write()?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        Ok(conn.exec_drop(query, params)?)
     }
 
     #[pyo3(signature = (query, params_list=vec![]))]
-    fn exec_batch(&mut self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
-        Ok(self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .exec_batch(query, params_list)?)
+    fn exec_batch(&self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
+        let mut guard = self.inner.write()?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        Ok(conn.exec_batch(query, params_list)?)
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_iter(slf: Py<Self>, query: String, params: Params) -> PyroResult<ResultSetIterator> {
         Python::attach(|py| {
-            let mut slf_ref = slf.borrow_mut(py);
-            let query_result = slf_ref
-                .inner
-                .as_mut()
-                .ok_or_else(|| Error::ConnectionClosedError)?
-                .exec_iter(query, params)?;
+            let slf_ref = slf.borrow(py);
+            let mut guard = slf_ref.inner.write()?;
+            let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+            let query_result = conn.exec_iter(query, params)?;
 
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
@@ -238,29 +214,25 @@ impl SyncConn {
         })
     }
 
-    fn close(&mut self) -> PyroResult<()> {
-        self.inner.take();
+    fn close(&self) -> PyroResult<()> {
+        *self.inner.write().map_err(Error::from)? = None;
         Ok(())
     }
 
-    fn disconnect(&mut self) -> PyroResult<()> {
-        self.inner.take();
+    fn disconnect(&self) -> PyroResult<()> {
+        *self.inner.write().map_err(Error::from)? = None;
         Ok(())
     }
 
-    fn reset(&mut self) -> PyroResult<()> {
-        Ok(self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .reset()?)
+    fn reset(&self) -> PyroResult<()> {
+        let mut guard = self.inner.write()?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        Ok(conn.reset()?)
     }
 
     fn server_version(&self) -> PyroResult<(u16, u16, u16)> {
-        Ok(self
-            .inner
-            .as_ref()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .server_version())
+        let guard = self.inner.read()?;
+        let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
+        Ok(conn.server_version())
     }
 }
