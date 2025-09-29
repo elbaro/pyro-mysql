@@ -63,7 +63,6 @@ impl AsyncConn {
         AsyncTransaction::new(self.inner.clone(), opts)
     }
 
-
     async fn id(&self) -> PyResult<u32> {
         Ok(self
             .inner

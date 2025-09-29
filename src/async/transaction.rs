@@ -59,10 +59,10 @@ impl AsyncTransaction {
 
             let tx = conn
                 .as_mut()
-                .unwrap()
+                .unwrap() // Conn is already non-None
                 .start_transaction(opts)
                 .await
-                .unwrap();
+                .map_err(Error::from)?;
 
             // As long as we hold Arc<Conn>, mysql_async::Transaction is valid.
             // inner is declared before conn so that Arc<Transaction> drops first.
@@ -110,8 +110,7 @@ impl AsyncTransaction {
 
             if let Some(inner) = inner.take() {
                 eprintln!("commit() or rollback() is not called. rolling back.");
-                inner.rollback().await.unwrap(); // TODO: unwrap to error
-                // Automatic rollback failed. The connection will rollback. Please close the current connection and start with new connection.
+                inner.rollback().await.map_err(Error::from)?;
             }
             *guard = None;
             Ok(())
