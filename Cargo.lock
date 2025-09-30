@@ -45,6 +45,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "862ed96ca487e809f1c8e5a8447f6ee2cf102f846893800b20cebdf541fc6bbd"
 
 [[package]]
+name = "arc-swap"
+version = "1.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69f7f8c3906b62b754cd5326047894316021dcfe5a194c8ea52bdd94934a3457"
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1145,6 +1151,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pyo3-log"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "833e6fdc21553e9938d9443050ed3c7787ac3c1a1aefccbd03dfae0c7a4be529"
+dependencies = [
+ "arc-swap",
+ "log",
+ "pyo3",
+]
+
+[[package]]
 name = "pyo3-macros"
 version = "0.26.0"
 source = "git+https://github.com/elbaro/pyo3.git?rev=e219540adf7bd00d03c251d53cb8d10cd3a5d16c#e219540adf7bd00d03c251d53cb8d10cd3a5d16c"
@@ -1174,11 +1191,13 @@ dependencies = [
  "criterion",
  "either",
  "futures",
+ "log",
  "mysql",
  "mysql_async",
  "mysql_common",
  "pyo3",
  "pyo3-async-runtimes",
+ "pyo3-log",
  "thiserror",
  "tokio",
 ]

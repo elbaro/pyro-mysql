@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 criterion = "0.7.0"
 either = "1.15.0"
 futures = "0.3.31"
+log = "0.4.28"
 mysql = "26.0.1"
 mysql_async = "0.36.1"
 mysql_common = "0.35.5"
@@ -22,6 +23,7 @@ pyo3 = { version = "0.26", features = [
     "auto-initialize",
 ] }
 pyo3-async-runtimes = { version = "0.26", features = ["tokio-runtime"] }
+pyo3-log = "0.13.0"
 thiserror = "2.0.16"
 tokio = "1.47.1"
 

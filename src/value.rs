@@ -457,7 +457,7 @@ pub fn value_to_python<'py>(
 
                 // Default: try string, fall back to bytes
                 _ => {
-                    eprintln!("Unimplemented column type: {:?}", col_type);
+                    log::error!("Unimplemented column type: {:?}", col_type);
                     match PyString::from_bytes(py, b) {
                         Ok(s) => s.into_any(),
                         Err(_) => PyBytes::new(py, b).into_any(),

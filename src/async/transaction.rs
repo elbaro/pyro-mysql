@@ -94,8 +94,8 @@ impl AsyncTransaction {
         // Check reference count of the transaction object
         let refcnt = slf.get_refcnt();
         if refcnt != 2 {
-            eprintln!(
-                "Warning: AsyncTransaction reference count is {} (expected 2) in __aexit__. Transaction may be referenced elsewhere.",
+            log::error!(
+                "AsyncTransaction reference count is {} (expected 2) in __aexit__. Transaction may be referenced elsewhere.",
                 refcnt
             );
         }
@@ -109,7 +109,7 @@ impl AsyncTransaction {
             let mut inner = inner.write().await;
 
             if let Some(inner) = inner.take() {
-                eprintln!("commit() or rollback() is not called. rolling back.");
+                log::warn!("commit() or rollback() is not called. rolling back.");
                 inner.rollback().await.map_err(Error::from)?;
             }
             *guard = None;

@@ -11,6 +11,7 @@ pub struct SyncTransaction {
     pub inner: Option<mysql::Transaction<'static>>,
     // Hold a reference to the connection Python object to prevent it from being dropped
     _conn: Option<Py<PyAny>>,
+    guard: Option<tokio::sync::RwLockWriteGuard<'static, Option<mysql_async::Conn>>>,
 }
 
 impl SyncTransaction {
@@ -18,6 +19,7 @@ impl SyncTransaction {
         SyncTransaction {
             inner: Some(tx),
             _conn: Some(conn),
+            guard: None,
         }
     }
 }
@@ -25,6 +27,7 @@ impl SyncTransaction {
 #[pymethods]
 impl SyncTransaction {
     fn __enter__(slf: Py<Self>) -> Py<Self> {
+        // slf.guard = slf.guard.clone();
         slf
     }
 
@@ -37,7 +40,7 @@ impl SyncTransaction {
         // Check reference count of the transaction object
         let refcnt = slf.get_refcnt();
         if refcnt != 2 {
-            eprintln!(
+            log::error!(
                 "Warning: Transaction reference count is {refcnt} (expected 2) in __exit__. Transaction may be referenced elsewhere."
             );
         }
@@ -45,7 +48,7 @@ impl SyncTransaction {
         let mut slf_mut = slf.borrow_mut();
         // If there's an uncaught exception or transaction wasn't explicitly committed/rolled back, roll back
         if slf_mut.inner.is_some() {
-            eprintln!("commit() or rollback() is not called. rolling back.");
+            log::warn!("commit() or rollback() is not called. rolling back.");
             slf_mut.rollback()?;
         }
         Ok(false) // Don't suppress exceptions
@@ -56,6 +59,7 @@ impl SyncTransaction {
             .inner
             .take()
             .ok_or_else(|| Error::ConnectionClosedError)?;
+        log::debug!("commit");
         Ok(inner.commit()?)
     }
     fn rollback(&mut self) -> PyroResult<()> {
@@ -63,6 +67,7 @@ impl SyncTransaction {
             .inner
             .take()
             .ok_or_else(|| Error::ConnectionClosedError)?;
+        log::debug!("rollback");
         Ok(inner.rollback()?)
     }
     fn affected_rows(&self) -> PyResult<u64> {
