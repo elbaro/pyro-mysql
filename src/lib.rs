@@ -46,12 +46,12 @@ fn init(worker_threads: Option<usize>, thread_name: Option<&str>) {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    pyo3_log::init();
+    pyo3_log::init(); // the default filter uses DEBUG
 
     if cfg!(debug_assertions) {
-        log::info!("Running in Debug mode.");
+        log::debug!("Running in Debug mode.");
     } else {
-        log::info!("Running in Release mode.");
+        log::debug!("Running in Release mode.");
     }
 
     init(Some(1), None);

@@ -1,38 +1,91 @@
+use std::pin::Pin;
+
 use either::Either;
 use mysql::prelude::Queryable;
+use mysql::{Transaction, TxOpts};
+use parking_lot::RwLockWriteGuard;
 use pyo3::prelude::*;
 
 use crate::error::{Error, PyroResult};
 use crate::sync::iterator::ResultSetIterator;
+use crate::sync::{SyncConn, SyncPooledConn};
 use crate::{params::Params, row::Row};
 
 #[pyclass]
 pub struct SyncTransaction {
-    pub inner: Option<mysql::Transaction<'static>>,
-    // Hold a reference to the connection Python object to prevent it from being dropped
-    _conn: Option<Py<PyAny>>,
-    guard: Option<tokio::sync::RwLockWriteGuard<'static, Option<mysql_async::Conn>>>,
+    // Hold a reference to the connection Python object to prevent it from being GC-ed
+    conn: Either<Py<SyncConn>, Py<SyncPooledConn>>,
+    opts: TxOpts,
+
+    // initialized and reset in __enter__ and __exit__
+    inner: Option<mysql::Transaction<'static>>,
+    conn1: Option<Pin<Box<mysql::Conn>>>, // Transaction takes the ownership of the Rust Conn struct from the Python Conn object
+    conn2: Option<Pin<Box<mysql::PooledConn>>>,
 }
 
 impl SyncTransaction {
-    pub fn new(tx: mysql::Transaction<'static>, conn: Py<PyAny>) -> Self {
+    pub fn new(conn: Either<Py<SyncConn>, Py<SyncPooledConn>>, opts: TxOpts) -> Self {
         SyncTransaction {
-            inner: Some(tx),
-            _conn: Some(conn),
-            guard: None,
+            conn,
+            opts,
+            inner: None,
+            conn1: None,
+            conn2: None,
         }
     }
 }
 
 #[pymethods]
 impl SyncTransaction {
-    fn __enter__(slf: Py<Self>) -> Py<Self> {
-        // slf.guard = slf.guard.clone();
-        slf
+    pub fn __enter__<'py>(slf: Bound<'py, Self>, py: Python<'py>) -> PyroResult<Bound<'py, Self>> {
+        let slf_ref = slf.borrow();
+        let (conn1, conn2, tx) = match &slf_ref.conn {
+            Either::Left(py_conn) => {
+                let mut conn = {
+                    let conn_mut = py_conn.borrow_mut(py);
+                    let inner = &conn_mut.inner;
+                    Box::pin(
+                        py.detach(|| inner.write())
+                            .take()
+                            .ok_or_else(|| Error::ConnectionClosedError)?,
+                    )
+                };
+
+                let tx = conn.start_transaction(slf_ref.opts)?;
+                let tx =
+                    unsafe { std::mem::transmute::<Transaction<'_>, Transaction<'static>>(tx) };
+                (Some(conn), None, tx)
+            }
+            Either::Right(py_conn) => {
+                let mut conn = {
+                    let conn_mut = py_conn.borrow_mut(py);
+                    let inner = &conn_mut.inner;
+                    Box::pin(
+                        py.detach(|| inner.write())
+                            .take()
+                            .ok_or_else(|| Error::ConnectionClosedError)?,
+                    )
+                };
+
+                let tx = conn.start_transaction(slf_ref.opts)?;
+                let tx =
+                    unsafe { std::mem::transmute::<Transaction<'_>, Transaction<'static>>(tx) };
+                (None, Some(conn), tx)
+            }
+        };
+        drop(slf_ref);
+        {
+            let mut slf_mut = slf.borrow_mut();
+            slf_mut.inner = Some(tx);
+            slf_mut.conn1 = conn1;
+            slf_mut.conn2 = conn2;
+        }
+        Ok(slf)
     }
 
-    fn __exit__(
+    pub fn __exit__(
         slf: &Bound<'_, Self>,
+        py: Python,
         _exc_type: Option<&Bound<'_, PyAny>>,
         _exc_value: Option<&Bound<'_, PyAny>>,
         _traceback: Option<&Bound<'_, PyAny>>,
@@ -40,16 +93,30 @@ impl SyncTransaction {
         // Check reference count of the transaction object
         let refcnt = slf.get_refcnt();
         if refcnt != 2 {
-            log::error!(
-                "Warning: Transaction reference count is {refcnt} (expected 2) in __exit__. Transaction may be referenced elsewhere."
-            );
+            return Err(Error::IncorrectApiUsageError(
+                "The transaction is still referenced in __exit__. Make sure not to store the transaction outside the with-clause",
+            ));
         }
 
         let mut slf_mut = slf.borrow_mut();
         // If there's an uncaught exception or transaction wasn't explicitly committed/rolled back, roll back
-        if slf_mut.inner.is_some() {
+        if slf_mut.inner.take().is_some() {
             log::warn!("commit() or rollback() is not called. rolling back.");
             slf_mut.rollback()?;
+        }
+        let conn1 = slf_mut.conn1.take();
+        let conn2 = slf_mut.conn2.take();
+        match &slf_mut.conn {
+            Either::Left(py_conn) => {
+                let conn_mut = py_conn.borrow_mut(py);
+                let inner = &conn_mut.inner;
+                *py.detach(|| inner.write()) = Some(*Pin::into_inner(conn1.unwrap()));
+            }
+            Either::Right(py_conn) => {
+                let conn_mut = py_conn.borrow_mut(py);
+                let inner = &conn_mut.inner;
+                *py.detach(|| inner.write()) = Some(*Pin::into_inner(conn2.unwrap()));
+            }
         }
         Ok(false) // Don't suppress exceptions
     }
@@ -62,6 +129,7 @@ impl SyncTransaction {
         log::debug!("commit");
         Ok(inner.commit()?)
     }
+
     fn rollback(&mut self) -> PyroResult<()> {
         let inner = self
             .inner
@@ -70,6 +138,7 @@ impl SyncTransaction {
         log::debug!("rollback");
         Ok(inner.rollback()?)
     }
+
     fn affected_rows(&self) -> PyResult<u64> {
         let inner = self.inner.as_ref().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Connection is not available")
@@ -123,6 +192,7 @@ impl SyncTransaction {
 
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec(&mut self, query: String, params: Params) -> PyroResult<Vec<Row>> {
+        log::debug!("exec {query}");
         Ok(self
             .inner
             .as_mut()
@@ -131,6 +201,7 @@ impl SyncTransaction {
     }
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_first(&mut self, query: String, params: Params) -> PyroResult<Option<Row>> {
+        log::debug!("exec_first {query}");
         Ok(self
             .inner
             .as_mut()
@@ -139,6 +210,7 @@ impl SyncTransaction {
     }
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
+        log::debug!("exec_drop {query} {params:?}");
         Ok(self
             .inner
             .as_mut()
@@ -147,6 +219,7 @@ impl SyncTransaction {
     }
     #[pyo3(signature = (query, params_list=vec![]))]
     fn exec_batch(&mut self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
+        log::debug!("exec_batch {query}");
         Ok(self
             .inner
             .as_mut()
@@ -156,6 +229,7 @@ impl SyncTransaction {
 
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_iter(slf: Py<Self>, query: String, params: Params) -> PyroResult<ResultSetIterator> {
+        log::debug!("exec_iter {query}");
         Python::attach(|py| {
             let mut slf_ref = slf.borrow_mut(py);
             let query_result = slf_ref

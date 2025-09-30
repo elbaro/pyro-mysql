@@ -1,5 +1,6 @@
 """Tests for SyncConn and SyncTransaction with multi-threading."""
 
+# TODO: remove
 import queue
 import random
 import threading
@@ -137,22 +138,16 @@ class TestSyncConnThreadSafety:
         def worker(thread_id: int):
             try:
                 # Start transaction
-                tx = sync_conn.start_transaction()
-
-                # Insert data within transaction
-                tx.exec_drop(
-                    "INSERT INTO test_threads (thread_id, value) VALUES (?, ?)",
-                    (f"tx-{thread_id}", thread_id * 100),
-                )
-
-                # Read within transaction
-                rows = tx.exec(
-                    "SELECT * FROM test_threads WHERE thread_id = ?",
-                    (f"tx-{thread_id}",),
-                )
-
-                # Commit
-                tx.commit()
+                with sync_conn.start_transaction() as tx:
+                    tx.exec_drop(
+                        "INSERT INTO test_threads (thread_id, value) VALUES (?, ?)",
+                        (f"tx-{thread_id}", thread_id * 100),
+                    )
+                    rows = tx.exec(
+                        "SELECT * FROM test_threads WHERE thread_id = ?",
+                        (f"tx-{thread_id}",),
+                    )
+                    tx.commit()
 
                 with lock:
                     results.append((thread_id, len(rows)))
@@ -308,8 +303,7 @@ class TestSyncTransactionThreadSafety:
         results = []
 
         def transaction_worker(thread_id: int):
-            tx = sync_conn.start_transaction()
-            try:
+            with sync_conn.start_transaction() as tx:
                 # Each transaction inserts multiple rows
                 for i in range(3):
                     tx.exec_drop(
@@ -323,10 +317,6 @@ class TestSyncTransactionThreadSafety:
                 # Commit
                 tx.commit()
                 results.append((thread_id, "committed"))
-
-            except Exception as e:
-                tx.rollback()
-                results.append((thread_id, f"rolled back: {e}"))
 
         # Run transactions in parallel
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
@@ -351,8 +341,7 @@ class TestSyncTransactionThreadSafety:
         barrier = threading.Barrier(2)
 
         def rollback_thread():
-            tx = sync_conn.start_transaction()
-            try:
+            with sync_conn.start_transaction() as tx:
                 # Insert data
                 tx.exec_drop(
                     "INSERT INTO test_threads (thread_id, value) VALUES (?, ?)",
@@ -367,27 +356,18 @@ class TestSyncTransactionThreadSafety:
 
                 # Rollback
                 tx.rollback()
-            except Exception:
-                tx.rollback()
-                raise
 
         def commit_thread():
             # Wait for rollback thread to insert
             barrier.wait()
 
-            tx = sync_conn.start_transaction()
-            try:
+            with sync_conn.start_transaction() as tx:
                 # Insert different data
                 tx.exec_drop(
                     "INSERT INTO test_threads (thread_id, value) VALUES (?, ?)",
                     ("commit", 111),
                 )
-
-                # Commit
                 tx.commit()
-            except Exception:
-                tx.rollback()
-                raise
 
         t1 = threading.Thread(target=rollback_thread)
         t2 = threading.Thread(target=commit_thread)
@@ -400,8 +380,6 @@ class TestSyncTransactionThreadSafety:
 
         # Only the committed data should exist
         rows = sync_conn.exec("SELECT * FROM test_threads")
-        print("rows ", rows[0].to_dict(), rows[1].to_dict())
-
         assert len(rows) == 1
         row_dict = rows[0].to_dict()
         assert row_dict["thread_id"] == "commit"
@@ -613,6 +591,7 @@ class TestDeadlockPrevention:
         )
 
         # Insert initial data
+        sync_conn.query_drop("TRUNCATE TABLE test_table1; TRUNCATE TABLE test_table2")
         sync_conn.exec_drop("INSERT INTO test_table1 (id, value) VALUES (1, 0)")
         sync_conn.exec_drop("INSERT INTO test_table2 (id, value) VALUES (1, 0)")
 
@@ -620,8 +599,7 @@ class TestDeadlockPrevention:
         lock = threading.Lock()
 
         def transaction1():
-            tx = sync_conn.start_transaction()
-            try:
+            with sync_conn.start_transaction() as tx:
                 # Update table1 first
                 tx.exec_drop("UPDATE test_table1 SET value = value + 1 WHERE id = 1")
                 time.sleep(0.01)  # Small delay to encourage interleaving
@@ -630,14 +608,9 @@ class TestDeadlockPrevention:
                 tx.commit()
                 with lock:
                     completed.append("tx1")
-            except Exception as e:
-                tx.rollback()
-                with lock:
-                    completed.append(f"tx1_error: {e}")
 
         def transaction2():
-            tx = sync_conn.start_transaction()
-            try:
+            with sync_conn.start_transaction() as tx:
                 # Update table2 first (opposite order)
                 tx.exec_drop("UPDATE test_table2 SET value = value + 10 WHERE id = 1")
                 time.sleep(0.01)  # Small delay to encourage interleaving
@@ -646,10 +619,6 @@ class TestDeadlockPrevention:
                 tx.commit()
                 with lock:
                     completed.append("tx2")
-            except Exception as e:
-                tx.rollback()
-                with lock:
-                    completed.append(f"tx2_error: {e}")
 
         # Run both transactions concurrently
         t1 = threading.Thread(target=transaction1)
@@ -667,13 +636,8 @@ class TestDeadlockPrevention:
         assert not t2.is_alive(), "Thread 2 is still running (possible deadlock)"
 
         # At least one transaction should complete (deadlock would prevent both)
-        successful = [
-            c
-            for c in completed
-            if not c.startswith("tx1_error") and not c.startswith("tx2_error")
-        ]
         assert (
-            len(successful) >= 1
+            len(completed) >= 1
         ), f"No transactions completed successfully: {completed}"
 
         # Cleanup

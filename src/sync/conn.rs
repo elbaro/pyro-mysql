@@ -1,7 +1,6 @@
-use std::sync::RwLock;
-
 use either::Either;
 use mysql::{AccessMode, Opts, prelude::*};
+use parking_lot::RwLock;
 use pyo3::prelude::*;
 
 use crate::error::{Error, PyroResult};
@@ -40,7 +39,6 @@ impl SyncConn {
         readonly: Option<bool>,
     ) -> PyroResult<SyncTransaction> {
         Python::attach(|py| {
-            let slf_ref = slf.borrow(py);
             let isolation_level: Option<mysql::IsolationLevel> =
                 isolation_level.map(|l| mysql::IsolationLevel::from(&l));
             let opts = mysql::TxOpts::default()
@@ -54,63 +52,55 @@ impl SyncConn {
                     }
                 }));
 
-            let mut guard = slf_ref.inner.write()?;
-            let inner = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-            let tx = inner.start_transaction(opts).map_err(Error::from)?;
-
-            Ok(SyncTransaction::new(
-                unsafe {
-                    std::mem::transmute::<mysql::Transaction<'_>, mysql::Transaction<'static>>(tx)
-                },
-                slf.clone_ref(py).into_any(),
-            ))
+            Ok(SyncTransaction::new(Either::Left(slf.clone_ref(py)), opts))
         })
     }
 
-    #[pyo3(signature=(callable, consistent_snapshot=false, isolation_level=None, readonly=None))]
-    fn run_transaction(
-        &self,
-        callable: Py<PyAny>,
-        consistent_snapshot: bool,
-        isolation_level: Option<IsolationLevel>,
-        readonly: Option<bool>,
-    ) -> PyResult<Py<PyAny>> {
-        let isolation_level: Option<mysql::IsolationLevel> =
-            isolation_level.map(|l| mysql::IsolationLevel::from(&l));
-        let opts = mysql::TxOpts::default()
-            .set_with_consistent_snapshot(consistent_snapshot)
-            .set_isolation_level(isolation_level)
-            .set_access_mode(readonly.map(|flag| {
-                if flag {
-                    AccessMode::ReadOnly
-                } else {
-                    AccessMode::ReadWrite
-                }
-            }));
+    // #[pyo3(signature=(callable, consistent_snapshot=false, isolation_level=None, readonly=None))]
+    // fn run_transaction(
+    //     &self,
+    //     callable: Py<PyAny>,
+    //     consistent_snapshot: bool,
+    //     isolation_level: Option<IsolationLevel>,
+    //     readonly: Option<bool>,
+    // ) -> PyResult<Py<PyAny>> {
+    //     let isolation_level: Option<mysql::IsolationLevel> =
+    //         isolation_level.map(|l| mysql::IsolationLevel::from(&l));
+    //     let opts = mysql::TxOpts::default()
+    //         .set_with_consistent_snapshot(consistent_snapshot)
+    //         .set_isolation_level(isolation_level)
+    //         .set_access_mode(readonly.map(|flag| {
+    //             if flag {
+    //                 AccessMode::ReadOnly
+    //             } else {
+    //                 AccessMode::ReadWrite
+    //             }
+    //         }));
 
-        let mut guard = self.inner.write().map_err(Error::from)?;
-        let inner = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        let tx = inner.start_transaction(opts).map_err(Error::from)?;
+    //     let mut guard = self.inner.write();
+    //     let inner = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
-        Ok(Python::attach(|py| {
-            // run_transaction doesn't need to hold a reference since it's scoped
-            let tx_static = unsafe {
-                std::mem::transmute::<mysql::Transaction<'_>, mysql::Transaction<'static>>(tx)
-            };
-            // Pass a dummy PyAny since run_transaction manages the lifetime
-            let none_py = py.None();
-            callable.call1(py, (SyncTransaction::new(tx_static, none_py),))
-        })?)
-    }
+    //     let tx = SyncTransaction::new(slf.clone_ref(py), none_py);
+    //     tx.__enter__(py)?;
+
+    //     // let ret = Python::attach(|py| {
+    //     //     callable.call1(py, (,))
+    //     // })?;
+    //     let ret = todo!();
+
+    //     tx.__exit__(None, None, None)?;
+
+    //     Ok(ret)
+    // }
 
     fn id(&self) -> PyroResult<u32> {
-        let guard = self.inner.read()?;
+        let guard = self.inner.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
         Ok(conn.connection_id())
     }
 
     fn affected_rows(&self) -> PyResult<u64> {
-        let guard = self.inner.read().map_err(Error::from)?;
+        let guard = self.inner.read();
         let conn = guard.as_ref().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Connection is not available")
         })?;
@@ -118,7 +108,7 @@ impl SyncConn {
     }
 
     fn last_insert_id(&self) -> PyroResult<Option<u64>> {
-        let guard = self.inner.read()?;
+        let guard = self.inner.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
         match conn.last_insert_id() {
             0 => Ok(None),
@@ -127,7 +117,7 @@ impl SyncConn {
     }
 
     fn ping(&self) -> PyroResult<()> {
-        let mut guard = self.inner.write()?;
+        let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         Ok(conn.ping()?)
     }
@@ -136,21 +126,21 @@ impl SyncConn {
 
     #[pyo3(signature = (query))]
     fn query(&self, query: String) -> PyroResult<Vec<Row>> {
-        let mut guard = self.inner.write()?;
+        let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         Ok(conn.query(query)?)
     }
 
     #[pyo3(signature = (query))]
     fn query_first(&self, query: String) -> PyroResult<Option<Row>> {
-        let mut guard = self.inner.write()?;
+        let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         Ok(conn.query_first(query)?)
     }
 
     #[pyo3(signature = (query))]
     fn query_drop(&self, query: String) -> PyroResult<()> {
-        let mut guard = self.inner.write()?;
+        let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         Ok(conn.query_drop(query)?)
     }
@@ -158,7 +148,7 @@ impl SyncConn {
     fn query_iter(slf: Py<Self>, query: String) -> PyroResult<ResultSetIterator> {
         Python::attach(|py| {
             let slf_ref = slf.borrow(py);
-            let mut guard = slf_ref.inner.write()?;
+            let mut guard = slf_ref.inner.write();
             let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
             let query_result = conn.query_iter(query)?;
 
@@ -173,29 +163,33 @@ impl SyncConn {
 
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec(&self, query: String, params: Params) -> PyroResult<Vec<Row>> {
-        let mut guard = self.inner.write()?;
+        let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        log::debug!("exec {query}");
         Ok(conn.exec(query, params)?)
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_first(&self, query: String, params: Params) -> PyroResult<Option<Row>> {
-        let mut guard = self.inner.write()?;
+        let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        log::debug!("exec_first {query}");
         Ok(conn.exec_first(query, params)?)
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_drop(&self, query: String, params: Params) -> PyroResult<()> {
-        let mut guard = self.inner.write()?;
+        let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        log::debug!("exec_drop {query}");
         Ok(conn.exec_drop(query, params)?)
     }
 
     #[pyo3(signature = (query, params_list=vec![]))]
     fn exec_batch(&self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
-        let mut guard = self.inner.write()?;
+        let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        log::debug!("exec_batch {query}");
         Ok(conn.exec_batch(query, params_list)?)
     }
 
@@ -203,10 +197,11 @@ impl SyncConn {
     fn exec_iter(slf: Py<Self>, query: String, params: Params) -> PyroResult<ResultSetIterator> {
         Python::attach(|py| {
             let slf_ref = slf.borrow(py);
-            let mut guard = slf_ref.inner.write()?;
+            let mut guard = slf_ref.inner.write();
             let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-            let query_result = conn.exec_iter(query, params)?;
 
+            log::debug!("exec_iter {query}");
+            let query_result = conn.exec_iter(query, params)?;
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
                 inner: Either::Right(unsafe { std::mem::transmute(query_result) }),
@@ -215,23 +210,23 @@ impl SyncConn {
     }
 
     fn close(&self) -> PyroResult<()> {
-        *self.inner.write().map_err(Error::from)? = None;
+        *self.inner.write() = None;
         Ok(())
     }
 
     fn disconnect(&self) -> PyroResult<()> {
-        *self.inner.write().map_err(Error::from)? = None;
+        *self.inner.write() = None;
         Ok(())
     }
 
     fn reset(&self) -> PyroResult<()> {
-        let mut guard = self.inner.write()?;
+        let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         Ok(conn.reset()?)
     }
 
     fn server_version(&self) -> PyroResult<(u16, u16, u16)> {
-        let guard = self.inner.read()?;
+        let guard = self.inner.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
         Ok(conn.server_version())
     }

@@ -1,8 +1,12 @@
-import asyncio
+import logging
 import os
 
 import pytest
 from pyro_mysql import AsyncOpts, AsyncOptsBuilder, SyncOpts, SyncOptsBuilder
+
+
+def pytest_configure(config):
+    logging.getLogger("pyro_mysql").setLevel(logging.DEBUG)
 
 
 def get_test_db_url() -> str:

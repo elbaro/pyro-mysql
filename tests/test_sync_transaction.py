@@ -57,21 +57,17 @@ class TestSyncTransaction:
         # First create a test table outside of transaction
         conn.exec("CREATE TEMPORARY TABLE test_tx_rollback (id INT, value VARCHAR(50))")
 
-        def transaction_func(tx):
+        with conn.start_transaction() as tx:
             rows = tx.exec("SELECT 42 as answer")
             tx.commit()
-            return rows[0].to_dict()["answer"]
-
-        result = conn.run_transaction(transaction_func)
+            result = rows[0].to_dict()["answer"]
         assert result == 42
 
         # Test auto-rollback on exception
-        def failing_transaction(tx):
-            tx.exec("INSERT INTO test_tx_rollback VALUES (1, 'should_rollback')")
-            raise ValueError("Intentional failure")
-
         with pytest.raises(ValueError):
-            conn.run_transaction(failing_transaction)
+            with conn.start_transaction() as tx:
+                tx.exec("INSERT INTO test_tx_rollback VALUES (1, 'should_rollback')")
+                raise ValueError("Intentional failure")
 
         # Verify insert was rolled back
         rows = conn.exec("SELECT * FROM test_tx_rollback")
@@ -81,16 +77,12 @@ class TestSyncTransaction:
         """Test that keeping a reference to transaction shows warning"""
         conn = SyncConn(get_test_db_url())
 
-        # This should trigger a warning because we keep a reference to tx
-        tx_ref = None
-        with conn.start_transaction() as tx:
-            tx_ref = tx  # Keep a reference
-            tx.exec("SELECT 1")
-            tx.commit()
-        # Warning should be printed in __exit__ about refcount != 1
-
-        # Clean up the reference
-        del tx_ref
+        with pytest.raises(pyro_mysql.error.IncorrectApiUsageError):
+            tx_ref = None
+            with conn.start_transaction() as tx:
+                tx_ref = tx  # Keep a reference
+                tx.exec("SELECT 1")
+                tx.commit()
 
     def test_using_conn_while_transaction_active(self):
         """Test that we can use Conn while a Transaction is active"""
