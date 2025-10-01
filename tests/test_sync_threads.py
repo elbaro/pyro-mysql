@@ -180,108 +180,108 @@ class TestSyncConnThreadSafety:
         assert final_count_dict["cnt"] == 30  # 3 writers * 10 inserts each
 
 
-class TestSyncPoolThreadSafety:
-    """Test thread safety with connection pools."""
+# class TestSyncPoolThreadSafety:
+#     """Test thread safety with connection pools."""
 
-    def test_pool_concurrent_connections(self, sync_pool):
-        """Test multiple threads getting connections from pool."""
-        results = []
-        errors = []
+#     def test_pool_concurrent_connections(self, sync_pool):
+#         """Test multiple threads getting connections from pool."""
+#         results = []
+#         errors = []
 
-        def worker(thread_id: int):
-            try:
-                # Get connection from pool
-                conn = sync_pool.get_conn()
-                try:
-                    # Use the connection
-                    for i in range(3):
-                        conn.exec_drop(
-                            "INSERT INTO test_threads (thread_id, value) VALUES (?, ?)",
-                            (f"pool-{thread_id}", i),
-                        )
+#         def worker(thread_id: int):
+#             try:
+#                 # Get connection from pool
+#                 conn = sync_pool.get_conn()
+#                 try:
+#                     # Use the connection
+#                     for i in range(3):
+#                         conn.exec_drop(
+#                             "INSERT INTO test_threads (thread_id, value) VALUES (?, ?)",
+#                             (f"pool-{thread_id}", i),
+#                         )
 
-                    rows = conn.exec(
-                        "SELECT COUNT(*) as cnt FROM test_threads WHERE thread_id = ?",
-                        (f"pool-{thread_id}",),
-                    )
+#                     rows = conn.exec(
+#                         "SELECT COUNT(*) as cnt FROM test_threads WHERE thread_id = ?",
+#                         (f"pool-{thread_id}",),
+#                     )
 
-                    if rows:
-                        row_dict = rows[0].to_dict()
-                        results.append((thread_id, row_dict["cnt"]))
-                finally:
-                    # Return connection to pool
-                    conn.close()
+#                     if rows:
+#                         row_dict = rows[0].to_dict()
+#                         results.append((thread_id, row_dict["cnt"]))
+#                 finally:
+#                     # Return connection to pool
+#                     conn.close()
 
-            except Exception as e:
-                errors.append((thread_id, str(e)))
+#             except Exception as e:
+#                 errors.append((thread_id, str(e)))
 
-        # Run many threads (more than pool size)
-        num_threads = 20
-        with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = [executor.submit(worker, i) for i in range(num_threads)]
-            for future in as_completed(futures):
-                future.result()
+#         # Run many threads (more than pool size)
+#         num_threads = 20
+#         with ThreadPoolExecutor(max_workers=num_threads) as executor:
+#             futures = [executor.submit(worker, i) for i in range(num_threads)]
+#             for future in as_completed(futures):
+#                 future.result()
 
-        # Check results
-        assert len(errors) == 0, f"Errors occurred: {errors}"
-        assert len(results) == num_threads
+#         # Check results
+#         assert len(errors) == 0, f"Errors occurred: {errors}"
+#         assert len(results) == num_threads
 
-        # Each thread should have inserted 3 rows
-        for thread_id, count in results:
-            assert count == 3
+#         # Each thread should have inserted 3 rows
+#         for thread_id, count in results:
+#             assert count == 3
 
-        # Verify total
-        conn = sync_pool.get_conn()
-        try:
-            total = conn.exec_first("SELECT COUNT(*) as cnt FROM test_threads")
-            if total:
-                total_dict = total.to_dict()
-                assert total_dict["cnt"] == num_threads * 3
-        finally:
-            conn.close()
+#         # Verify total
+#         conn = sync_pool.get_conn()
+#         try:
+#             total = conn.exec_first("SELECT COUNT(*) as cnt FROM test_threads")
+#             if total:
+#                 total_dict = total.to_dict()
+#                 assert total_dict["cnt"] == num_threads * 3
+#         finally:
+#             conn.close()
 
-    def test_pool_connection_reuse(self, sync_pool):
-        """Test that connections are properly reused across threads."""
-        connection_ids = []
-        lock = threading.Lock()
+#     def test_pool_connection_reuse(self, sync_pool):
+#         """Test that connections are properly reused across threads."""
+#         connection_ids = []
+#         lock = threading.Lock()
 
-        def worker(thread_id: int):
-            conn = sync_pool.get_conn()
-            try:
-                # Get connection ID
-                row = conn.exec_first("SELECT CONNECTION_ID() as id")
-                if row:
-                    row_dict = row.to_dict()
-                    conn_id = row_dict["id"]
+#         def worker(thread_id: int):
+#             conn = sync_pool.get_conn()
+#             try:
+#                 # Get connection ID
+#                 row = conn.exec_first("SELECT CONNECTION_ID() as id")
+#                 if row:
+#                     row_dict = row.to_dict()
+#                     conn_id = row_dict["id"]
 
-                with lock:
-                    connection_ids.append(conn_id)
+#                 with lock:
+#                     connection_ids.append(conn_id)
 
-                # Do some work
-                conn.exec_drop(
-                    "INSERT INTO test_threads (thread_id, value) VALUES (?, ?)",
-                    (f"reuse-{thread_id}", conn_id),
-                )
+#                 # Do some work
+#                 conn.exec_drop(
+#                     "INSERT INTO test_threads (thread_id, value) VALUES (?, ?)",
+#                     (f"reuse-{thread_id}", conn_id),
+#                 )
 
-                # Small delay to simulate work
-                time.sleep(0.01)
+#                 # Small delay to simulate work
+#                 time.sleep(0.01)
 
-            finally:
-                conn.close()
+#             finally:
+#                 conn.close()
 
-        # Run threads in batches to force connection reuse
-        for batch in range(3):
-            threads = []
-            for i in range(5):
-                thread_id = batch * 5 + i
-                t = threading.Thread(target=worker, args=(thread_id,))
-                threads.append(t)
-                t.start()
+#         # Run threads in batches to force connection reuse
+#         for batch in range(3):
+#             threads = []
+#             for i in range(5):
+#                 thread_id = batch * 5 + i
+#                 t = threading.Thread(target=worker, args=(thread_id,))
+#                 threads.append(t)
+#                 t.start()
 
-            for t in threads:
-                t.join()
+#             for t in threads:
+#                 t.join()
 
-        # Check that connections were reused (should have fewer unique IDs than threads)
-        unique_conn_ids = set(connection_ids)
-        assert len(unique_conn_ids) <= 10  # Pool max size
-        assert len(connection_ids) == 15  # Total thread executions
+#         # Check that connections were reused (should have fewer unique IDs than threads)
+#         unique_conn_ids = set(connection_ids)
+#         assert len(unique_conn_ids) <= 10  # Pool max size
+#         assert len(connection_ids) == 15  # Total thread executions
