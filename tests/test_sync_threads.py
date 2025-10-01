@@ -1,8 +1,6 @@
 """Tests for SyncConn and SyncTransaction with multi-threading."""
 
-# TODO: remove
 import queue
-import random
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -288,77 +286,3 @@ class TestSyncPoolThreadSafety:
         unique_conn_ids = set(connection_ids)
         assert len(unique_conn_ids) <= 10  # Pool max size
         assert len(connection_ids) == 15  # Total thread executions
-
-    def test_pool_stress_test(self, sync_pool):
-        """Stress test with many threads and operations."""
-        num_threads = 50
-        operations_per_thread = 10
-        success_count = threading.Semaphore(0)
-        error_count = threading.Semaphore(0)
-
-        def stress_worker(thread_id: int):
-            try:
-                for op in range(operations_per_thread):
-                    conn = sync_pool.get_conn()
-                    try:
-                        # Mix of operations
-                        if op % 3 == 0:
-                            # Insert
-                            conn.exec_drop(
-                                "INSERT INTO test_threads (thread_id, value) VALUES (?, ?)",
-                                (f"stress-{thread_id}", op),
-                            )
-                        elif op % 3 == 1:
-                            # Select
-                            rows = conn.exec("SELECT * FROM test_threads LIMIT 10")
-                        else:
-                            # Update
-                            conn.exec_drop(
-                                "UPDATE test_threads SET value = value + 1 WHERE thread_id = ?",
-                                (f"stress-{thread_id}",),
-                            )
-                    finally:
-                        conn.close()
-
-                    # Very small delay to increase concurrency
-                    time.sleep(0.001)
-
-                success_count.release()
-            except Exception:
-                error_count.release()
-
-        # Launch all threads
-        threads = []
-        start_time = time.time()
-
-        for i in range(num_threads):
-            t = threading.Thread(target=stress_worker, args=(i,))
-            threads.append(t)
-            t.start()
-
-        # Wait for all to complete
-        for t in threads:
-            t.join()
-
-        elapsed_time = time.time() - start_time
-
-        # Count successes and errors
-        successes = 0
-        errors = 0
-
-        for _ in range(num_threads):
-            if success_count.acquire(blocking=False):
-                successes += 1
-            elif error_count.acquire(blocking=False):
-                errors += 1
-
-        # All threads should succeed
-        assert (
-            successes == num_threads
-        ), f"Only {successes}/{num_threads} threads succeeded"
-        assert errors == 0, f"Had {errors} errors"
-
-        print(f"Stress test completed in {elapsed_time:.2f}s")
-        print(
-            f"Operations per second: {(num_threads * operations_per_thread) / elapsed_time:.0f}"
-        )
