@@ -51,15 +51,27 @@ def example2():
             .build()
     )
     conn = await pool.acquire()
+
+def example3(pool):
+    with pool.acquire() as conn:
+        ...
 ```
 
 
 ### 2. Query Execution
 
-`AsyncConn` and `AsyncTransaction` provides the following methods.
-`SyncConn` and `SyncTransaction` provides the sync versions.
+`AsyncConn` and `AsyncTransaction` provide the following methods.
+`SyncConn`, `SyncPooledConn` and `SyncTransaction` provide similar API.
 
 ```py
+
+# Text Protocols - supports multiple statements concatenated with ';' but accepts no arguemnt
+def query(self, query: str) -> PyroFuture[list[Row]]
+def query_first(self, query: str) -> PyroFuture[Row | None]
+def query_drop(self, query: str) -> PyroFuture[None]
+def query_batch(self, query: str) -> PyroFuture[None]
+
+# Binary Protocols - supports arguments but no multiple statement
 def exec(self, query: str, params: Params) -> PyroFuture[list[Row]]
 def exec_first(self, query: str, params: Params) -> PyroFuture[Row | None]
 def exec_drop(self, query: str, params: Params) -> PyroFuture[None]
@@ -89,13 +101,13 @@ async with conn.start_transaction() as tx:
     await tx.exec('INSERT ..')
     await tx.exec('INSERT ..')
     await tx.commit()  # tx cannot be used anymore
-    # await conn.exec(..)  # error: conn cannot be used while tx is active
+    await conn.exec(..)  # error
 
 # sync API
 with conn.start_transaction() as tx:
     tx.exec('INSERT ..')
     tx.exec('INSERT ..')
-    conn.exec('INSERT ..')  # you cannot use conn
+    conn.exec('INSERT ..')  # error
     tx.commit()  # tx cannot be used anymore
 ```
 
@@ -140,7 +152,7 @@ with conn.start_transaction() as tx:
 
 ## Logging
 
-By default, pyro-mysql sends the Rust logs to the Python logging system.
+pyro-mysql sends the Rust logs to the Python logging system, which can be configured with `logging.getLogger("pyro_mysql")`.
 
 ```py
 # Queries are logged with the DEBUG level

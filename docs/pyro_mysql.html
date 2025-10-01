@@ -401,7 +401,7 @@
                     <a class="class" href="#SyncConn">SyncConn</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#SyncConn.run_transaction">run_transaction</a>
+                                <a class="function" href="#SyncConn.start_transaction">start_transaction</a>
                         </li>
                         <li>
                                 <a class="function" href="#SyncConn.id">id</a>
@@ -446,9 +446,6 @@
                                 <a class="function" href="#SyncConn.close">close</a>
                         </li>
                         <li>
-                                <a class="function" href="#SyncConn.close">close</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#SyncConn.reset">reset</a>
                         </li>
                         <li>
@@ -473,7 +470,7 @@
                     <a class="class" href="#SyncPooledConn">SyncPooledConn</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#SyncPooledConn.run_transaction">run_transaction</a>
+                                <a class="function" href="#SyncPooledConn.start_transaction">start_transaction</a>
                         </li>
                         <li>
                                 <a class="function" href="#SyncPooledConn.affected_rows">affected_rows</a>
@@ -695,7 +692,13 @@
                     <h1 class="modulename">
 pyro_mysql    </h1>
 
-                        <div class="docstring"><p>pyro_mysql - High-performance MySQL driver for Python.</p>
+                        <div class="docstring"><p>pyro_mysql - High-performance MySQL driver for Python, written in Rust.</p>
+
+<ul>
+<li><a href="pyro_mysql/sync.html">pyro_mysql.sync</a>: The synchronous API using the <code>mysql</code> crate.</li>
+<li><a href="pyro_mysql/async_.html">pyro_mysql.async_</a>: The asynchronous API using the <code>mysql_async</code> crate.</li>
+<li><a href="pyro_mysql/error.html">pyro_mysql.error</a>: Exceptions.</li>
+</ul>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
@@ -851,7 +854,7 @@ to_tuple() / to_dict() copies the data, and should not be called many times.</p>
                             </div>
                             <div id="IsolationLevel.ReadUncommitted" class="classattr">
                                 <div class="attr variable">
-            <span class="name">ReadUncommitted</span><span class="annotation">: <a href="#IsolationLevel">IsolationLevel</a></span>        =
+            <span class="name">ReadUncommitted</span><span class="annotation">: &#39;IsolationLevel&#39;</span>        =
 <span class="default_value"><a href="#IsolationLevel.ReadUncommitted">IsolationLevel.ReadUncommitted</a></span>
 
         
@@ -863,7 +866,7 @@ to_tuple() / to_dict() copies the data, and should not be called many times.</p>
                             </div>
                             <div id="IsolationLevel.ReadCommitted" class="classattr">
                                 <div class="attr variable">
-            <span class="name">ReadCommitted</span><span class="annotation">: <a href="#IsolationLevel">IsolationLevel</a></span>        =
+            <span class="name">ReadCommitted</span><span class="annotation">: &#39;IsolationLevel&#39;</span>        =
 <span class="default_value"><a href="#IsolationLevel.ReadCommitted">IsolationLevel.ReadCommitted</a></span>
 
         
@@ -875,7 +878,7 @@ to_tuple() / to_dict() copies the data, and should not be called many times.</p>
                             </div>
                             <div id="IsolationLevel.RepeatableRead" class="classattr">
                                 <div class="attr variable">
-            <span class="name">RepeatableRead</span><span class="annotation">: <a href="#IsolationLevel">IsolationLevel</a></span>        =
+            <span class="name">RepeatableRead</span><span class="annotation">: &#39;IsolationLevel&#39;</span>        =
 <span class="default_value"><a href="#IsolationLevel.RepeatableRead">IsolationLevel.RepeatableRead</a></span>
 
         
@@ -887,7 +890,7 @@ to_tuple() / to_dict() copies the data, and should not be called many times.</p>
                             </div>
                             <div id="IsolationLevel.Serializable" class="classattr">
                                 <div class="attr variable">
-            <span class="name">Serializable</span><span class="annotation">: <a href="#IsolationLevel">IsolationLevel</a></span>        =
+            <span class="name">Serializable</span><span class="annotation">: &#39;IsolationLevel&#39;</span>        =
 <span class="default_value"><a href="#IsolationLevel.Serializable">IsolationLevel.Serializable</a></span>
 
         
@@ -2337,15 +2340,15 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
     
     
 
-                            <div id="SyncConn.run_transaction" class="classattr">
+                            <div id="SyncConn.start_transaction" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">run_transaction</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="o">/</span>,</span><span class="param">	<span class="nb">callable</span>,</span><span class="param">	<span class="n">consistent_snapshot</span><span class="o">=</span><span class="kc">False</span>,</span><span class="param">	<span class="n">isolation_level</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">readonly</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">start_transaction</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="o">/</span>,</span><span class="param">	<span class="n">consistent_snapshot</span><span class="o">=</span><span class="kc">False</span>,</span><span class="param">	<span class="n">isolation_level</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">readonly</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#SyncConn.run_transaction"></a>
+    <a class="headerlink" href="#SyncConn.start_transaction"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -2562,21 +2565,6 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
 
 
                             </div>
-                            <div id="SyncConn.close" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">close</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#SyncConn.close"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
                             <div id="SyncConn.reset" class="classattr">
                                 <div class="attr function">
             
@@ -2663,15 +2651,15 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
     
     
 
-                            <div id="SyncPooledConn.run_transaction" class="classattr">
+                            <div id="SyncPooledConn.start_transaction" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">run_transaction</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="o">/</span>,</span><span class="param">	<span class="nb">callable</span>,</span><span class="param">	<span class="n">consistent_snapshot</span><span class="o">=</span><span class="kc">False</span>,</span><span class="param">	<span class="n">isolation_level</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">readonly</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">start_transaction</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="o">/</span>,</span><span class="param">	<span class="n">consistent_snapshot</span><span class="o">=</span><span class="kc">False</span>,</span><span class="param">	<span class="n">isolation_level</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">readonly</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#SyncPooledConn.run_transaction"></a>
+    <a class="headerlink" href="#SyncPooledConn.start_transaction"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -3599,22 +3587,22 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
 <p>These Python types can be converted to MySQL values:</p>
 
 <ul>
-<li>None</li>
-<li>bool</li>
-<li>int</li>
-<li>float  </li>
-<li>str</li>
-<li>bytes</li>
-<li>bytearray</li>
-<li>tuple[Any, ...]</li>
-<li>list[Any]</li>
-<li>dict[str, Any]</li>
-<li>datetime.datetime</li>
-<li>datetime.date</li>
-<li>datetime.time</li>
-<li>datetime.timedelta</li>
-<li>time.struct_time</li>
-<li>decimal.Decimal</li>
+<li><code>None</code></li>
+<li><code>bool</code></li>
+<li><code>int</code></li>
+<li><code>float</code></li>
+<li><code>str</code></li>
+<li><code>bytes</code></li>
+<li><code>bytearray</code></li>
+<li><code>tuple[Any, ...]</code></li>
+<li><code>list[Any]</code></li>
+<li><code>dict[str, Any]</code></li>
+<li><code>datetime.datetime</code></li>
+<li><code>datetime.date</code></li>
+<li><code>datetime.time</code></li>
+<li><code>datetime.timedelta</code></li>
+<li><code>time.struct_time</code></li>
+<li><code>decimal.Decimal</code></li>
 </ul>
 </div>
 
@@ -3633,10 +3621,10 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
 <p>Parameters that can be passed to query execution methods:</p>
 
 <ul>
-<li>None: No parameters</li>
-<li>tuple[Value, ...]: Positional parameters for queries with ? placeholders</li>
-<li>list[Value]: List of parameters for queries with ? placeholders  </li>
-<li>dict[str, Value]: Named parameters for queries with named placeholders</li>
+<li><code>None</code>: No parameters</li>
+<li><code>tuple[Value, ...]</code>: Positional parameters for queries with ? placeholders</li>
+<li><code>list[Value]</code>: List of parameters for queries with ? placeholders  </li>
+<li><code>dict[str, Value]</code>: Named parameters for queries with named placeholders</li>
 </ul>
 
 <p>Examples:</p>
@@ -3644,25 +3632,25 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
 <h6 id="no-parameters">No parameters:</h6>
 
 <blockquote>
-  <p>await conn.exec("SELECT * FROM users")</p>
+  <p><code>await conn.exec("SELECT * FROM users")</code></p>
 </blockquote>
 
 <h6 id="positional-parameters">Positional parameters:</h6>
 
 <blockquote>
-  <p>await conn.exec("SELECT * FROM users WHERE id = ?", (123,))</p>
+  <p><code>await conn.exec("SELECT * FROM users WHERE id = ?", (123,))</code></p>
 </blockquote>
 
 <h6 id="multiple-positional-parameters">Multiple positional parameters:</h6>
 
 <blockquote>
-  <p>await conn.exec("SELECT * FROM users WHERE age &gt; ? AND city = ?", (18, "NYC"))</p>
+  <p><code>await conn.exec("SELECT * FROM users WHERE age &gt; ? AND city = ?", (18, "NYC"))</code></p>
 </blockquote>
 
 <h6 id="named-parameters">Named parameters:</h6>
 
 <blockquote>
-  <p>await conn.exec("SELECT * FROM users WHERE age &gt; :age AND city = :city", dict(age=18, name="NYC"))</p>
+  <p><code>await conn.exec("SELECT * FROM users WHERE age &gt; :age AND city = :city", dict(age=18, name="NYC"))</code></p>
 </blockquote>
 </div>
 
