@@ -176,9 +176,8 @@ class TestSyncConnThreadSafety:
 
         # Final verification
         final_count = sync_conn.exec_first("SELECT COUNT(*) as cnt FROM test_threads")
-        if final_count:
-            final_count_dict = final_count.to_dict()
-            assert final_count_dict["cnt"] == 30  # 3 writers * 10 inserts each
+        final_count_dict = final_count.to_dict()
+        assert final_count_dict["cnt"] == 30  # 3 writers * 10 inserts each
 
 
 class TestSyncPoolThreadSafety:
