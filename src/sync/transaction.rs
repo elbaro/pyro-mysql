@@ -3,7 +3,6 @@ use std::pin::Pin;
 use either::Either;
 use mysql::prelude::Queryable;
 use mysql::{Transaction, TxOpts};
-use parking_lot::RwLockWriteGuard;
 use pyo3::prelude::*;
 
 use crate::error::{Error, PyroResult};
@@ -184,7 +183,12 @@ impl SyncTransaction {
 
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
-                inner: Either::Left(unsafe { std::mem::transmute(query_result) }),
+                inner: Either::Left(unsafe {
+                    std::mem::transmute::<
+                        mysql::QueryResult<'_, '_, '_, mysql::Text>,
+                        mysql::QueryResult<'_, '_, '_, mysql::Text>,
+                    >(query_result)
+                }),
             })
         })
     }
@@ -241,7 +245,12 @@ impl SyncTransaction {
 
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
-                inner: Either::Right(unsafe { std::mem::transmute(query_result) }),
+                inner: Either::Right(unsafe {
+                    std::mem::transmute::<
+                        mysql::QueryResult<'_, '_, '_, mysql::Binary>,
+                        mysql::QueryResult<'_, '_, '_, mysql::Binary>,
+                    >(query_result)
+                }),
             })
         })
     }

@@ -30,6 +30,7 @@ impl AsyncConn {
         ))
     }
 
+    #[allow(clippy::new_ret_no_self)]
     #[staticmethod]
     fn new<'py>(
         py: Python<'py>,

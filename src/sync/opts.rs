@@ -159,7 +159,7 @@ impl SyncOptsBuilder {
 
     // Performance/Timeout Options
     fn read_timeout(mut self_: PyRefMut<Self>, seconds: Option<f64>) -> PyResult<PyRefMut<Self>> {
-        let duration = seconds.map(|s| Duration::from_secs_f64(s));
+        let duration = seconds.map(Duration::from_secs_f64);
         let builder = self_
             .builder
             .take()
@@ -169,7 +169,7 @@ impl SyncOptsBuilder {
     }
 
     fn write_timeout(mut self_: PyRefMut<Self>, seconds: Option<f64>) -> PyResult<PyRefMut<Self>> {
-        let duration = seconds.map(|s| Duration::from_secs_f64(s));
+        let duration = seconds.map(Duration::from_secs_f64);
         let builder = self_
             .builder
             .take()
@@ -182,7 +182,7 @@ impl SyncOptsBuilder {
         mut self_: PyRefMut<Self>,
         seconds: Option<f64>,
     ) -> PyResult<PyRefMut<Self>> {
-        let duration = seconds.map(|s| Duration::from_secs_f64(s));
+        let duration = seconds.map(Duration::from_secs_f64);
         let builder = self_
             .builder
             .take()

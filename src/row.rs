@@ -21,23 +21,21 @@ impl mysql_common::prelude::FromRow for Row {
 #[pymethods]
 impl Row {
     pub fn to_tuple<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        let n = self.inner.len();
         let columns = self.inner.columns_ref();
-        let mut vec = Vec::with_capacity(n);
-        for i in 0..n {
-            vec.push(value_to_python(py, &self.inner[i], &columns[i])?);
+        let mut vec = Vec::with_capacity(self.inner.len());
+        for (i, column) in columns.iter().enumerate() {
+            vec.push(value_to_python(py, &self.inner[i], column)?);
         }
-        Ok(PyTuple::new(py, vec)?)
+        PyTuple::new(py, vec)
     }
 
     pub fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        let n = self.inner.len();
         let columns = self.inner.columns_ref();
         let dict = PyDict::new(py);
-        for i in 0..n {
+        for (i, column) in columns.iter().enumerate() {
             dict.set_item(
                 columns[i].name_str(),
-                value_to_python(py, &self.inner[i], &columns[i])?,
+                value_to_python(py, &self.inner[i], column)?,
             )?;
         }
         Ok(dict)
