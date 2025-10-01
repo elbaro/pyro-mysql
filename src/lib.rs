@@ -14,16 +14,16 @@ use pyo3::prelude::*;
 use tokio::runtime::Builder;
 
 use crate::{
+    r#async::{
+        AsyncOpts, AsyncOptsBuilder, AsyncPoolOpts, conn::AsyncConn, pool::AsyncPool,
+        transaction::AsyncTransaction,
+    },
     capability_flags::CapabilityFlags,
     isolation_level::IsolationLevel,
-    r#async::{
-        conn::AsyncConn, pool::AsyncPool, transaction::AsyncTransaction, AsyncOpts,
-        AsyncOptsBuilder, AsyncPoolOpts,
-    },
     row::Row,
     sync::{
-        opts::{SyncOpts, SyncOptsBuilder},
         SyncConn, SyncPool, SyncPoolOpts, SyncPooledConn, SyncTransaction,
+        opts::{SyncOpts, SyncOptsBuilder},
     },
     util::PyroFuture,
 };
