@@ -22,7 +22,7 @@ pyo3 = { version = "0.26", features = [
   "experimental-inspect",
   "either",
   "auto-initialize",
-  "abi3",
+  "abi3-py310",
 ] }
 pyo3-async-runtimes = { version = "0.26", features = ["tokio-runtime"] }
 pyo3-log = "0.13.0"
