@@ -119,7 +119,7 @@ impl SyncPooledConn {
 
             Ok(ResultSetIterator {
                 owner: slf.clone_ref(py).into_any(),
-                inner: Either::Left(unsafe { std::mem::transmute(query_result) }),
+                inner: Either::Left(unsafe { std::mem::transmute::<mysql::QueryResult<'_, '_, '_, mysql::Text>, mysql::QueryResult<'_, '_, '_, mysql::Text>>(query_result) }),
             })
         })
     }
@@ -182,7 +182,7 @@ impl SyncPooledConn {
 
         Ok(ResultSetIterator {
             owner: slf.clone_ref(py).into_any(),
-            inner: Either::Right(unsafe { std::mem::transmute(query_result) }),
+            inner: Either::Right(unsafe { std::mem::transmute::<mysql::QueryResult<'_, '_, '_, mysql::Binary>, mysql::QueryResult<'_, '_, '_, mysql::Binary>>(query_result) }),
         })
     }
 

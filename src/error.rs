@@ -71,19 +71,17 @@ impl From<Error> for pyo3::PyErr {
     fn from(err: Error) -> Self {
         // TODO: track up sources and append to notes
         match err {
-            Error::IncorrectApiUsageError(s) => IncorrectApiUsageError::new_err(s).into(),
-            Error::SyncUrlError(url_error) => UrlError::new_err(url_error.to_string()).into(),
-            Error::AsyncUrlError(url_error) => UrlError::new_err(url_error.to_string()).into(),
-            Error::SyncError(error) => MysqlError::new_err(error.to_string()).into(),
-            Error::AsyncError(error) => MysqlError::new_err(error.to_string()).into(),
-            Error::ConnectionClosedError => ConnectionClosedError::new_err(err.to_string()).into(),
-            Error::TransactionClosedError => {
-                TransactionClosedError::new_err(err.to_string()).into()
-            }
-            Error::BuilderConsumedError => BuilderConsumedError::new_err(err.to_string()).into(),
+            Error::IncorrectApiUsageError(s) => IncorrectApiUsageError::new_err(s),
+            Error::SyncUrlError(url_error) => UrlError::new_err(url_error.to_string()),
+            Error::AsyncUrlError(url_error) => UrlError::new_err(url_error.to_string()),
+            Error::SyncError(error) => MysqlError::new_err(error.to_string()),
+            Error::AsyncError(error) => MysqlError::new_err(error.to_string()),
+            Error::ConnectionClosedError => ConnectionClosedError::new_err(err.to_string()),
+            Error::TransactionClosedError => TransactionClosedError::new_err(err.to_string()),
+            Error::BuilderConsumedError => BuilderConsumedError::new_err(err.to_string()),
             Error::PythonCancelledError => pyo3::exceptions::asyncio::CancelledError::new_err(()),
-            Error::DecodeError { .. } => DecodeError::new_err(err.to_string()).into(),
-            Error::PoisonError(s) => PoisonError::new_err(s).into(),
+            Error::DecodeError { .. } => DecodeError::new_err(err.to_string()),
+            Error::PoisonError(s) => PoisonError::new_err(s),
         }
     }
 }

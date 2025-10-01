@@ -25,13 +25,13 @@ impl ResultSetIterator {
             Either::Left(text) => text
                 .iter()
                 .map(|x| RowIterator {
-                    inner: Either::Left(unsafe { std::mem::transmute::<_, _>(x) }),
+                    inner: Either::Left(unsafe { std::mem::transmute::<mysql::ResultSet<'_, '_, '_, '_, mysql::Text>, mysql::ResultSet<'_, '_, '_, '_, mysql::Text>>(x) }),
                 })
                 .ok_or_else(|| PyStopIteration::new_err("ResultSet exhausted")),
             Either::Right(binary) => binary
                 .iter()
                 .map(|x| RowIterator {
-                    inner: Either::Right(unsafe { std::mem::transmute::<_, _>(x) }),
+                    inner: Either::Right(unsafe { std::mem::transmute::<mysql::ResultSet<'_, '_, '_, '_, mysql::Binary>, mysql::ResultSet<'_, '_, '_, '_, mysql::Binary>>(x) }),
                 })
                 .ok_or_else(|| PyStopIteration::new_err("ResultSet exhausted")),
         })

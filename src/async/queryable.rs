@@ -9,10 +9,7 @@ use crate::{
     util::{PyroFuture, rust_future_into_py},
 };
 
-/// This trait implements the common methods between Conn, Connection, Transaction.
-///
-/// All methods return RaiiFuture for Python async integration
-
+/// This trait implements the common methods between Conn and Transaction.
 pub trait Queryable {
     fn ping<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>>;
     // fn prep(&self, query: String) -> PyResult<Py<RaiiFuture>>; // TODO

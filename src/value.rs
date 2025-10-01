@@ -257,7 +257,7 @@ pub fn value_to_python<'py>(
                 | ColumnType::MYSQL_TYPE_BLOB => {
                     // Check if it's a BINARY flag (BINARY/VARBINARY columns)
                     if flags.contains(ColumnFlags::BINARY_FLAG) {
-                        PyBytes::new(py, &b).into_any()
+                        PyBytes::new(py, b).into_any()
                     } else {
                         // Text column - try UTF-8, fall back to bytes
                         match PyString::from_bytes(py, b) {
@@ -271,7 +271,7 @@ pub fn value_to_python<'py>(
                 ColumnType::MYSQL_TYPE_ENUM | ColumnType::MYSQL_TYPE_SET => {
                     match PyString::from_bytes(py, b) {
                         Ok(s) => s.into_any(),
-                        Err(_) => PyBytes::new(py, &b).into_any(),
+                        Err(_) => PyBytes::new(py, b).into_any(),
                     }
                 }
 
@@ -306,7 +306,7 @@ pub fn value_to_python<'py>(
                 }
 
                 // BIT type - return as bytes
-                ColumnType::MYSQL_TYPE_BIT => PyBytes::new(py, &b).into_any(),
+                ColumnType::MYSQL_TYPE_BIT => PyBytes::new(py, b).into_any(),
 
                 ColumnType::MYSQL_TYPE_DATE => {
                     let date_str =
@@ -338,11 +338,12 @@ pub fn value_to_python<'py>(
 
                     // Parse MySQL time format: HH:MM:SS or HH:MM:SS.ffffff
                     // Can also be negative and exceed 24 hours for TIME type
-                    let (is_negative, time_part) = if time_str.starts_with('-') {
-                        (true, &time_str[1..])
-                    } else {
-                        (false, time_str)
-                    };
+                    let (is_negative, time_part) =
+                        if let Some(time_str) = time_str.strip_prefix('-') {
+                            (true, time_str)
+                        } else {
+                            (false, time_str)
+                        };
 
                     let parts: Vec<&str> = time_part.split(':').collect();
                     if parts.len() != 3 {

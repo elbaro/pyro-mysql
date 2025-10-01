@@ -260,7 +260,7 @@ impl AsyncOptsBuilder {
     }
 
     fn conn_ttl(mut self_: PyRefMut<Self>, ttl_seconds: Option<f64>) -> PyResult<PyRefMut<Self>> {
-        let duration = ttl_seconds.map(|s| Duration::from_secs_f64(s));
+        let duration = ttl_seconds.map(Duration::from_secs_f64);
         let builder = self_
             .builder
             .take()
