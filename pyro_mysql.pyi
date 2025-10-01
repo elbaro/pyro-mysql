@@ -49,7 +49,7 @@ import datetime
 import decimal
 import time
 from types import TracebackType
-from typing import Any, Callable, Self
+from typing import Any, Self
 
 __all__ = [
     "init",
@@ -589,7 +589,7 @@ class async_:
             """
             ...
 
-        async def disconnect(self) -> None:
+        async def close(self) -> None:
             """
             Disconnect from the MySQL server.
 
@@ -639,7 +639,7 @@ class async_:
             """
             ...
 
-        async def disconnect(self) -> None:
+        async def close(self) -> None:
             """
             Disconnect and close all connections in the pool.
             """
@@ -870,7 +870,7 @@ class SyncPool:
         """
         ...
 
-    def disconnect(self) -> None:
+    def close(self) -> None:
         """
         Disconnect and close all connections in the pool.
         """
@@ -891,27 +891,8 @@ class SyncPooledConn:
         """
         ...
 
-    def run_transaction(
-        self,
-        callable: Any,
-        consistent_snapshot: bool = False,
-        isolation_level: IsolationLevel | None = None,
-        readonly: bool | None = None,
-    ) -> Any:
-        """
-        Run a transaction with a callable.
-
-        Args:
-            callable: A callable that will receive the transaction object.
-            consistent_snapshot: Whether to use consistent snapshot.
-            isolation_level: Transaction isolation level.
-            readonly: Whether the transaction is read-only.
-
-        Returns:
-            The return value of the callable.
-        """
-        ...
-
+    def __enter__(self) -> Self: ...
+    def __exit__(self, _, __, ___) -> None: ...
     def affected_rows(self) -> int:
         """Get the number of affected rows from the last operation."""
         ...
@@ -1048,7 +1029,7 @@ class sync:
         """
 
         def __enter__(self) -> Self: ...
-        def __exit__(self) -> None: ...
+        def __exit__(self, _, __, ___) -> None: ...
         def commit(self) -> None:
             """Commit the transaction."""
             ...
@@ -1181,27 +1162,6 @@ class sync:
             """
             ...
 
-        def run_transaction(
-            self,
-            callable: Callable[["SyncTransaction"], Any],
-            consistent_snapshot: bool = False,
-            isolation_level: IsolationLevel | None = None,
-            readonly: bool | None = None,
-        ) -> Any:
-            """
-            Run a transaction with a callable.
-
-            Args:
-                callable: A callable that will receive the transaction object.
-                consistent_snapshot: Whether to use consistent snapshot.
-                isolation_level: Transaction isolation level.
-                readonly: Whether the transaction is read-only.
-
-            Returns:
-                The return value of the callable.
-            """
-            ...
-
         def start_transaction(
             self,
             consistent_snapshot: bool = False,
@@ -1308,10 +1268,6 @@ class sync:
             ...
 
         def close(self) -> None:
-            """Close the connection."""
-            ...
-
-        def disconnect(self) -> None:
             """
             Disconnect from the MySQL server.
 

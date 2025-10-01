@@ -17,7 +17,7 @@ async def test_basic_query():
     assert result[1].to_tuple() == (2,)
     assert result[2].to_tuple() == (3,)
 
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -43,7 +43,7 @@ async def test_query_with_params():
     assert results[0].to_tuple() == ("Bob", 25)
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -72,7 +72,7 @@ async def test_query_first():
     assert result is None
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 # TODO
@@ -102,7 +102,7 @@ async def test_query_first():
 #     assert count == 3
 
 #     await cleanup_test_table_async(conn)
-#     await conn.disconnect()
+#     await conn.close()
 
 
 @pytest.mark.asyncio
@@ -129,7 +129,7 @@ async def test_named_params():
     assert result.to_tuple() == ("Alice", 30)
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -155,7 +155,7 @@ async def test_batch_exec():
     assert count.to_tuple() == (5,)
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -178,7 +178,7 @@ async def test_query_with_nulls():
     assert results[1].to_tuple() == ("Bob", None)
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -199,7 +199,7 @@ async def test_multi_statement_query():
     assert count.to_tuple() == (2,)
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -227,7 +227,7 @@ async def test_last_insert_id():
     assert new_last_id > last_id
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -257,4 +257,4 @@ async def test_affected_rows():
     assert affected_rows == 1
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()

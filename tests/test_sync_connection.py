@@ -15,7 +15,7 @@ def test_basic_sync_connection():
     result = conn.query_first("SELECT 1")
     assert result.to_tuple() == (1,)
 
-    conn.disconnect()
+    conn.close()
 
 
 # Add the second db to test this
@@ -26,14 +26,14 @@ def test_basic_sync_connection():
 #     db_name = conn.query_first("SELECT DATABASE()")
 #     assert db_name.to_tuple() == ("test",)
 
-#     conn.disconnect()
+#     conn.close()
 
 
 def test_sync_connection_ping():
     """Test sync connection ping functionality."""
     conn = Conn(get_test_db_url())
     conn.ping()
-    conn.disconnect()
+    conn.close()
 
 
 def test_sync_connection_reset():
@@ -50,7 +50,7 @@ def test_sync_connection_reset():
     result = conn.query_first("SELECT @test_var")
     assert result.to_tuple() == (None,)
 
-    conn.disconnect()
+    conn.close()
 
 
 def test_sync_connection_server_info():
@@ -63,7 +63,7 @@ def test_sync_connection_server_info():
     connection_id = conn.id()
     assert connection_id > 0
 
-    conn.disconnect()
+    conn.close()
 
 
 def test_sync_connection_charset():
@@ -81,7 +81,7 @@ def test_sync_connection_charset():
     charset = conn.query_first("SELECT @@character_set_connection")
     assert charset.to_tuple() == ("utf8mb4",)
 
-    conn.disconnect()
+    conn.close()
 
 
 def test_sync_connection_autocommit():
@@ -110,7 +110,7 @@ def test_sync_connection_autocommit():
     assert count.to_tuple() == (1,)
 
     cleanup_test_table_sync(conn)
-    conn.disconnect()
+    conn.close()
 
 
 def test_sync_connection_ssl():
@@ -127,7 +127,7 @@ def test_sync_connection_ssl():
         except Exception:
             pass
 
-        conn.disconnect()
+        conn.close()
 
     except Exception:
         # SSL connection may not be available in test environment
@@ -144,7 +144,7 @@ def test_sync_connection_init_command():
     result = conn.query_first("SELECT @init_test")
     assert result.to_tuple() == (123,)
 
-    conn.disconnect()
+    conn.close()
 
 
 # TODO: needs a separate table to test this
@@ -162,7 +162,7 @@ def test_sync_connection_init_command():
 #     assert result.to_tuple() == (large_string,)
 
 #     cleanup_test_table_sync(conn)
-#     conn.disconnect()
+#     conn.close()
 
 
 def test_sync_connection_with_wrong_credentials():

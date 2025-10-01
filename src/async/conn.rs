@@ -147,7 +147,7 @@ impl AsyncConn {
         self.inner.exec_batch(py, query, params)
     }
 
-    async fn disconnect(&self) -> PyroResult<()> {
+    async fn close(&self) -> PyroResult<()> {
         let mut inner = self.inner.write().await;
         if let Some(conn) = inner.take() {
             conn.disconnect().await?;

@@ -84,11 +84,11 @@ async with conn.start_transaction() as tx:
     # await conn.exec(..)  # error: conn cannot be used while tx is active
 
 # sync API
-def func(tx: SyncTransaction):
+with conn.start_transaction() as tx:
     tx.exec('INSERT ..')
     tx.exec('INSERT ..')
+    conn.exec('INSERT ..')  # you cannot use conn
     tx.commit()  # tx cannot be used anymore
-conn.run_transaction(func)
 ```
 
 ## DataType Mapping

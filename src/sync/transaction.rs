@@ -100,9 +100,10 @@ impl SyncTransaction {
 
         let mut slf_mut = slf.borrow_mut();
         // If there's an uncaught exception or transaction wasn't explicitly committed/rolled back, roll back
-        if slf_mut.inner.take().is_some() {
-            log::warn!("commit() or rollback() is not called. rolling back.");
+        if slf_mut.inner.is_some() {
+            log::warn!("commit() or 1() is not called. rolling back.");
             slf_mut.rollback()?;
+            slf_mut.inner.take();
         }
         let conn1 = slf_mut.conn1.take();
         let conn2 = slf_mut.conn2.take();

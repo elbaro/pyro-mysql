@@ -18,8 +18,8 @@ async def test_basic_pool():
     result = await conn.query_first("SELECT 1")
     assert result.to_tuple() == (1,)
 
-    await conn.disconnect()
-    await pool.disconnect()
+    await conn.close()
+    await pool.close()
 
 
 @pytest.mark.asyncio
@@ -44,9 +44,9 @@ async def test_pool_constraints():
     assert result1.to_tuple() == (1,)
     assert result2.to_tuple() == (2,)
 
-    await conn1.disconnect()
-    await conn2.disconnect()
-    await pool.disconnect()
+    await conn1.close()
+    await conn2.close()
+    await pool.close()
 
 
 @pytest.mark.asyncio
@@ -59,7 +59,7 @@ async def test_concurrent_connections():
     async def worker(worker_id):
         conn = await pool.get_conn()
         result = await conn.query_first(f"SELECT {worker_id}")
-        await conn.disconnect()
+        await conn.close()
         return result.to_tuple()
 
     # Create multiple concurrent workers
@@ -69,7 +69,7 @@ async def test_concurrent_connections():
     expected = [(i,) for i in range(1, 6)]
     assert sorted(results) == sorted(expected)
 
-    await pool.disconnect()
+    await pool.close()
 
 
 @pytest.mark.asyncio
@@ -92,8 +92,8 @@ async def test_pool_with_transactions():
         await tx.commit()
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
-    await pool.disconnect()
+    await conn.close()
+    await pool.close()
 
 
 # TODO: how to test the reuse?
@@ -107,17 +107,17 @@ async def test_pool_with_transactions():
 #     # Get and release a connection
 #     conn1 = await pool.get_conn()
 #     connection_id1 = await conn1.id()
-#     await conn1.disconnect()
+#     await conn1.close()
 
 #     # Get another connection - should be the same one reused
 #     conn2 = await pool.get_conn()
 #     connection_id2 = await conn2.id()
-#     await conn2.disconnect()
+#     await conn2.close()
 
 #     # Note: Connection IDs might be different
 #     # due to MySQL server behavior
 #     # but the test verifies pool functionality
-#     await pool.disconnect()
+#     await pool.close()
 
 
 @pytest.mark.asyncio
@@ -137,9 +137,9 @@ async def test_pool_max_connections():
     assert result1.to_tuple() == (1,)
     assert result2.to_tuple() == (2,)
 
-    await conn1.disconnect()
-    await conn2.disconnect()
-    await pool.disconnect()
+    await conn1.close()
+    await conn2.close()
+    await pool.close()
 
 
 @pytest.mark.asyncio
@@ -156,7 +156,7 @@ async def test_pool_connection_timeout():
 
     conn = await pool.get_conn()
     await conn.query_first("SELECT 1")
-    await conn.disconnect()
+    await conn.close()
 
     # Wait for connection to potentially expire
     await asyncio.sleep(0.2)
@@ -166,5 +166,5 @@ async def test_pool_connection_timeout():
     result = await conn2.query_first("SELECT 2")
     assert result.to_tuple() == (2,)
 
-    await conn2.disconnect()
-    await pool.disconnect()
+    await conn2.close()
+    await pool.close()

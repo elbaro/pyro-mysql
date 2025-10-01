@@ -36,7 +36,7 @@ async def async_conn():
     try:
         yield conn
     finally:
-        await conn.disconnect()
+        await conn.close()
 
 
 @pytest.fixture
@@ -101,7 +101,7 @@ async def async_conn_with_table():
         yield conn
         await cleanup_test_table_async(conn)
     finally:
-        await conn.disconnect()
+        await conn.close()
 
 
 @pytest.fixture

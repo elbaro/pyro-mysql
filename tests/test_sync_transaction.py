@@ -6,51 +6,7 @@ from .conftest import get_test_db_url
 
 
 class TestSyncTransaction:
-    # TODO
-    # def test_start_transaction_context_manager(self):
-    #     """Test that start_transaction works as a context manager"""
-    #     conn = SyncConn(get_test_db_url())
-
-    #     # Test basic context manager usage
-    #     with conn.start_transaction() as tx:
-    #         rows = tx.exec("SELECT 1 as n")
-    #         assert len(rows) == 1
-    #         assert rows[0].to_dict()["n"] == 1
-    #         tx.commit()
-
-    #     # Test auto-rollback on exception
-    #     with conn.start_transaction() as tx:
-    #         tx.exec("CREATE TEMPORARY TABLE test_tx (id INT)")
-    #         tx.exec("INSERT INTO test_tx VALUES (1)")
-    #         # Don't commit - should auto-rollback
-
-    #     # Verify table doesn't exist (was rolled back)
-    #     with pytest.raises(Exception):
-    #         conn.exec("SELECT * FROM test_tx")
-
-    # TODO
-    # def test_start_transaction_with_options(self):
-    #     """Test start_transaction with various options"""
-    #     conn = SyncConn(get_test_db_url())
-
-    #     # Test with readonly transaction
-    #     with conn.start_transaction(readonly=True) as tx:
-    #         rows = tx.exec("SELECT 1")
-    #         assert len(rows) == 1
-    #         # Write operations should fail in readonly transaction
-    #         with pytest.raises(Exception):
-    #             tx.exec("CREATE TEMPORARY TABLE test_readonly (id INT)")
-    #         tx.commit()
-
-    #     # Test with isolation level
-    #     with conn.start_transaction(
-    #         isolation_level=pyro_mysql.IsolationLevel.ReadCommitted
-    #     ) as tx:
-    #         rows = tx.exec("SELECT 1")
-    #         assert len(rows) == 1
-    #         tx.commit()
-
-    def test_run_transaction(self):
+    def test_start_transaction(self):
         """Test run_transaction with a callable"""
         conn = SyncConn(get_test_db_url())
 
@@ -89,38 +45,29 @@ class TestSyncTransaction:
         conn = SyncConn(get_test_db_url())
 
         with conn.start_transaction() as tx:
-            # Use transaction
             tx_rows = tx.exec("SELECT 1 as n")
             assert tx_rows[0].to_dict()["n"] == 1
-
-            # Try to use connection directly - this should work or fail gracefully
-            # depending on the implementation
-            try:
-                conn_rows = conn.exec("SELECT 2 as n")
-                # If it works, verify the result
-                assert conn_rows[0].to_dict()["n"] == 2
-            except Exception as e:
-                # If it fails, that's also acceptable behavior
-                print(f"Using conn while transaction is active failed: {e}")
+            with pytest.raises(pyro_mysql.error.ConnectionClosedError):
+                conn.exec("SELECT 2 as n")
 
             tx.commit()
 
-    # def test_pooled_conn_start_transaction(self):
-    #     """Test start_transaction with pooled connections"""
-    #     pool = SyncPool(get_test_db_url())
+    def test_pooled_conn_start_transaction(self):
+        """Test start_transaction with pooled connections"""
+        pool = SyncPool(get_test_db_url())
 
-    #     with pool.acquire() as conn:
-    #         with conn.start_transaction() as tx:
-    #             rows = tx.exec("SELECT 1 as n")
-    #             assert rows[0].to_dict()["n"] == 1
-    #             tx.commit()
+        with pool.acquire() as conn:
+            with conn.start_transaction() as tx:
+                rows = tx.exec("SELECT 1 as n")
+                assert rows[0].to_dict()["n"] == 1
+                tx.commit()
 
-    #     # Test multiple transactions from pool
-    #     with pool.acquire() as conn1:
-    #         with pool.acquire() as conn2:
-    #             with conn1.start_transaction() as tx1:
-    #                 with conn2.start_transaction() as tx2:
-    #                     tx1.exec("SELECT 1")
-    #                     tx2.exec("SELECT 2")
-    #                     tx1.commit()
-    #                     tx2.commit()
+        # Test multiple transactions from pool
+        with pool.acquire() as conn1:
+            with pool.acquire() as conn2:
+                with conn1.start_transaction() as tx1:
+                    with conn2.start_transaction() as tx2:
+                        tx1.exec("SELECT 1")
+                        tx2.exec("SELECT 2")
+                        tx1.commit()
+                        tx2.commit()

@@ -56,43 +56,6 @@ impl SyncConn {
         })
     }
 
-    // #[pyo3(signature=(callable, consistent_snapshot=false, isolation_level=None, readonly=None))]
-    // fn run_transaction(
-    //     &self,
-    //     callable: Py<PyAny>,
-    //     consistent_snapshot: bool,
-    //     isolation_level: Option<IsolationLevel>,
-    //     readonly: Option<bool>,
-    // ) -> PyResult<Py<PyAny>> {
-    //     let isolation_level: Option<mysql::IsolationLevel> =
-    //         isolation_level.map(|l| mysql::IsolationLevel::from(&l));
-    //     let opts = mysql::TxOpts::default()
-    //         .set_with_consistent_snapshot(consistent_snapshot)
-    //         .set_isolation_level(isolation_level)
-    //         .set_access_mode(readonly.map(|flag| {
-    //             if flag {
-    //                 AccessMode::ReadOnly
-    //             } else {
-    //                 AccessMode::ReadWrite
-    //             }
-    //         }));
-
-    //     let mut guard = self.inner.write();
-    //     let inner = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-
-    //     let tx = SyncTransaction::new(slf.clone_ref(py), none_py);
-    //     tx.__enter__(py)?;
-
-    //     // let ret = Python::attach(|py| {
-    //     //     callable.call1(py, (,))
-    //     // })?;
-    //     let ret = todo!();
-
-    //     tx.__exit__(None, None, None)?;
-
-    //     Ok(ret)
-    // }
-
     fn id(&self) -> PyroResult<u32> {
         let guard = self.inner.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
@@ -209,14 +172,8 @@ impl SyncConn {
         })
     }
 
-    fn close(&self) -> PyroResult<()> {
+    fn close(&self) {
         *self.inner.write() = None;
-        Ok(())
-    }
-
-    fn disconnect(&self) -> PyroResult<()> {
-        *self.inner.write() = None;
-        Ok(())
     }
 
     fn reset(&self) -> PyroResult<()> {
