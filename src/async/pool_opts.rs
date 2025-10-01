@@ -1,5 +1,4 @@
 use pyo3::prelude::*;
-use pyo3::types::PyDeltaAccess;
 use std::time::Duration;
 
 use crate::error::{Error, PyroResult};
@@ -36,10 +35,10 @@ impl AsyncPoolOpts {
         use pyo3::types::PyDelta;
 
         let duration = if let Ok(delta) = ttl.downcast::<PyDelta>() {
-            let total_seconds =
-                delta.get_seconds() as f64 + delta.get_microseconds() as f64 / 1_000_000.0;
-            // TODO: lose of precision
-            Duration::from_secs_f64(total_seconds)
+            // without abi3: delta.get_seconds() as f64 + delta.get_microseconds() as f64 / 1_000_000.0;
+            let seconds = delta.getattr("seconds")?.extract::<u64>()?;
+            let microseconds = delta.getattr("microseconds")?.extract::<u64>()?;
+            Duration::from_micros(seconds * 1_000_000 + microseconds)
         } else {
             return Err(pyo3::exceptions::PyTypeError::new_err(
                 "Expected timedelta object",
@@ -56,9 +55,9 @@ impl AsyncPoolOpts {
         use pyo3::types::PyDelta;
 
         let duration = if let Ok(delta) = interval.downcast::<PyDelta>() {
-            let total_seconds =
-                delta.get_seconds() as f64 + delta.get_microseconds() as f64 / 1_000_000.0;
-            Duration::from_secs_f64(total_seconds)
+            let seconds = delta.getattr("seconds")?.extract::<u64>()?;
+            let microseconds = delta.getattr("microseconds")?.extract::<u64>()?;
+            Duration::from_micros(seconds * 1_000_000 + microseconds)
         } else {
             return Err(pyo3::exceptions::PyTypeError::new_err(
                 "Expected timedelta object",
