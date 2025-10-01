@@ -1,5 +1,6 @@
 use either::Either;
 use mysql::{AccessMode, prelude::*};
+use parking_lot::RwLock;
 use pyo3::prelude::*;
 
 use crate::error::{Error, PyroResult};
@@ -11,7 +12,7 @@ use crate::sync::transaction::SyncTransaction;
 
 #[pyclass]
 pub struct SyncPooledConn {
-    pub inner: Option<mysql::PooledConn>,
+    pub inner: RwLock<Option<mysql::PooledConn>>,
 }
 
 #[pymethods]
@@ -23,49 +24,46 @@ impl SyncPooledConn {
         ))
     }
 
-    #[pyo3(signature=(callable, consistent_snapshot=false, isolation_level=None, readonly=None))]
-    fn run_transaction(
+    fn __enter__(slf: Py<Self>) -> Py<Self> {
+        slf
+    }
+    fn __exit__(
         &mut self,
-        callable: Py<PyAny>,
+        _exc_type: Option<&Bound<'_, PyAny>>,
+        _exc_value: Option<&Bound<'_, PyAny>>,
+        _traceback: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<bool> {
+        self.close();
+        Ok(false) // propagate raises
+    }
+
+    #[pyo3(signature=(consistent_snapshot=false, isolation_level=None, readonly=None))]
+    fn start_transaction(
+        slf: Py<Self>,
         consistent_snapshot: bool,
         isolation_level: Option<IsolationLevel>,
         readonly: Option<bool>,
-    ) -> PyResult<Py<PyAny>> {
-        let isolation_level: Option<mysql::IsolationLevel> =
-            isolation_level.map(|l| mysql::IsolationLevel::from(&l));
-        let opts = mysql::TxOpts::default()
-            .set_with_consistent_snapshot(consistent_snapshot)
-            .set_isolation_level(isolation_level)
-            .set_access_mode(readonly.map(|flag| {
-                if flag {
-                    AccessMode::ReadOnly
-                } else {
-                    AccessMode::ReadWrite
-                }
-            }));
-
-        let inner = self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::ConnectionClosedError)?;
-        let tx = inner.start_transaction(opts).map_err(Error::from)?;
-
-        Ok(Python::attach(|py| {
-            callable.call1(
-                py,
-                (SyncTransaction {
-                    inner: Some(unsafe {
-                        std::mem::transmute::<mysql::Transaction<'_>, mysql::Transaction<'static>>(
-                            tx,
-                        )
-                    }),
-                },),
-            )
-        })?)
+    ) -> PyroResult<SyncTransaction> {
+        Python::attach(|py| {
+            let isolation_level: Option<mysql::IsolationLevel> =
+                isolation_level.map(|l| mysql::IsolationLevel::from(&l));
+            let opts = mysql::TxOpts::default()
+                .set_with_consistent_snapshot(consistent_snapshot)
+                .set_isolation_level(isolation_level)
+                .set_access_mode(readonly.map(|flag| {
+                    if flag {
+                        AccessMode::ReadOnly
+                    } else {
+                        AccessMode::ReadWrite
+                    }
+                }));
+            Ok(SyncTransaction::new(Either::Right(slf.clone_ref(py)), opts))
+        })
     }
 
     fn affected_rows(&self) -> PyResult<u64> {
-        let conn = self.inner.as_ref().ok_or_else(|| {
+        let guard = self.inner.read();
+        let conn = guard.as_ref().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Connection is not available")
         })?;
         Ok(conn.affected_rows())
@@ -74,6 +72,7 @@ impl SyncPooledConn {
     fn ping(&mut self) -> PyroResult<()> {
         Ok(self
             .inner
+            .write()
             .as_mut()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .as_mut()
@@ -85,6 +84,7 @@ impl SyncPooledConn {
     fn query(&mut self, query: String) -> PyroResult<Vec<Row>> {
         Ok(self
             .inner
+            .write()
             .as_mut()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .query(query)?)
@@ -93,6 +93,7 @@ impl SyncPooledConn {
     fn query_first(&mut self, query: String) -> PyroResult<Option<Row>> {
         Ok(self
             .inner
+            .write()
             .as_mut()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .query_first(query)?)
@@ -101,6 +102,7 @@ impl SyncPooledConn {
     fn query_drop(&mut self, query: String) -> PyroResult<()> {
         Ok(self
             .inner
+            .write()
             .as_mut()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .query_drop(query)?)
@@ -108,9 +110,9 @@ impl SyncPooledConn {
 
     fn query_iter(slf: Py<Self>, query: String) -> PyroResult<ResultSetIterator> {
         Python::attach(|py| {
-            let mut slf_ref = slf.borrow_mut(py);
-            let query_result = slf_ref
-                .inner
+            let slf_ref = slf.borrow(py);
+            let mut guard = slf_ref.inner.write();
+            let query_result = guard
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?
                 .query_iter(query)?;
@@ -128,6 +130,7 @@ impl SyncPooledConn {
     fn exec(&mut self, query: String, params: Params) -> PyroResult<Vec<Row>> {
         Ok(self
             .inner
+            .write()
             .as_mut()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .exec(query, params)?)
@@ -137,6 +140,7 @@ impl SyncPooledConn {
     fn exec_first(&mut self, query: String, params: Params) -> PyroResult<Option<Row>> {
         Ok(self
             .inner
+            .write()
             .as_mut()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .exec_first(query, params)?)
@@ -146,6 +150,7 @@ impl SyncPooledConn {
     fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
         Ok(self
             .inner
+            .write()
             .as_mut()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .exec_drop(query, params)?)
@@ -155,30 +160,33 @@ impl SyncPooledConn {
     fn exec_batch(&mut self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
         Ok(self
             .inner
+            .write()
             .as_mut()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .exec_batch(query, params_list)?)
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_iter(slf: Py<Self>, query: String, params: Params) -> PyroResult<ResultSetIterator> {
-        Python::attach(|py| {
-            let mut slf_ref = slf.borrow_mut(py);
-            let query_result = slf_ref
-                .inner
-                .as_mut()
-                .ok_or_else(|| Error::ConnectionClosedError)?
-                .exec_iter(query, params)?;
+    fn exec_iter(
+        slf: Py<Self>,
+        py: Python,
+        query: String,
+        params: Params,
+    ) -> PyroResult<ResultSetIterator> {
+        let slf_ref = slf.borrow(py);
+        let mut guard = slf_ref.inner.write();
+        let query_result = guard
+            .as_mut()
+            .ok_or_else(|| Error::ConnectionClosedError)?
+            .exec_iter(query, params)?;
 
-            Ok(ResultSetIterator {
-                owner: slf.clone_ref(py).into_any(),
-                inner: Either::Right(unsafe { std::mem::transmute(query_result) }),
-            })
+        Ok(ResultSetIterator {
+            owner: slf.clone_ref(py).into_any(),
+            inner: Either::Right(unsafe { std::mem::transmute(query_result) }),
         })
     }
 
-    fn close(&mut self) -> PyResult<()> {
-        self.inner.take();
-        Ok(())
+    fn close(&mut self) {
+        *self.inner.write() = None;
     }
 }

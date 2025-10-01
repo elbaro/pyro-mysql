@@ -46,10 +46,12 @@ fn init(worker_threads: Option<usize>, thread_name: Option<&str>) {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
+    pyo3_log::init(); // the default filter uses DEBUG
+
     if cfg!(debug_assertions) {
-        println!("Running in Debug mode.");
+        log::debug!("Running in Debug mode.");
     } else {
-        println!("Running in Release mode.");
+        log::debug!("Running in Release mode.");
     }
 
     init(Some(1), None);
@@ -81,6 +83,7 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
         py.get_type::<error::IncorrectApiUsageError>(),
     )?;
     error.add("UrlError", py.get_type::<error::UrlError>())?;
+    error.add("MysqlError", py.get_type::<error::MysqlError>())?;
     error.add(
         "ConnectionClosedError",
         py.get_type::<error::ConnectionClosedError>(),

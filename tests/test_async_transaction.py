@@ -30,7 +30,7 @@ async def test_basic_transaction():
     assert count.to_tuple() == (1,)
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -55,7 +55,7 @@ async def test_transaction_rollback():
     assert count.to_tuple() == (0,)
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -86,7 +86,7 @@ async def test_transaction_isolation_levels():
     assert count.to_tuple() == (4,)
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 # TODO
@@ -125,7 +125,7 @@ async def test_nested_transactions():
     assert result[0].to_tuple() == ("Alice", 30)
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -158,7 +158,7 @@ async def test_transaction_with_error():
     assert count.to_tuple() == (1,)
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -192,8 +192,8 @@ async def test_transaction_concurrent_read():
     assert count.to_tuple() == (2,)
 
     await cleanup_test_table_async(conn1)
-    await conn1.disconnect()
-    await conn2.disconnect()
+    await conn1.close()
+    await conn2.close()
 
 
 @pytest.mark.asyncio
@@ -221,7 +221,7 @@ async def test_transaction_read_only():
         await tx.rollback()
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -245,7 +245,7 @@ async def test_transaction_consistent_snapshot():
         await tx.commit()
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -271,4 +271,4 @@ async def test_transaction_auto_rollback_on_drop():
     assert count.to_tuple() == (0,)
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()

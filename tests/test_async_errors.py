@@ -60,7 +60,7 @@ async def test_syntax_error_in_query():
     with pytest.raises(Exception):
         await conn.query("INVALID SQL SYNTAX")
 
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -72,7 +72,7 @@ async def test_table_not_found_error():
     with pytest.raises(Exception):
         await conn.query("SELECT * FROM nonexistent_table")
 
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -103,7 +103,7 @@ async def test_duplicate_key_error():
         )
 
     await conn.query_drop("DROP TABLE test_unique")
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -129,7 +129,7 @@ async def test_data_too_long_error():
         )
 
     await conn.query_drop("DROP TABLE test_varchar")
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -168,7 +168,7 @@ async def test_foreign_key_constraint_error():
 
     await conn.query_drop("DROP TABLE test_child")
     await conn.query_drop("DROP TABLE test_parent")
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -177,8 +177,8 @@ async def test_connection_lost_error():
     opts = get_async_opts()
     conn = await Conn.new(opts)
 
-    # Force disconnect and try to use connection
-    await conn.disconnect()
+    # Force close and try to use connection
+    await conn.close()
 
     with pytest.raises(Exception):
         await conn.query("SELECT 1")
@@ -200,9 +200,9 @@ async def test_connection_lost_error():
 #     # (behavior depends on implementation)
 #     try:
 #         conn2 = await pool.get_conn()
-#         await conn2.disconnect()
+#         await conn2.close()
 #     except Exception:
 #         pass  # Expected to potentially fail
 
-#     await conn1.disconnect()
-#     await pool.disconnect()
+#     await conn1.close()
+#     await pool.close()

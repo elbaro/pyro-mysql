@@ -191,7 +191,7 @@
                                 <a class="function" href="#AsyncPool.acquire">acquire</a>
                         </li>
                         <li>
-                                <a class="function" href="#AsyncPool.disconnect">disconnect</a>
+                                <a class="function" href="#AsyncPool.close">close</a>
                         </li>
                 </ul>
 
@@ -239,7 +239,7 @@
                                 <a class="function" href="#AsyncConn.exec_batch">exec_batch</a>
                         </li>
                         <li>
-                                <a class="function" href="#AsyncConn.disconnect">disconnect</a>
+                                <a class="function" href="#AsyncConn.close">close</a>
                         </li>
                         <li>
                                 <a class="function" href="#AsyncConn.reset">reset</a>
@@ -446,7 +446,7 @@
                                 <a class="function" href="#SyncConn.close">close</a>
                         </li>
                         <li>
-                                <a class="function" href="#SyncConn.disconnect">disconnect</a>
+                                <a class="function" href="#SyncConn.close">close</a>
                         </li>
                         <li>
                                 <a class="function" href="#SyncConn.reset">reset</a>
@@ -1384,15 +1384,15 @@ to_tuple() / to_dict() copies the data, and should not be called many times.</p>
 
 
                             </div>
-                            <div id="AsyncPool.disconnect" class="classattr">
+                            <div id="AsyncPool.close" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">disconnect</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">close</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#AsyncPool.disconnect"></a>
+    <a class="headerlink" href="#AsyncPool.close"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -1612,15 +1612,15 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
 
 
                             </div>
-                            <div id="AsyncConn.disconnect" class="classattr">
+                            <div id="AsyncConn.close" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">disconnect</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">close</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#AsyncConn.disconnect"></a>
+    <a class="headerlink" href="#AsyncConn.close"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -2562,15 +2562,15 @@ Conn.exec_*() receives &amp;mut self, so there is at most one statement being ex
 
 
                             </div>
-                            <div id="SyncConn.disconnect" class="classattr">
+                            <div id="SyncConn.close" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">disconnect</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">close</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#SyncConn.disconnect"></a>
+    <a class="headerlink" href="#SyncConn.close"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>

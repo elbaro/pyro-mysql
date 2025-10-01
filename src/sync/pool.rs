@@ -4,6 +4,7 @@ use crate::{
 };
 use either::Either;
 use mysql::{Opts, Pool};
+use parking_lot::RwLock;
 use pyo3::prelude::*;
 
 #[pyclass]
@@ -28,7 +29,9 @@ impl SyncPool {
 
     fn get_conn(&self) -> PyroResult<SyncPooledConn> {
         let conn = self.pool.get_conn()?;
-        Ok(SyncPooledConn { inner: Some(conn) })
+        Ok(SyncPooledConn {
+            inner: RwLock::new(Some(conn)),
+        })
     }
 
     fn acquire(&self) -> PyroResult<SyncPooledConn> {

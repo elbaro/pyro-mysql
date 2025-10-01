@@ -29,7 +29,7 @@ def test_none_type():
     assert result.to_tuple() == (None, None, None)
 
     conn.query_drop("DROP TABLE test_none_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_int_type():
@@ -54,7 +54,7 @@ def test_int_type():
     assert result.to_tuple() == test_values
 
     conn.query_drop("DROP TABLE test_int_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_float_type():
@@ -88,7 +88,7 @@ def test_float_type():
     assert abs(double_val - test_values2[1]) < 0.000001
 
     conn.query_drop("DROP TABLE test_float_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_str_type():
@@ -125,7 +125,7 @@ def test_str_type():
     assert result[4] == float(test_values[4])
 
     conn.query_drop("DROP TABLE test_str_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_bytearray_type():
@@ -154,7 +154,7 @@ def test_bytearray_type():
     assert blob_val == bytes(test_data)
 
     conn.query_drop("DROP TABLE test_bytearray_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_tuple_type():
@@ -182,7 +182,7 @@ def test_tuple_type():
     assert abs(val3 - 3.14) < 0.001
 
     conn.query_drop("DROP TABLE test_tuple_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_list_type():
@@ -210,7 +210,7 @@ def test_list_type():
     assert abs(val3 - 2.718) < 0.001
 
     conn.query_drop("DROP TABLE test_list_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_set_type():
@@ -242,7 +242,7 @@ def test_set_type():
     assert val2 == "test"
 
     conn.query_drop("DROP TABLE test_set_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_frozenset_type():
@@ -274,7 +274,7 @@ def test_frozenset_type():
     assert val2 == "frozen"
 
     conn.query_drop("DROP TABLE test_frozenset_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_dict_type():
@@ -306,7 +306,7 @@ def test_dict_type():
     assert abs(score - 95.5) < 0.001
 
     conn.query_drop("DROP TABLE test_dict_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_datetime_types():
@@ -350,7 +350,7 @@ def test_datetime_types():
     assert datetime_val == test_datetime
 
     conn.query_drop("DROP TABLE test_datetime_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_struct_time_type():
@@ -384,7 +384,7 @@ def test_struct_time_type():
     assert timestamp_val.second == 45
 
     conn.query_drop("DROP TABLE test_struct_time_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_decimal_type():
@@ -417,7 +417,7 @@ def test_decimal_type():
     assert numeric_val == Decimal("12345.6789")
 
     conn.query_drop("DROP TABLE test_decimal_types")
-    conn.disconnect()
+    conn.close()
 
 
 def test_combined_data_types():
@@ -468,4 +468,4 @@ def test_combined_data_types():
     assert values[7] == Decimal("99.99")
 
     conn.query_drop("DROP TABLE test_combined_types")
-    conn.disconnect()
+    conn.close()

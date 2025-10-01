@@ -59,10 +59,10 @@ impl AsyncTransaction {
 
             let tx = conn
                 .as_mut()
-                .unwrap()
+                .unwrap() // Conn is already non-None
                 .start_transaction(opts)
                 .await
-                .unwrap();
+                .map_err(Error::from)?;
 
             // As long as we hold Arc<Conn>, mysql_async::Transaction is valid.
             // inner is declared before conn so that Arc<Transaction> drops first.
@@ -85,14 +85,23 @@ impl AsyncTransaction {
         })
     }
     fn __aexit__<'py>(
-        &self,
+        slf: &Bound<'py, Self>,
         py: Python<'py>,
         _exc_type: &crate::Bound<'py, crate::PyAny>,
         _exc_value: &crate::Bound<'py, crate::PyAny>,
         _traceback: &crate::Bound<'py, crate::PyAny>,
     ) -> PyResult<Py<PyroFuture>> {
-        let guard = self.guard.clone();
-        let inner = self.inner.clone();
+        // Check reference count of the transaction object
+        let refcnt = slf.get_refcnt();
+        if refcnt != 2 {
+            log::error!(
+                "AsyncTransaction reference count is {} (expected 2) in __aexit__. Transaction may be referenced elsewhere.",
+                refcnt
+            );
+        }
+
+        let guard = slf.borrow().guard.clone();
+        let inner = slf.borrow().inner.clone();
         rust_future_into_py(py, async move {
             // TODO: check if  is not called and normally exiting without exception
 
@@ -100,9 +109,8 @@ impl AsyncTransaction {
             let mut inner = inner.write().await;
 
             if let Some(inner) = inner.take() {
-                eprintln!("commit() or rollback() is not called. rolling back.");
-                inner.rollback().await.unwrap(); // TODO: unwrap to error
-                // Automatic rollback failed. The connection will rollback. Please close the current connection and start with new connection.
+                log::warn!("commit() or rollback() is not called. rolling back.");
+                inner.rollback().await.map_err(Error::from)?;
             }
             *guard = None;
             Ok(())

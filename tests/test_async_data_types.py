@@ -43,7 +43,7 @@ async def test_integer_types():
     )
 
     await conn.query_drop("DROP TABLE test_int_types")
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -72,7 +72,7 @@ async def test_float_types():
     assert abs(double_val - 2.718281828) < 0.000001
 
     await conn.query_drop("DROP TABLE test_float_types")
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -112,7 +112,7 @@ async def test_string_types():
     )
 
     await conn.query_drop("DROP TABLE test_string_types")
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -146,7 +146,7 @@ async def test_date_time_types():
     assert result is not None
 
     await conn.query_drop("DROP TABLE test_datetime_types")
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -179,7 +179,7 @@ async def test_decimal_types():
     )
 
     await conn.query_drop("DROP TABLE test_decimal_types")
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -211,7 +211,7 @@ async def test_binary_types():
     assert result is not None
 
     await conn.query_drop("DROP TABLE test_binary_types")
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -239,7 +239,7 @@ async def test_null_values():
     assert result.to_tuple() == (None, None, None)
 
     await conn.query_drop("DROP TABLE test_null_types")
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -267,4 +267,4 @@ async def test_boolean_type():
     assert results[1].to_tuple() == (1,) or results[1].to_tuple() == (True,)
 
     await conn.query_drop("DROP TABLE test_boolean_types")
-    await conn.disconnect()
+    await conn.close()

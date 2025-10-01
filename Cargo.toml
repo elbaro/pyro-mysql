@@ -11,25 +11,26 @@ crate-type = ["cdylib", "rlib"]
 criterion = "0.7.0"
 either = "1.15.0"
 futures = "0.3.31"
+log = "0.4.28"
 mysql = "26.0.1"
 mysql_async = "0.36.1"
 mysql_common = "0.35.5"
+parking_lot = { version = "0.12.4", features = ["send_guard"] }
 pyo3 = { version = "0.26", features = [
-    "experimental-async",
-    "experimental-inspect",
-    "either",
-    "auto-initialize",
+  "extension-module",
+  "experimental-async",
+  "experimental-inspect",
+  "either",
+  "auto-initialize",
 ] }
 pyo3-async-runtimes = { version = "0.26", features = ["tokio-runtime"] }
+pyo3-log = "0.13.0"
 thiserror = "2.0.16"
 tokio = "1.47.1"
 
 
 [patch.crates-io]
-pyo3 = { git = "https://github.com/elbaro/pyo3.git", rev = "e219540adf7bd00d03c251d53cb8d10cd3a5d16c", features = [
-    "experimental-async",
-    "extension-module",
-] }
+pyo3 = { git = "https://github.com/elbaro/pyo3.git", rev = "e219540adf7bd00d03c251d53cb8d10cd3a5d16c" }
 pyo3-ffi = { git = "https://github.com/elbaro/pyo3.git", rev = "e219540adf7bd00d03c251d53cb8d10cd3a5d16c" }
 
 

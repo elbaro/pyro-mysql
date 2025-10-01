@@ -48,7 +48,7 @@ impl AsyncPool {
         self.get_conn(py)
     }
 
-    fn disconnect<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+    fn close<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         let pool = self.pool.clone();
         rust_future_into_py(py, async move {
             pool.disconnect().await?;

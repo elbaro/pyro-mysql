@@ -21,7 +21,7 @@ async def test_basic_connection():
     result = await conn.query_first("SELECT 1")
     assert result.to_tuple() == (1,)
 
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -35,7 +35,7 @@ async def test_connection_with_database():
     db_name = await conn.query_first("SELECT DATABASE()")
     assert db_name.to_tuple() == ("test",)
 
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -46,7 +46,7 @@ async def test_connection_timeout():
 
     try:
         conn = await Conn.new(opts)
-        await conn.disconnect()
+        await conn.close()
     except Exception:
         # Connection timeout is expected to potentially fail
         pass
@@ -60,7 +60,7 @@ async def test_connection_ping():
 
     await conn.ping()
 
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -79,7 +79,7 @@ async def test_connection_reset():
     result = await conn.query_first("SELECT @test_var")
     assert result.to_tuple() == (None,)
 
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -94,7 +94,7 @@ async def test_connection_server_info():
     connection_id = await conn.id()
     assert connection_id > 0
 
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -113,7 +113,7 @@ async def test_connection_charset():
     charset = await conn.query_first("SELECT @@character_set_connection")
     assert charset.to_tuple() == ("utf8mb4",)
 
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -144,7 +144,7 @@ async def test_connection_autocommit():
     assert count.to_tuple() == (1,)
 
     await cleanup_test_table_async(conn)
-    await conn.disconnect()
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -162,7 +162,7 @@ async def test_connection_ssl():
         except Exception:
             pass
 
-        await conn.disconnect()
+        await conn.close()
     except Exception:
         # SSL connection may not be available in test environment
         pass
@@ -179,7 +179,7 @@ async def test_connection_init_command():
     result = await conn.query_first("SELECT @init_test")
     assert result.to_tuple() == (123,)
 
-    await conn.disconnect()
+    await conn.close()
 
 
 # TODO: needs a separate table dedicated for this test
@@ -201,7 +201,7 @@ async def test_connection_init_command():
 #     await conn.exec_drop("INSERT INTO test_table (name) VALUES (?)", (large_string,))
 
 #     await cleanup_test_table_async(conn)
-#     await conn.disconnect()
+#     await conn.close()
 
 
 @pytest.mark.asyncio
