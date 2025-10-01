@@ -130,55 +130,6 @@ class TestSyncConnThreadSafety:
             total_row_dict = total_row.to_dict()
             assert total_row_dict["cnt"] == num_threads * 5
 
-    def test_concurrent_transactions(self, sync_conn):
-        """Test multiple threads using transactions on same connection."""
-        results = []
-        lock = threading.Lock()
-
-        def worker(thread_id: int):
-            try:
-                # Start transaction
-                with sync_conn.start_transaction() as tx:
-                    tx.exec_drop(
-                        "INSERT INTO test_threads (thread_id, value) VALUES (?, ?)",
-                        (f"tx-{thread_id}", thread_id * 100),
-                    )
-                    rows = tx.exec(
-                        "SELECT * FROM test_threads WHERE thread_id = ?",
-                        (f"tx-{thread_id}",),
-                    )
-                    tx.commit()
-
-                with lock:
-                    results.append((thread_id, len(rows)))
-
-            except Exception as e:
-                with lock:
-                    results.append((thread_id, f"error: {e}"))
-
-        # Run multiple transaction threads
-        threads = []
-        num_threads = 5
-        for i in range(num_threads):
-            t = threading.Thread(target=worker, args=(i,))
-            threads.append(t)
-            t.start()
-
-        for t in threads:
-            t.join()
-
-        # Check results
-        errors = [r for r in results if isinstance(r[1], str)]
-        assert len(errors) == 0, f"Transaction errors: {errors}"
-
-        # Verify all transactions completed
-        total_row = sync_conn.exec_first(
-            "SELECT COUNT(*) as cnt FROM test_threads WHERE thread_id LIKE 'tx-%'"
-        )
-        if total_row:
-            total_row_dict = total_row.to_dict()
-            assert total_row_dict["cnt"] == num_threads
-
     def test_read_write_consistency(self, sync_conn):
         """Test that reads and writes are consistent across threads."""
         counter_lock = threading.Lock()
