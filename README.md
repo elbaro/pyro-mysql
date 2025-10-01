@@ -51,19 +51,31 @@ def example2():
             .build()
     )
     conn = await pool.acquire()
+
+def example3(pool):
+    with pool.acquire() as conn:
+        ...
 ```
 
 
 ### 2. Query Execution
 
-`AsyncConn` and `AsyncTransaction` provides the following methods.
-`SyncConn` and `SyncTransaction` provides the sync versions.
+`AsyncConn` and `AsyncTransaction` provide the following methods.
+`SyncConn`, `SyncPooledConn` and `SyncTransaction` provide similar API.
 
 ```py
-async def exec(self, query: str, params: Params) -> list[Row]
-async def exec_first(self, query: str, params: Params) -> Row | None
-async def exec_drop(self, query: str, params: Params) -> None
-async def exec_batch(self, query: str, params: Iterable[Params]) -> None
+
+# Text Protocols - supports multiple statements concatenated with ';' but accepts no arguemnt
+def query(self, query: str) -> PyroFuture[list[Row]]
+def query_first(self, query: str) -> PyroFuture[Row | None]
+def query_drop(self, query: str) -> PyroFuture[None]
+def query_batch(self, query: str) -> PyroFuture[None]
+
+# Binary Protocols - supports arguments but no multiple statement
+def exec(self, query: str, params: Params) -> PyroFuture[list[Row]]
+def exec_first(self, query: str, params: Params) -> PyroFuture[Row | None]
+def exec_drop(self, query: str, params: Params) -> PyroFuture[None]
+def exec_batch(self, query: str, params: Iterable[Params]) -> PyroFuture[None]
 
 # Examples
 rows = await conn.exec("SELECT * FROM my_table WHERE a=? AND b=?", (a, b))
@@ -71,7 +83,15 @@ rows = await conn.exec("SELECT * FROM my_table WHERE a=:x AND b=:y AND c=:y", {'
 await conn.exec_batch("SELECT * FROM my_table WHERE a=? AND b=?", [(a1, b1), (a2, b2)])
 ```
 
-For exact description of each API, refer to [the Rust doc](https://docs.rs/mysql/latest/mysql/prelude/trait.Queryable.html).
+`PyroFuture` is a Future-like object that tracks a task in the Rust thread. When an object of `PyroFuture` is dropped before completion or cancellation, the corresponding task in the Rust thread is cancelled.
+
+```py
+fut = conn.exec("SELECT ...")  # the Rust thread starts to execute the query before we await the Python future.
+
+print(fut.get_loop())  # get the associated Python event loop
+fut.cancel()  # cancels the Rust task
+del fut  # this is equivalent to .cancel()
+```
 
 ### 3. Transaction
 
@@ -81,13 +101,13 @@ async with conn.start_transaction() as tx:
     await tx.exec('INSERT ..')
     await tx.exec('INSERT ..')
     await tx.commit()  # tx cannot be used anymore
-    # await conn.exec(..)  # error: conn cannot be used while tx is active
+    await conn.exec(..)  # error
 
 # sync API
 with conn.start_transaction() as tx:
     tx.exec('INSERT ..')
     tx.exec('INSERT ..')
-    conn.exec('INSERT ..')  # you cannot use conn
+    conn.exec('INSERT ..')  # error
     tx.commit()  # tx cannot be used anymore
 ```
 
@@ -129,3 +149,12 @@ with conn.start_transaction() as tx:
 | `ENUM` / `SET` | `str` |
 | `BIT` | `bytes` |
 | `GEOMETRY` | `bytes` (WKB format) |
+
+## Logging
+
+pyro-mysql sends the Rust logs to the Python logging system, which can be configured with `logging.getLogger("pyro_mysql")`.
+
+```py
+# Queries are logged with the DEBUG level
+logging.getLogger("pyro_mysql").setLevel(logging.DEBUG)
+```

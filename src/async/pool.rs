@@ -30,11 +30,6 @@ impl AsyncPool {
         Ok(Self { pool })
     }
 
-    // pub fn close_gracefully(self) {
-    // This needs to be handled properly with async runtime
-    // For now, we'll leave it as a placeholder
-    // }
-
     fn get_conn<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         let pool = self.pool.clone();
         rust_future_into_py(py, async move {

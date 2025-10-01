@@ -127,6 +127,10 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     sync.add("Opts", py.get_type::<SyncOpts>())?;
     sync.add("OptsBuilder", py.get_type::<SyncOptsBuilder>())?;
     sync.add("PoolOpts", py.get_type::<SyncPoolOpts>())?;
+    sync.add(
+        "ResultSetIterator",
+        py.get_type::<sync::iterator::ResultSetIterator>(),
+    )?;
     m.add_submodule(&sync)?;
 
     // a hack for Python's import system

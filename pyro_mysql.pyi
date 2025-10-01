@@ -1,4 +1,5 @@
-"""pyro_mysql - High-performance MySQL driver for Python, written in Rust.
+"""
+pyro_mysql - High-performance MySQL driver for Python, written in Rust.
 
 - pyro_mysql.sync: The synchronous API using the `mysql` crate.
 - pyro_mysql.async_: The asynchronous API using the `mysql_async` crate.
@@ -48,8 +49,9 @@ asyncio.run(example_transaction())
 import datetime
 import decimal
 import time
+from collections.abc import Awaitable
 from types import TracebackType
-from typing import Any, Self
+from typing import Any, Generic, Iterator, Self, TypeVar
 
 __all__ = [
     "init",
@@ -95,6 +97,13 @@ def init(worker_threads: int | None = 1, thread_name: str | None = None) -> None
         thread_name: Name prefix for worker threads.
     """
     ...
+
+T = TypeVar("T")
+
+class PyroFuture(Awaitable[T]):
+    def __await__(self): ...
+    def cancel(self) -> bool: ...
+    def get_loop(self): ...
 
 class IsolationLevel:
     """Transaction isolation level enum."""
@@ -347,36 +356,69 @@ class async_:
         Represents a MySQL transaction with async context manager support.
         """
 
-        async def __aenter__(self) -> Self:
+        def __aenter__(self) -> PyroFuture[Self]:
             """Enter the async context manager."""
             ...
 
-        async def __aexit__(
+        def __aexit__(
             self,
             exc_type: type[BaseException] | None,
             exc_value: BaseException | None,
             traceback: TracebackType | None,
-        ) -> None:
+        ) -> PyroFuture[None]:
             """Exit the async context manager. Automatically rolls back if not committed."""
             ...
 
-        async def commit(self) -> None:
+        def commit(self) -> PyroFuture[None]:
             """Commit the transaction."""
             ...
 
-        async def rollback(self) -> None:
+        def rollback(self) -> PyroFuture[None]:
             """Rollback the transaction."""
             ...
 
-        async def close_prepared_statement(self, stmt: str) -> None:
+        def affected_rows(self) -> PyroFuture[int]:
             """Close a prepared statement (not yet implemented)."""
             ...
 
-        async def ping(self) -> None:
+        def ping(self) -> PyroFuture[None]:
             """Ping the server to check connection."""
             ...
 
-        async def exec(self, query: str, params: Params = None) -> list[Row]:
+        def query(self, query: str) -> PyroFuture[list[Row]]:
+            """
+            Execute a query using text protocol and return all rows.
+
+            Args:
+                query: SQL query string.
+
+            Returns:
+                List of Row objects.
+            """
+            ...
+
+        def query_first(self, query: str) -> PyroFuture[Row | None]:
+            """
+            Execute a query using text protocol and return the first row.
+
+            Args:
+                query: SQL query string.
+
+            Returns:
+                First Row or None if no results.
+            """
+            ...
+
+        def query_drop(self, query: str) -> PyroFuture[None]:
+            """
+            Execute a query using text protocol and discard the results.
+
+            Args:
+                query: SQL query string.
+            """
+            ...
+
+        def exec(self, query: str, params: Params = None) -> PyroFuture[list[Row]]:
             """
             Execute a query and return all rows.
 
@@ -389,7 +431,9 @@ class async_:
             """
             ...
 
-        async def exec_first(self, query: str, params: Params = None) -> Row | None:
+        def exec_first(
+            self, query: str, params: Params = None
+        ) -> PyroFuture[Row | None]:
             """
             Execute a query and return the first row.
 
@@ -402,7 +446,7 @@ class async_:
             """
             ...
 
-        async def exec_drop(self, query: str, params: Params = None) -> None:
+        def exec_drop(self, query: str, params: Params = None) -> PyroFuture[None]:
             """
             Execute a query and discard the results.
 
@@ -412,46 +456,13 @@ class async_:
             """
             ...
 
-        async def exec_batch(self, query: str, params: list[Params] = []) -> None:
+        def exec_batch(self, query: str, params: list[Params] = []) -> PyroFuture[None]:
             """
             Execute a query multiple times with different parameters.
 
             Args:
                 query: SQL query string with '?' placeholders.
                 params: List of parameter sets.
-            """
-            ...
-
-        async def query(self, query: str) -> list[Row]:
-            """
-            Execute a query using text protocol and return all rows.
-
-            Args:
-                query: SQL query string.
-
-            Returns:
-                List of Row objects.
-            """
-            ...
-
-        async def query_first(self, query: str) -> Row | None:
-            """
-            Execute a query using text protocol and return the first row.
-
-            Args:
-                query: SQL query string.
-
-            Returns:
-                First Row or None if no results.
-            """
-            ...
-
-        async def query_drop(self, query: str) -> None:
-            """
-            Execute a query using text protocol and discard the results.
-
-            Args:
-                query: SQL query string.
             """
             ...
 
@@ -470,7 +481,7 @@ class async_:
             ...
 
         @staticmethod
-        async def new(url_or_opts: str | AsyncOpts) -> "async_.Conn":
+        def new(url_or_opts: str | AsyncOpts) -> PyroFuture[async_.Conn]:
             """
             Create a new connection.
 
@@ -502,15 +513,47 @@ class async_:
             """
             ...
 
-        async def close_prepared_statement(self, stmt: str) -> None:
-            """Close a prepared statement (not yet implemented)."""
-            ...
-
-        async def ping(self) -> None:
+        async def id(self) -> int: ...
+        async def affected_rows(self) -> int: ...
+        async def last_insert_id(self) -> int | None: ...
+        def ping(self) -> PyroFuture[None]:
             """Ping the server to check connection."""
             ...
 
-        async def exec(self, query: str, params: Params = None) -> list[Row]:
+        def query(self, query: str) -> PyroFuture[list[Row]]:
+            """
+            Execute a query using text protocol and return all rows.
+
+            Args:
+                query: SQL query string.
+
+            Returns:
+                List of Row objects.
+            """
+            ...
+
+        def query_first(self, query: str) -> PyroFuture[Row | None]:
+            """
+            Execute a query using text protocol and return the first row.
+
+            Args:
+                query: SQL query string.
+
+            Returns:
+                First Row or None if no results.
+            """
+            ...
+
+        def query_drop(self, query: str) -> PyroFuture[None]:
+            """
+            Execute a query using text protocol and discard the results.
+
+            Args:
+                query: SQL query string.
+            """
+            ...
+
+        def exec(self, query: str, params: Params = None) -> PyroFuture[list[Row]]:
             """
             Execute a query and return all rows.
 
@@ -523,7 +566,9 @@ class async_:
             """
             ...
 
-        async def exec_first(self, query: str, params: Params = None) -> Row | None:
+        def exec_first(
+            self, query: str, params: Params = None
+        ) -> PyroFuture[Row | None]:
             """
             Execute a query and return the first row.
 
@@ -536,7 +581,7 @@ class async_:
             """
             ...
 
-        async def exec_drop(self, query: str, params: Params = None) -> None:
+        def exec_drop(self, query: str, params: Params = None) -> PyroFuture[None]:
             """
             Execute a query and discard the results.
 
@@ -546,46 +591,13 @@ class async_:
             """
             ...
 
-        async def exec_batch(self, query: str, params: list[Params] = []) -> None:
+        def exec_batch(self, query: str, params: list[Params] = []) -> PyroFuture[None]:
             """
             Execute a query multiple times with different parameters.
 
             Args:
                 query: SQL query string with '?' placeholders.
                 params: List of parameter sets.
-            """
-            ...
-
-        async def query(self, query: str) -> list[Row]:
-            """
-            Execute a query using text protocol and return all rows.
-
-            Args:
-                query: SQL query string.
-
-            Returns:
-                List of Row objects.
-            """
-            ...
-
-        async def query_first(self, query: str) -> Row | None:
-            """
-            Execute a query using text protocol and return the first row.
-
-            Args:
-                query: SQL query string.
-
-            Returns:
-                First Row or None if no results.
-            """
-            ...
-
-        async def query_drop(self, query: str) -> None:
-            """
-            Execute a query using text protocol and discard the results.
-
-            Args:
-                query: SQL query string.
             """
             ...
 
@@ -604,6 +616,8 @@ class async_:
             This resets the connection to a clean state without closing it.
             """
             ...
+
+        def server_version(self) -> PyroFuture[tuple[int, int, int]]: ...
 
     class Pool:
         """
@@ -1042,52 +1056,6 @@ class sync:
             """Get the number of affected rows from the last operation."""
             ...
 
-        def exec(self, query: str, params: Params = None) -> list[Row]:
-            """
-            Execute a query and return all rows.
-
-            Args:
-                query: SQL query string with '?' placeholders.
-                params: Query parameters.
-
-            Returns:
-                List of Row objects.
-            """
-            ...
-
-        def exec_first(self, query: str, params: Params = None) -> Row | None:
-            """
-            Execute a query and return the first row.
-
-            Args:
-                query: SQL query string with '?' placeholders.
-                params: Query parameters.
-
-            Returns:
-                First Row or None if no results.
-            """
-            ...
-
-        def exec_drop(self, query: str, params: Params = None) -> None:
-            """
-            Execute a query and discard the results.
-
-            Args:
-                query: SQL query string with '?' placeholders.
-                params: Query parameters.
-            """
-            ...
-
-        def exec_batch(self, query: str, params_list: list[Params] = []) -> None:
-            """
-            Execute a query multiple times with different parameters.
-
-            Args:
-                query: SQL query string with '?' placeholders.
-                params_list: List of parameter sets.
-            """
-            ...
-
         def query(self, query: str) -> list[Row]:
             """
             Execute a query using text protocol and return all rows.
@@ -1133,6 +1101,52 @@ class sync:
             """
             ...
 
+        def exec(self, query: str, params: Params = None) -> list[Row]:
+            """
+            Execute a query and return all rows.
+
+            Args:
+                query: SQL query string with '?' placeholders.
+                params: Query parameters.
+
+            Returns:
+                List of Row objects.
+            """
+            ...
+
+        def exec_first(self, query: str, params: Params = None) -> Row | None:
+            """
+            Execute a query and return the first row.
+
+            Args:
+                query: SQL query string with '?' placeholders.
+                params: Query parameters.
+
+            Returns:
+                First Row or None if no results.
+            """
+            ...
+
+        def exec_drop(self, query: str, params: Params = None) -> None:
+            """
+            Execute a query and discard the results.
+
+            Args:
+                query: SQL query string with '?' placeholders.
+                params: Query parameters.
+            """
+            ...
+
+        def exec_batch(self, query: str, params_list: list[Params] = []) -> None:
+            """
+            Execute a query multiple times with different parameters.
+
+            Args:
+                query: SQL query string with '?' placeholders.
+                params_list: List of parameter sets.
+            """
+            ...
+
         def exec_iter(
             self, query: str, params: Params = None
         ) -> "sync.ResultSetIterator":
@@ -1168,12 +1182,59 @@ class sync:
             isolation_level: IsolationLevel | None = None,
             readonly: bool | None = None,
         ) -> "sync.Transaction": ...
+        def id(self) -> int: ...
         def affected_rows(self) -> int:
             """Get the number of affected rows from the last operation."""
             ...
 
+        def last_insert_id(self) -> int | None: ...
         def ping(self) -> None:
             """Ping the server to check connection."""
+            ...
+
+        def query(self, query: str) -> list[Row]:
+            """
+            Execute a query using text protocol and return all rows.
+
+            Args:
+                query: SQL query string.
+
+            Returns:
+                List of Row objects.
+            """
+            ...
+
+        def query_first(self, query: str) -> Row | None:
+            """
+            Execute a query using text protocol and return the first row.
+
+            Args:
+                query: SQL query string.
+
+            Returns:
+                First Row or None if no results.
+            """
+            ...
+
+        def query_drop(self, query: str) -> None:
+            """
+            Execute a query using text protocol and discard the results.
+
+            Args:
+                query: SQL query string.
+            """
+            ...
+
+        def query_iter(self, query: str) -> "sync.ResultSetIterator":
+            """
+            Execute a query using text protocol and return an iterator over result sets.
+
+            Args:
+                query: SQL query string.
+
+            Returns:
+                Iterator over result sets.
+            """
             ...
 
         def exec(self, query: str, params: Params = None) -> list[Row]:
@@ -1222,51 +1283,9 @@ class sync:
             """
             ...
 
-        def query(self, query: str) -> list[Row]:
-            """
-            Execute a query using text protocol and return all rows.
-
-            Args:
-                query: SQL query string.
-
-            Returns:
-                List of Row objects.
-            """
-            ...
-
-        def query_first(self, query: str) -> Row | None:
-            """
-            Execute a query using text protocol and return the first row.
-
-            Args:
-                query: SQL query string.
-
-            Returns:
-                First Row or None if no results.
-            """
-            ...
-
-        def query_drop(self, query: str) -> None:
-            """
-            Execute a query using text protocol and discard the results.
-
-            Args:
-                query: SQL query string.
-            """
-            ...
-
-        def query_iter(self, query: str) -> Any:
-            """
-            Execute a query using text protocol and return an iterator over result sets.
-
-            Args:
-                query: SQL query string.
-
-            Returns:
-                Iterator over result sets.
-            """
-            ...
-
+        def exec_iter(
+            self, query: str, params: Params = None
+        ) -> "sync.ResultSetIterator": ...
         def close(self) -> None:
             """
             Disconnect from the MySQL server.
@@ -1282,6 +1301,8 @@ class sync:
             This resets the connection to a clean state without closing it.
             """
             ...
+
+        def server_version(self) -> tuple[int, int, int]: ...
 
     # These classes are exposed in the sync module namespace
     class Pool(SyncPool):
