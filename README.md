@@ -60,10 +60,10 @@ def example2():
 `SyncConn` and `SyncTransaction` provides the sync versions.
 
 ```py
-async def exec(self, query: str, params: Params) -> list[Row]
-async def exec_first(self, query: str, params: Params) -> Row | None
-async def exec_drop(self, query: str, params: Params) -> None
-async def exec_batch(self, query: str, params: Iterable[Params]) -> None
+def exec(self, query: str, params: Params) -> PyroFuture[list[Row]]
+def exec_first(self, query: str, params: Params) -> PyroFuture[Row | None]
+def exec_drop(self, query: str, params: Params) -> PyroFuture[None]
+def exec_batch(self, query: str, params: Iterable[Params]) -> PyroFuture[None]
 
 # Examples
 rows = await conn.exec("SELECT * FROM my_table WHERE a=? AND b=?", (a, b))
@@ -71,7 +71,15 @@ rows = await conn.exec("SELECT * FROM my_table WHERE a=:x AND b=:y AND c=:y", {'
 await conn.exec_batch("SELECT * FROM my_table WHERE a=? AND b=?", [(a1, b1), (a2, b2)])
 ```
 
-For exact description of each API, refer to [the Rust doc](https://docs.rs/mysql/latest/mysql/prelude/trait.Queryable.html).
+`PyroFuture` is a Future-like object that tracks a task in the Rust thread. When an object of `PyroFuture` is dropped before completion or cancellation, the corresponding task in the Rust thread is cancelled.
+
+```py
+fut = conn.exec("SELECT ...")  # the Rust thread starts to execute the query before we await the Python future.
+
+print(fut.get_loop())  # get the associated Python event loop
+fut.cancel()  # cancels the Rust task
+del fut  # this is equivalent to .cancel()
+```
 
 ### 3. Transaction
 
@@ -129,3 +137,12 @@ with conn.start_transaction() as tx:
 | `ENUM` / `SET` | `str` |
 | `BIT` | `bytes` |
 | `GEOMETRY` | `bytes` (WKB format) |
+
+## Logging
+
+By default, pyro-mysql sends the Rust logs to the Python logging system.
+
+```py
+# Queries are logged with the DEBUG level
+logging.getLogger("pyro_mysql").setLevel(logging.DEBUG)
+```

@@ -14,16 +14,16 @@ use pyo3::prelude::*;
 use tokio::runtime::Builder;
 
 use crate::{
-    r#async::{
-        AsyncOpts, AsyncOptsBuilder, AsyncPoolOpts, conn::AsyncConn, pool::AsyncPool,
-        transaction::AsyncTransaction,
-    },
     capability_flags::CapabilityFlags,
     isolation_level::IsolationLevel,
+    r#async::{
+        conn::AsyncConn, pool::AsyncPool, transaction::AsyncTransaction, AsyncOpts,
+        AsyncOptsBuilder, AsyncPoolOpts,
+    },
     row::Row,
     sync::{
-        SyncConn, SyncPool, SyncPoolOpts, SyncPooledConn, SyncTransaction,
         opts::{SyncOpts, SyncOptsBuilder},
+        SyncConn, SyncPool, SyncPoolOpts, SyncPooledConn, SyncTransaction,
     },
     util::PyroFuture,
 };
@@ -127,6 +127,10 @@ fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     sync.add("Opts", py.get_type::<SyncOpts>())?;
     sync.add("OptsBuilder", py.get_type::<SyncOptsBuilder>())?;
     sync.add("PoolOpts", py.get_type::<SyncPoolOpts>())?;
+    sync.add(
+        "ResultSetIterator",
+        py.get_type::<sync::iterator::ResultSetIterator>(),
+    )?;
     m.add_submodule(&sync)?;
 
     // a hack for Python's import system
