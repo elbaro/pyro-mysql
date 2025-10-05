@@ -10,7 +10,7 @@ use crate::sync::iterator::ResultSetIterator;
 use crate::sync::{SyncConn, SyncPooledConn};
 use crate::{params::Params, row::Row};
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql.sync", name = "Transaction")]
 pub struct SyncTransaction {
     // Hold a reference to the connection Python object to prevent it from being GC-ed
     conn: Either<Py<SyncConn>, Py<SyncPooledConn>>,

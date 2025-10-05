@@ -45,99 +45,155 @@ fn init(worker_threads: Option<usize>, thread_name: Option<&str>) {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn pyro_mysql(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    pyo3_log::init(); // the default filter uses DEBUG
+mod pyro_mysql {
+    use super::*;
 
-    if cfg!(debug_assertions) {
-        log::debug!("Running in Debug mode.");
-    } else {
-        log::debug!("Running in Release mode.");
+    #[pymodule_export]
+    use super::init;
+
+    #[pymodule_export]
+    use super::Row;
+
+    #[pymodule_export]
+    use super::IsolationLevel;
+
+    #[pymodule_export]
+    use super::CapabilityFlags;
+
+    #[pymodule_export]
+    use super::PyroFuture;
+
+    #[pymodule_export]
+    use super::AsyncPool;
+
+    #[pymodule_export]
+    use super::AsyncConn;
+
+    #[pymodule_export]
+    use super::AsyncTransaction;
+
+    #[pymodule_export]
+    use super::AsyncOpts;
+
+    #[pymodule_export]
+    use super::AsyncOptsBuilder;
+
+    #[pymodule_export]
+    use super::AsyncPoolOpts;
+
+    #[pymodule_export]
+    use super::SyncConn;
+
+    #[pymodule_export]
+    use super::SyncPool;
+
+    #[pymodule_export]
+    use super::SyncPooledConn;
+
+    #[pymodule_export]
+    use super::SyncPoolOpts;
+
+    #[pymodule_export]
+    use super::SyncTransaction;
+
+    #[pymodule_export]
+    use super::SyncOpts;
+
+    #[pymodule_export]
+    use super::SyncOptsBuilder;
+
+    #[pymodule]
+    mod error {
+        use crate::error as error_types;
+
+        #[pymodule_export]
+        use error_types::IncorrectApiUsageError;
+
+        #[pymodule_export]
+        use error_types::UrlError;
+
+        #[pymodule_export]
+        use error_types::MysqlError;
+
+        #[pymodule_export]
+        use error_types::ConnectionClosedError;
+
+        #[pymodule_export]
+        use error_types::TransactionClosedError;
+
+        #[pymodule_export]
+        use error_types::BuilderConsumedError;
+
+        #[pymodule_export]
+        use error_types::DecodeError;
     }
 
-    init(Some(1), None);
-    m.add_function(wrap_pyfunction!(init, m)?)?;
-    m.add_class::<Row>()?;
-    m.add_class::<IsolationLevel>()?;
-    m.add_class::<CapabilityFlags>()?;
-    m.add_class::<PyroFuture>()?;
+    #[pymodule]
+    mod async_ {
+        #[pymodule_export]
+        use crate::r#async::pool::AsyncPool;
 
-    m.add_class::<AsyncPool>()?;
-    m.add_class::<AsyncConn>()?;
-    m.add_class::<AsyncTransaction>()?;
-    m.add_class::<AsyncOpts>()?;
-    m.add_class::<AsyncOptsBuilder>()?;
-    m.add_class::<AsyncPoolOpts>()?;
+        #[pymodule_export]
+        use crate::r#async::conn::AsyncConn;
 
-    m.add_class::<SyncConn>()?;
-    m.add_class::<SyncPool>()?;
-    m.add_class::<SyncPooledConn>()?;
-    m.add_class::<SyncPoolOpts>()?;
-    m.add_class::<SyncTransaction>()?;
-    m.add_class::<SyncOpts>()?;
-    m.add_class::<SyncOptsBuilder>()?;
+        #[pymodule_export]
+        use crate::r#async::transaction::AsyncTransaction;
 
-    // error
-    let error = PyModule::new(py, "error")?;
-    error.add(
-        "IncorrectApiUsageError",
-        py.get_type::<error::IncorrectApiUsageError>(),
-    )?;
-    error.add("UrlError", py.get_type::<error::UrlError>())?;
-    error.add("MysqlError", py.get_type::<error::MysqlError>())?;
-    error.add(
-        "ConnectionClosedError",
-        py.get_type::<error::ConnectionClosedError>(),
-    )?;
-    error.add(
-        "TransactionClosedError",
-        py.get_type::<error::TransactionClosedError>(),
-    )?;
-    error.add(
-        "BuilderConsumedError",
-        py.get_type::<error::BuilderConsumedError>(),
-    )?;
-    error.add("DecodeError", py.get_type::<error::DecodeError>())?;
-    pyo3::py_run!(
-        py,
-        error,
-        "import sys; sys.modules['pyro_mysql.error'] = error"
-    );
-    m.add_submodule(&error)?;
+        #[pymodule_export]
+        use crate::r#async::AsyncOpts;
 
-    // async
-    let async_ = PyModule::new(py, "async_")?;
-    async_.add("Pool", py.get_type::<AsyncPool>())?;
-    async_.add("Conn", py.get_type::<AsyncConn>())?;
-    async_.add("Transaction", py.get_type::<AsyncTransaction>())?;
-    async_.add("Opts", py.get_type::<AsyncOpts>())?;
-    async_.add("OptsBuilder", py.get_type::<AsyncOptsBuilder>())?;
-    async_.add("PoolOpts", py.get_type::<AsyncPoolOpts>())?;
-    m.add_submodule(&async_)?;
-    pyo3::py_run!(
-        py,
-        async_,
-        "import sys; sys.modules['pyro_mysql.async_'] = async_"
-    );
+        #[pymodule_export]
+        use crate::r#async::AsyncOptsBuilder;
 
-    // sync
-    let sync = PyModule::new(py, "sync")?;
-    sync.add("Conn", py.get_type::<SyncConn>())?;
-    sync.add("Pool", py.get_type::<SyncPool>())?;
-    sync.add("PooledConn", py.get_type::<SyncPooledConn>())?;
-    sync.add("Opts", py.get_type::<SyncOpts>())?;
-    sync.add("OptsBuilder", py.get_type::<SyncOptsBuilder>())?;
-    sync.add("PoolOpts", py.get_type::<SyncPoolOpts>())?;
-    sync.add(
-        "ResultSetIterator",
-        py.get_type::<sync::iterator::ResultSetIterator>(),
-    )?;
-    m.add_submodule(&sync)?;
+        #[pymodule_export]
+        use crate::r#async::AsyncPoolOpts;
+    }
 
-    // a hack for Python's import system
-    let sys_modules = py.import("sys")?.getattr("modules")?;
-    sys_modules.set_item("pyro_mysql.async_", async_)?;
-    sys_modules.set_item("pyro_mysql.sync", sync)?;
-    sys_modules.set_item("pyro_mysql.error", error)?;
+    #[pymodule]
+    mod sync {
+        #[pymodule_export]
+        use crate::sync::SyncConn;
 
-    Ok(())
+        #[pymodule_export]
+        use crate::sync::SyncPool;
+
+        #[pymodule_export]
+        use crate::sync::SyncPooledConn;
+
+        #[pymodule_export]
+        use crate::sync::SyncTransaction;
+
+        #[pymodule_export]
+        use crate::sync::opts::SyncOpts;
+
+        #[pymodule_export]
+        use crate::sync::opts::SyncOptsBuilder;
+
+        #[pymodule_export]
+        use crate::sync::SyncPoolOpts;
+
+        #[pymodule_export]
+        use crate::sync::iterator::ResultSetIterator;
+    }
+
+    #[pymodule_init]
+    fn module_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        pyo3_log::init();
+
+        if cfg!(debug_assertions) {
+            log::debug!("Running in Debug mode.");
+        } else {
+            log::debug!("Running in Release mode.");
+        }
+
+        super::init(Some(1), None);
+
+        let py = m.py();
+        let sys_modules = py.import("sys")?.getattr("modules")?;
+        for module in ["error", "sync", "async_"] {
+            sys_modules.set_item(format!("pyro_mysql.{module}"), m.getattr(module)?)?;
+        }
+
+        Ok(())
+    }
 }

@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use crate::error::{Error, PyroResult};
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql.sync", name = "Opts")]
 #[derive(Clone)]
 pub struct SyncOpts {
     pub opts: mysql::Opts,
@@ -20,7 +20,7 @@ impl SyncOpts {
     }
 }
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql.sync", name = "OptsBuilder")]
 pub struct SyncOptsBuilder {
     builder: Option<mysql::OptsBuilder>,
 }

@@ -13,7 +13,7 @@ use crate::isolation_level::IsolationLevel;
 use crate::params::Params;
 use crate::util::{PyroFuture, rust_future_into_py, url_error_to_pyerr};
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql.async_", name = "Conn")]
 /// ### Concurrency
 /// The API is thread-safe. The underlying implementation is protected by RwLock.
 /// Conn.exec_*() receives &mut self, so there is at most one statement being executed at any point.

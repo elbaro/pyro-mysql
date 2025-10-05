@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="pdoc 15.0.4"/>
-    <title>pyro_mysql.async_ API documentation</title>
+    <title>async_ API documentation</title>
 
     <style>/*! * Bootstrap Reboot v5.0.0 (https://getbootstrap.com/) * Copyright 2011-2021 The Bootstrap Authors * Copyright 2011-2021 Twitter, Inc. * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE) * Forked from Normalize.css, licensed MIT (https://github.com/necolas/normalize.css/blob/master/LICENSE.md) */*,::after,::before{box-sizing:border-box}@media (prefers-reduced-motion:no-preference){:root{scroll-behavior:smooth}}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#fff;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}hr{margin:1rem 0;color:inherit;background-color:currentColor;border:0;opacity:.25}hr:not([size]){height:1px}h1,h2,h3,h4,h5,h6{margin-top:0;margin-bottom:.5rem;font-weight:500;line-height:1.2}h1{font-size:calc(1.375rem + 1.5vw)}@media (min-width:1200px){h1{font-size:2.5rem}}h2{font-size:calc(1.325rem + .9vw)}@media (min-width:1200px){h2{font-size:2rem}}h3{font-size:calc(1.3rem + .6vw)}@media (min-width:1200px){h3{font-size:1.75rem}}h4{font-size:calc(1.275rem + .3vw)}@media (min-width:1200px){h4{font-size:1.5rem}}h5{font-size:1.25rem}h6{font-size:1rem}p{margin-top:0;margin-bottom:1rem}abbr[data-bs-original-title],abbr[title]{-webkit-text-decoration:underline dotted;text-decoration:underline dotted;cursor:help;-webkit-text-decoration-skip-ink:none;text-decoration-skip-ink:none}address{margin-bottom:1rem;font-style:normal;line-height:inherit}ol,ul{padding-left:2rem}dl,ol,ul{margin-top:0;margin-bottom:1rem}ol ol,ol ul,ul ol,ul ul{margin-bottom:0}dt{font-weight:700}dd{margin-bottom:.5rem;margin-left:0}blockquote{margin:0 0 1rem}b,strong{font-weight:bolder}small{font-size:.875em}mark{padding:.2em;background-color:#fcf8e3}sub,sup{position:relative;font-size:.75em;line-height:0;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}a{color:#0d6efd;text-decoration:underline}a:hover{color:#0a58ca}a:not([href]):not([class]),a:not([href]):not([class]):hover{color:inherit;text-decoration:none}code,kbd,pre,samp{font-family:SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:1em;direction:ltr;unicode-bidi:bidi-override}pre{display:block;margin-top:0;margin-bottom:1rem;overflow:auto;font-size:.875em}pre code{font-size:inherit;color:inherit;word-break:normal}code{font-size:.875em;color:#d63384;word-wrap:break-word}a>code{color:inherit}kbd{padding:.2rem .4rem;font-size:.875em;color:#fff;background-color:#212529;border-radius:.2rem}kbd kbd{padding:0;font-size:1em;font-weight:700}figure{margin:0 0 1rem}img,svg{vertical-align:middle}table{caption-side:bottom;border-collapse:collapse}caption{padding-top:.5rem;padding-bottom:.5rem;color:#6c757d;text-align:left}th{text-align:inherit;text-align:-webkit-match-parent}tbody,td,tfoot,th,thead,tr{border-color:inherit;border-style:solid;border-width:0}label{display:inline-block}button{border-radius:0}button:focus:not(:focus-visible){outline:0}button,input,optgroup,select,textarea{margin:0;font-family:inherit;font-size:inherit;line-height:inherit}button,select{text-transform:none}[role=button]{cursor:pointer}select{word-wrap:normal}select:disabled{opacity:1}[list]::-webkit-calendar-picker-indicator{display:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]:not(:disabled),[type=reset]:not(:disabled),[type=submit]:not(:disabled),button:not(:disabled){cursor:pointer}::-moz-focus-inner{padding:0;border-style:none}textarea{resize:vertical}fieldset{min-width:0;padding:0;margin:0;border:0}legend{float:left;width:100%;padding:0;margin-bottom:.5rem;font-size:calc(1.275rem + .3vw);line-height:inherit}@media (min-width:1200px){legend{font-size:1.5rem}}legend+*{clear:left}::-webkit-datetime-edit-day-field,::-webkit-datetime-edit-fields-wrapper,::-webkit-datetime-edit-hour-field,::-webkit-datetime-edit-minute,::-webkit-datetime-edit-month-field,::-webkit-datetime-edit-text,::-webkit-datetime-edit-year-field{padding:0}::-webkit-inner-spin-button{height:auto}[type=search]{outline-offset:-2px;-webkit-appearance:textfield}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-color-swatch-wrapper{padding:0}::file-selector-button{font:inherit}::-webkit-file-upload-button{font:inherit;-webkit-appearance:button}output{display:inline-block}iframe{border:0}summary{display:list-item;cursor:pointer}progress{vertical-align:baseline}[hidden]{display:none!important}</style>
     <style>/*! syntax-highlighting.css */pre{line-height:125%;}span.linenos{color:inherit; background-color:transparent; padding-left:5px; padding-right:20px;}.pdoc-code .hll{background-color:#ffffcc}.pdoc-code{background:#f8f8f8;}.pdoc-code .c{color:#3D7B7B; font-style:italic}.pdoc-code .err{border:1px solid #FF0000}.pdoc-code .k{color:#008000; font-weight:bold}.pdoc-code .o{color:#666666}.pdoc-code .ch{color:#3D7B7B; font-style:italic}.pdoc-code .cm{color:#3D7B7B; font-style:italic}.pdoc-code .cp{color:#9C6500}.pdoc-code .cpf{color:#3D7B7B; font-style:italic}.pdoc-code .c1{color:#3D7B7B; font-style:italic}.pdoc-code .cs{color:#3D7B7B; font-style:italic}.pdoc-code .gd{color:#A00000}.pdoc-code .ge{font-style:italic}.pdoc-code .gr{color:#E40000}.pdoc-code .gh{color:#000080; font-weight:bold}.pdoc-code .gi{color:#008400}.pdoc-code .go{color:#717171}.pdoc-code .gp{color:#000080; font-weight:bold}.pdoc-code .gs{font-weight:bold}.pdoc-code .gu{color:#800080; font-weight:bold}.pdoc-code .gt{color:#0044DD}.pdoc-code .kc{color:#008000; font-weight:bold}.pdoc-code .kd{color:#008000; font-weight:bold}.pdoc-code .kn{color:#008000; font-weight:bold}.pdoc-code .kp{color:#008000}.pdoc-code .kr{color:#008000; font-weight:bold}.pdoc-code .kt{color:#B00040}.pdoc-code .m{color:#666666}.pdoc-code .s{color:#BA2121}.pdoc-code .na{color:#687822}.pdoc-code .nb{color:#008000}.pdoc-code .nc{color:#0000FF; font-weight:bold}.pdoc-code .no{color:#880000}.pdoc-code .nd{color:#AA22FF}.pdoc-code .ni{color:#717171; font-weight:bold}.pdoc-code .ne{color:#CB3F38; font-weight:bold}.pdoc-code .nf{color:#0000FF}.pdoc-code .nl{color:#767600}.pdoc-code .nn{color:#0000FF; font-weight:bold}.pdoc-code .nt{color:#008000; font-weight:bold}.pdoc-code .nv{color:#19177C}.pdoc-code .ow{color:#AA22FF; font-weight:bold}.pdoc-code .w{color:#bbbbbb}.pdoc-code .mb{color:#666666}.pdoc-code .mf{color:#666666}.pdoc-code .mh{color:#666666}.pdoc-code .mi{color:#666666}.pdoc-code .mo{color:#666666}.pdoc-code .sa{color:#BA2121}.pdoc-code .sb{color:#BA2121}.pdoc-code .sc{color:#BA2121}.pdoc-code .dl{color:#BA2121}.pdoc-code .sd{color:#BA2121; font-style:italic}.pdoc-code .s2{color:#BA2121}.pdoc-code .se{color:#AA5D1F; font-weight:bold}.pdoc-code .sh{color:#BA2121}.pdoc-code .si{color:#A45A77; font-weight:bold}.pdoc-code .sx{color:#008000}.pdoc-code .sr{color:#A45A77}.pdoc-code .s1{color:#BA2121}.pdoc-code .ss{color:#19177C}.pdoc-code .bp{color:#008000}.pdoc-code .fm{color:#0000FF}.pdoc-code .vc{color:#19177C}.pdoc-code .vg{color:#19177C}.pdoc-code .vi{color:#19177C}.pdoc-code .vm{color:#19177C}.pdoc-code .il{color:#666666}</style>
@@ -16,12 +16,7 @@
     <nav class="pdoc">
         <label id="navtoggle" for="togglestate" class="pdoc-button"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'><path stroke-linecap='round' stroke="currentColor" stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/></svg></label>
         <input id="togglestate" type="checkbox" aria-hidden="true" tabindex="-1">
-        <div>            <a class="pdoc-button module-list-button" href="../pyro_mysql.html">
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-in-left" viewBox="0 0 16 16">
-  <path fill-rule="evenodd" d="M10 3.5a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 1 1 0v2A1.5 1.5 0 0 1 9.5 14h-8A1.5 1.5 0 0 1 0 12.5v-9A1.5 1.5 0 0 1 1.5 2h8A1.5 1.5 0 0 1 11 3.5v2a.5.5 0 0 1-1 0v-2z"/>
-  <path fill-rule="evenodd" d="M4.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H14.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3z"/>
-</svg>                &nbsp;pyro_mysql</a>
-
+        <div>
 
             <input type="search" placeholder="Search..." role="searchbox" aria-label="search"
                    pattern=".+" required>
@@ -31,22 +26,220 @@
             <h2>API Documentation</h2>
                 <ul class="memberlist">
             <li>
-                    <a class="variable" href="#Pool">Pool</a>
+                    <a class="class" href="#Pool">Pool</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#Pool.get_conn">get_conn</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Pool.acquire">acquire</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Pool.close">close</a>
+                        </li>
+                </ul>
+
             </li>
             <li>
-                    <a class="variable" href="#Conn">Conn</a>
+                    <a class="class" href="#Conn">Conn</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#Conn.new">new</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.start_transaction">start_transaction</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.id">id</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.affected_rows">affected_rows</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.last_insert_id">last_insert_id</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.ping">ping</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.query">query</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.query_first">query_first</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.query_drop">query_drop</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.exec">exec</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.exec_first">exec_first</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.exec_drop">exec_drop</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.exec_batch">exec_batch</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.close">close</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.reset">reset</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Conn.server_version">server_version</a>
+                        </li>
+                </ul>
+
             </li>
             <li>
-                    <a class="variable" href="#Transaction">Transaction</a>
+                    <a class="class" href="#Transaction">Transaction</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#Transaction.commit">commit</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Transaction.rollback">rollback</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Transaction.affected_rows">affected_rows</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Transaction.close_prepared_statement">close_prepared_statement</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Transaction.ping">ping</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Transaction.query">query</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Transaction.query_first">query_first</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Transaction.query_drop">query_drop</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Transaction.exec">exec</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Transaction.exec_first">exec_first</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Transaction.exec_drop">exec_drop</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Transaction.exec_batch">exec_batch</a>
+                        </li>
+                </ul>
+
             </li>
             <li>
-                    <a class="variable" href="#Opts">Opts</a>
+                    <a class="class" href="#Opts">Opts</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#Opts.pool_opts">pool_opts</a>
+                        </li>
+                </ul>
+
             </li>
             <li>
-                    <a class="variable" href="#OptsBuilder">OptsBuilder</a>
+                    <a class="class" href="#OptsBuilder">OptsBuilder</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#OptsBuilder.from_opts">from_opts</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.from_url">from_url</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.ip_or_hostname">ip_or_hostname</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.tcp_port">tcp_port</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.socket">socket</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.user">user</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.password">password</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.db_name">db_name</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.secure_auth">secure_auth</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.wait_timeout">wait_timeout</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.stmt_cache_size">stmt_cache_size</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.tcp_nodelay">tcp_nodelay</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.tcp_keepalive">tcp_keepalive</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.max_allowed_packet">max_allowed_packet</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.prefer_socket">prefer_socket</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.init">init</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.compression">compression</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.ssl_opts">ssl_opts</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.local_infile_handler">local_infile_handler</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.pool_opts">pool_opts</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.enable_cleartext_plugin">enable_cleartext_plugin</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.client_found_rows">client_found_rows</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.conn_ttl">conn_ttl</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.setup">setup</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OptsBuilder.build">build</a>
+                        </li>
+                </ul>
+
             </li>
             <li>
-                    <a class="variable" href="#PoolOpts">PoolOpts</a>
+                    <a class="class" href="#PoolOpts">PoolOpts</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#PoolOpts.with_constraints">with_constraints</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#PoolOpts.with_inactive_connection_ttl">with_inactive_connection_ttl</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#PoolOpts.with_ttl_check_interval">with_ttl_check_interval</a>
+                        </li>
+                </ul>
+
             </li>
     </ul>
 
@@ -62,7 +255,7 @@
     <main class="pdoc">
             <section class="module-info">
                     <h1 class="modulename">
-<a href="./../pyro_mysql.html">pyro_mysql</a><wbr>.async_    </h1>
+async_    </h1>
 
                 
                 
@@ -70,9 +263,10 @@
                 
             </section>
                 <section id="Pool">
-                    <div class="attr variable">
-            <span class="name">Pool</span>        =
-<span class="default_value">&lt;class &#39;builtins.AsyncPool&#39;&gt;</span>
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">Pool</span>:
 
         
     </div>
@@ -80,23 +274,315 @@
     
     
 
+                            <div id="Pool.get_conn" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_conn</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pool.get_conn"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Pool.acquire" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">acquire</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pool.acquire"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Pool.close" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">close</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pool.close"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="Conn">
-                    <div class="attr variable">
-            <span class="name">Conn</span>        =
-<span class="default_value">&lt;class &#39;builtins.AsyncConn&#39;&gt;</span>
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">Conn</span>:
 
         
     </div>
     <a class="headerlink" href="#Conn"></a>
     
-    
+            <div class="docstring"><h3 id="concurrency">Concurrency</h3>
 
+<p>The API is thread-safe. The underlying implementation is protected by RwLock.
+Conn.exec_*() receives &amp;mut self, so there is at most one statement being executed at any point.</p>
+</div>
+
+
+                            <div id="Conn.new" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">new</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">url_or_opts</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.new"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.start_transaction" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">start_transaction</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="o">/</span>,</span><span class="param">	<span class="n">consistent_snapshot</span><span class="o">=</span><span class="kc">False</span>,</span><span class="param">	<span class="n">isolation_level</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">readonly</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.start_transaction"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.id" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">id</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.id"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.affected_rows" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">affected_rows</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.affected_rows"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.last_insert_id" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">last_insert_id</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.last_insert_id"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.ping" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">ping</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.ping"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.query" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">query</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.query"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.query_first" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">query_first</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.query_first"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.query_drop" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">query_drop</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.query_drop"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.exec" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.exec"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.exec_first" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec_first</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.exec_first"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.exec_drop" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec_drop</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.exec_drop"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.exec_batch" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec_batch</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.exec_batch"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.close" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">close</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.close"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.reset" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">reset</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.reset"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Conn.server_version" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">server_version</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Conn.server_version"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="Transaction">
-                    <div class="attr variable">
-            <span class="name">Transaction</span>        =
-<span class="default_value">&lt;class &#39;builtins.AsyncTransaction&#39;&gt;</span>
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">Transaction</span>:
 
         
     </div>
@@ -104,11 +590,192 @@
     
     
 
+                            <div id="Transaction.commit" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">commit</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Transaction.commit"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Transaction.rollback" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">rollback</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Transaction.rollback"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Transaction.affected_rows" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">affected_rows</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Transaction.affected_rows"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Transaction.close_prepared_statement" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">close_prepared_statement</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">_stmt</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Transaction.close_prepared_statement"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Transaction.ping" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">ping</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Transaction.ping"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Transaction.query" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">query</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Transaction.query"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Transaction.query_first" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">query_first</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Transaction.query_first"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Transaction.query_drop" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">query_drop</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Transaction.query_drop"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Transaction.exec" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Transaction.exec"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Transaction.exec_first" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec_first</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Transaction.exec_first"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Transaction.exec_drop" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec_drop</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Transaction.exec_drop"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Transaction.exec_batch" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">exec_batch</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">query</span>, </span><span class="param"><span class="n">params</span><span class="o">=</span><span class="bp">Ellipsis</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Transaction.exec_batch"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="Opts">
-                    <div class="attr variable">
-            <span class="name">Opts</span>        =
-<span class="default_value">&lt;class &#39;builtins.AsyncOpts&#39;&gt;</span>
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">Opts</span>:
 
         
     </div>
@@ -116,11 +783,27 @@
     
     
 
+                            <div id="Opts.pool_opts" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">pool_opts</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">pool_opts</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Opts.pool_opts"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="OptsBuilder">
-                    <div class="attr variable">
-            <span class="name">OptsBuilder</span>        =
-<span class="default_value">&lt;class &#39;builtins.AsyncOptsBuilder&#39;&gt;</span>
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">OptsBuilder</span>:
 
         
     </div>
@@ -128,11 +811,387 @@
     
     
 
+                            <div id="OptsBuilder.from_opts" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_opts</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">opts</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.from_opts"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.from_url" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_url</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">url</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.from_url"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.ip_or_hostname" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">ip_or_hostname</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">hostname</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.ip_or_hostname"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.tcp_port" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tcp_port</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">port</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.tcp_port"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.socket" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">socket</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">path</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.socket"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.user" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">user</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">username</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.user"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.password" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">password</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">password</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.password"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.db_name" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">db_name</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">database</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.db_name"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.secure_auth" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">secure_auth</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">enable</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.secure_auth"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.wait_timeout" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">wait_timeout</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">seconds</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.wait_timeout"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.stmt_cache_size" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">stmt_cache_size</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">size</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.stmt_cache_size"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.tcp_nodelay" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tcp_nodelay</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">enable</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.tcp_nodelay"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.tcp_keepalive" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tcp_keepalive</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">keepalive_ms</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.tcp_keepalive"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.max_allowed_packet" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">max_allowed_packet</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">max_allowed_packet</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.max_allowed_packet"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.prefer_socket" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">prefer_socket</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">prefer_socket</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.prefer_socket"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.init" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">init</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">commands</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.init"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.compression" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">compression</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">level</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.compression"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.ssl_opts" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">ssl_opts</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">_opts</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.ssl_opts"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.local_infile_handler" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">local_infile_handler</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">_handler</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.local_infile_handler"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.pool_opts" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">pool_opts</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">opts</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.pool_opts"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.enable_cleartext_plugin" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">enable_cleartext_plugin</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">enable</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.enable_cleartext_plugin"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.client_found_rows" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">client_found_rows</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">enable</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.client_found_rows"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.conn_ttl" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">conn_ttl</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">ttl_seconds</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.conn_ttl"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.setup" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">setup</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">commands</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.setup"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="OptsBuilder.build" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">build</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OptsBuilder.build"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="PoolOpts">
-                    <div class="attr variable">
-            <span class="name">PoolOpts</span>        =
-<span class="default_value">&lt;class &#39;builtins.AsyncPoolOpts&#39;&gt;</span>
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">PoolOpts</span>:
 
         
     </div>
@@ -140,6 +1199,51 @@
     
     
 
+                            <div id="PoolOpts.with_constraints" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">with_constraints</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">constraints</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#PoolOpts.with_constraints"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="PoolOpts.with_inactive_connection_ttl" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">with_inactive_connection_ttl</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">ttl</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#PoolOpts.with_inactive_connection_ttl"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="PoolOpts.with_ttl_check_interval" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">with_ttl_check_interval</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">interval</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#PoolOpts.with_ttl_check_interval"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
                 </section>
     </main>
 <script>
@@ -194,7 +1298,7 @@
                 script.async = true;
                 script.onload = () => resolve(window.pdocSearch);
                 script.onerror = (e) => reject(e);
-                script.src = "../search.js";
+                script.src = "search.js";
                 document.getElementsByTagName("head")[0].appendChild(script);
             });
         } catch (e) {
@@ -236,7 +1340,7 @@
             }
             for (let result of results.slice(0, 10)) {
                 let doc = result.doc;
-                let url = `../${doc.modulename.replaceAll(".", "/")}.html`;
+                let url = `${doc.modulename.replaceAll(".", "/")}.html`;
                 if (doc.qualname) {
                     url += `#${doc.qualname}`;
                 }

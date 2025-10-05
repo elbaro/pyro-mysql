@@ -10,7 +10,7 @@ use mysql_async::Opts;
 use pyo3::prelude::*;
 use tokio::sync::RwLock;
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql.async_", name = "Pool")]
 pub struct AsyncPool {
     pool: mysql_async::Pool, // This is clonable
 }

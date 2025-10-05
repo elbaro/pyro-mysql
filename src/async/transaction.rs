@@ -10,7 +10,7 @@ use crate::{
 };
 
 // struct fields are dropped in the same order as declared in the struct
-#[pyclass]
+#[pyclass(module = "pyro_mysql.async_", name = "Transaction")]
 pub struct AsyncTransaction {
     opts: mysql_async::TxOpts,
 

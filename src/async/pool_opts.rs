@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use crate::error::{Error, PyroResult};
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql.async_", name = "PoolOpts")]
 #[derive(Clone, Debug)]
 pub struct AsyncPoolOpts {
     pub(crate) inner: mysql_async::PoolOpts,

@@ -11,7 +11,7 @@ use crate::sync::iterator::ResultSetIterator;
 use crate::sync::opts::SyncOpts;
 use crate::sync::transaction::SyncTransaction;
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql.sync", name = "Conn")]
 pub struct SyncConn {
     pub inner: RwLock<Option<mysql::Conn>>,
 }

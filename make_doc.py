@@ -84,13 +84,14 @@ def main():
     all_modules["pyro_mysql"].members["Params"] = params_doc
 
     for module in all_modules.values():
-        out = pdoc.render.html_module(module, all_modules)
-        if not output_directory:
-            return out
+        if module.fullname == "pyro_mysql":
+            name = module.fullname
         else:
-            outfile = output_directory / f"{module.fullname.replace('.', '/')}.html"
-            outfile.parent.mkdir(parents=True, exist_ok=True)
-            outfile.write_bytes(out.encode())
+            name = f"pyro_mysql.{module.fullname}"
+        out = pdoc.render.html_module(module, all_modules)
+        outfile = output_directory / f"{name.replace('.', '/')}.html"
+        outfile.parent.mkdir(parents=True, exist_ok=True)
+        outfile.write_bytes(out.encode())
 
     assert output_directory
 

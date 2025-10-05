@@ -2,7 +2,7 @@ use pyo3::prelude::*;
 
 use crate::error::{Error, PyroResult};
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql.sync", name = "PoolOpts")]
 #[derive(Clone, Debug)]
 pub struct SyncPoolOpts {
     pub(crate) inner: mysql::PoolOpts,

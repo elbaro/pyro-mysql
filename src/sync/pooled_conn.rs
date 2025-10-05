@@ -10,7 +10,7 @@ use crate::row::Row;
 use crate::sync::iterator::ResultSetIterator;
 use crate::sync::transaction::SyncTransaction;
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql.sync", name = "PooledConn")]
 pub struct SyncPooledConn {
     pub inner: RwLock<Option<mysql::PooledConn>>,
 }

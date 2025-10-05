@@ -7,7 +7,7 @@ use mysql::{Opts, Pool};
 use parking_lot::RwLock;
 use pyo3::prelude::*;
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql.sync", name = "Pool")]
 pub struct SyncPool {
     pool: Pool, // This is clonable
 }
