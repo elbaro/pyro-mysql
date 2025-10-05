@@ -13,6 +13,7 @@ def test_basic_sync_connection():
     conn = Conn(get_test_db_url())
 
     result = conn.query_first("SELECT 1")
+    assert result
     assert result.to_tuple() == (1,)
 
     conn.close()
@@ -43,11 +44,13 @@ def test_sync_connection_reset():
     conn.query_drop("SET @test_var = 42")
 
     result = conn.query_first("SELECT @test_var")
+    assert result
     assert result.to_tuple() == (42,)
 
     conn.reset()
 
     result = conn.query_first("SELECT @test_var")
+    assert result
     assert result.to_tuple() == (None,)
 
     conn.close()
@@ -79,6 +82,7 @@ def test_sync_connection_charset():
     conn.query_drop("SET NAMES utf8mb4")
 
     charset = conn.query_first("SELECT @@character_set_connection")
+    assert charset
     assert charset.to_tuple() == ("utf8mb4",)
 
     conn.close()
@@ -93,6 +97,7 @@ def test_sync_connection_autocommit():
     conn.query_drop("SET autocommit = 0")
 
     autocommit = conn.query_first("SELECT @@autocommit")
+    assert autocommit
     assert autocommit.to_tuple() == (0,)
 
     conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Test', 25)")
@@ -100,6 +105,7 @@ def test_sync_connection_autocommit():
     conn.query_drop("ROLLBACK")
 
     count = conn.query_first("SELECT COUNT(*) FROM test_table")
+    assert count
     assert count.to_tuple() == (0,)
 
     conn.query_drop("SET autocommit = 1")
@@ -107,6 +113,7 @@ def test_sync_connection_autocommit():
     conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Test2', 30)")
 
     count = conn.query_first("SELECT COUNT(*) FROM test_table")
+    assert count
     assert count.to_tuple() == (1,)
 
     cleanup_test_table_sync(conn)
@@ -122,7 +129,7 @@ def test_sync_connection_ssl():
         conn = Conn(opts)
 
         try:
-            ssl_result = conn.query_first("SHOW STATUS LIKE 'Ssl_cipher'")
+            _ssl_result = conn.query_first("SHOW STATUS LIKE 'Ssl_cipher'")
             # SSL cipher status may or may not be available
         except Exception:
             pass
@@ -142,6 +149,7 @@ def test_sync_connection_init_command():
     conn = Conn(opts)
 
     result = conn.query_first("SELECT @init_test")
+    assert result
     assert result.to_tuple() == (123,)
 
     conn.close()

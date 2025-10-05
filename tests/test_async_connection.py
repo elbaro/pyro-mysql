@@ -1,7 +1,5 @@
-from datetime import timedelta
-
 import pytest
-from pyro_mysql import AsyncOpts, AsyncOptsBuilder
+from pyro_mysql import AsyncOptsBuilder
 from pyro_mysql.async_ import Conn
 
 from .conftest import (
@@ -19,7 +17,7 @@ async def test_basic_connection():
     conn = await Conn.new(opts)
 
     result = await conn.query_first("SELECT 1")
-    assert result.to_tuple() == (1,)
+    assert result and result.to_tuple() == (1,)
 
     await conn.close()
 
@@ -33,7 +31,7 @@ async def test_connection_with_database():
     conn = await Conn.new(opts)
 
     db_name = await conn.query_first("SELECT DATABASE()")
-    assert db_name.to_tuple() == ("test",)
+    assert db_name and db_name.to_tuple() == ("test",)
 
     await conn.close()
 
@@ -72,12 +70,12 @@ async def test_connection_reset():
     await conn.query_drop("SET @test_var = 42")
 
     result = await conn.query_first("SELECT @test_var")
-    assert result.to_tuple() == (42,)
+    assert result and result.to_tuple() == (42,)
 
     await conn.reset()
 
     result = await conn.query_first("SELECT @test_var")
-    assert result.to_tuple() == (None,)
+    assert result and result.to_tuple() == (None,)
 
     await conn.close()
 
@@ -106,12 +104,12 @@ async def test_connection_charset():
     conn = await Conn.new(opts)
 
     charset = await conn.query_first("SELECT @@character_set_connection")
-    assert charset is not None
+    assert charset and charset is not None
 
     await conn.query_drop("SET NAMES utf8mb4")
 
     charset = await conn.query_first("SELECT @@character_set_connection")
-    assert charset.to_tuple() == ("utf8mb4",)
+    assert charset and charset.to_tuple() == ("utf8mb4",)
 
     await conn.close()
 
@@ -127,21 +125,21 @@ async def test_connection_autocommit():
     await conn.query_drop("SET autocommit = 0")
 
     autocommit = await conn.query_first("SELECT @@autocommit")
-    assert autocommit.to_tuple() == (0,)
+    assert autocommit and autocommit.to_tuple() == (0,)
 
     await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Test', 25)")
 
     await conn.query_drop("ROLLBACK")
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
-    assert count.to_tuple() == (0,)
+    assert count and count.to_tuple() == (0,)
 
     await conn.query_drop("SET autocommit = 1")
 
     await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Test2', 30)")
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
-    assert count.to_tuple() == (1,)
+    assert count and count.to_tuple() == (1,)
 
     await cleanup_test_table_async(conn)
     await conn.close()
@@ -157,7 +155,7 @@ async def test_connection_ssl():
         conn = await Conn.new(opts)
 
         try:
-            ssl_result = await conn.query_first("SHOW STATUS LIKE 'Ssl_cipher'")
+            _ssl_result = await conn.query_first("SHOW STATUS LIKE 'Ssl_cipher'")
             # SSL cipher status may or may not be available depending on server config
         except Exception:
             pass
@@ -177,7 +175,7 @@ async def test_connection_init_command():
     conn = await Conn.new(opts)
 
     result = await conn.query_first("SELECT @init_test")
-    assert result.to_tuple() == (123,)
+    assert result and result.to_tuple() == (123,)
 
     await conn.close()
 
@@ -216,7 +214,7 @@ async def test_connection_with_wrong_credentials():
     )
 
     with pytest.raises(Exception):
-        await Conn.new(opts)
+        _ = await Conn.new(opts)
 
 
 @pytest.mark.asyncio

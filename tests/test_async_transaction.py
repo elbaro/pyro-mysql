@@ -1,5 +1,4 @@
 import asyncio
-from decimal import ConversionSyntax
 
 import pytest
 from pyro_mysql import IsolationLevel
@@ -22,11 +21,13 @@ async def test_basic_transaction():
         )
 
         count = await tx.query_first("SELECT COUNT(*) FROM test_table")
+        assert count
         assert count.to_tuple() == (1,)
 
         await tx.commit()
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
+    assert count
     assert count.to_tuple() == (1,)
 
     await cleanup_test_table_async(conn)
@@ -47,11 +48,13 @@ async def test_transaction_rollback():
         )
 
         count = await tx.query_first("SELECT COUNT(*) FROM test_table")
+        assert count
         assert count.to_tuple() == (1,)
 
         await tx.rollback()
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
+    assert count
     assert count.to_tuple() == (0,)
 
     await cleanup_test_table_async(conn)
@@ -83,6 +86,7 @@ async def test_transaction_isolation_levels():
             await tx.commit()
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
+    assert count
     assert count.to_tuple() == (4,)
 
     await cleanup_test_table_async(conn)
@@ -111,11 +115,13 @@ async def test_nested_transactions():
         )
 
         count = await tx.query_first("SELECT COUNT(*) FROM test_table")
+        assert count
         assert count.to_tuple() == (2,)
 
         await tx.exec_drop("ROLLBACK TO SAVEPOINT sp1")
 
         count = await tx.query_first("SELECT COUNT(*) FROM test_table")
+        assert count
         assert count.to_tuple() == (1,)
 
         await tx.commit()
@@ -155,6 +161,7 @@ async def test_transaction_with_error():
         await tx.rollback()
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
+    assert count
     assert count.to_tuple() == (1,)
 
     await cleanup_test_table_async(conn)
@@ -183,12 +190,14 @@ async def test_transaction_concurrent_read():
 
         # conn2 should not see the uncommitted change
         count = await conn2.query_first("SELECT COUNT(*) FROM test_table")
+        assert count
         assert count.to_tuple() == (1,)
 
         await tx.commit()
 
     # Now conn2 should see the committed change
     count = await conn2.query_first("SELECT COUNT(*) FROM test_table")
+    assert count
     assert count.to_tuple() == (2,)
 
     await cleanup_test_table_async(conn1)
@@ -240,6 +249,7 @@ async def test_transaction_consistent_snapshot():
         consistent_snapshot=True, isolation_level=IsolationLevel.RepeatableRead
     ) as tx:
         count = await tx.query_first("SELECT COUNT(*) FROM test_table")
+        assert count
         assert count.to_tuple() == (1,)
 
         await tx.commit()
@@ -268,6 +278,7 @@ async def test_transaction_auto_rollback_on_drop():
     await asyncio.sleep(0.1)
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
+    assert count
     assert count.to_tuple() == (0,)
 
     await cleanup_test_table_async(conn)

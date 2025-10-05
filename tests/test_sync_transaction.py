@@ -34,9 +34,9 @@ class TestSyncTransaction:
         conn = SyncConn(get_test_db_url())
 
         with pytest.raises(pyro_mysql.error.IncorrectApiUsageError):
-            tx_ref = None
+            _tx_ref = None
             with conn.start_transaction() as tx:
-                tx_ref = tx  # Keep a reference
+                _tx_ref = tx  # Keep a reference
                 tx.exec("SELECT 1")
                 tx.commit()
 

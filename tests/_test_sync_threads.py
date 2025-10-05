@@ -3,7 +3,6 @@
 import queue
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
 from pyro_mysql import (

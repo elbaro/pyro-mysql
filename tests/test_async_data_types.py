@@ -33,7 +33,7 @@ async def test_integer_types():
     )
 
     result = await conn.query_first("SELECT * FROM test_int_types")
-    assert result.to_tuple() == (
+    assert result and result.to_tuple() == (
         127,
         32767,
         8388607,
@@ -67,9 +67,10 @@ async def test_float_types():
     )
 
     result = await conn.query_first("SELECT * FROM test_float_types")
+    assert result
     float_val, double_val = result.to_tuple()
-    assert abs(float_val - 3.14159) < 0.001
-    assert abs(double_val - 2.718281828) < 0.000001
+    assert isinstance(float_val, float) and abs(float_val - 3.14159) < 0.001
+    assert isinstance(double_val, float) and abs(double_val - 2.718281828) < 0.000001
 
     await conn.query_drop("DROP TABLE test_float_types")
     await conn.close()
@@ -104,6 +105,7 @@ async def test_string_types():
     )
 
     result = await conn.query_first("SELECT * FROM test_string_types")
+    assert result
     assert result.to_tuple() == (
         "Hello World",
         "Fixed",
@@ -172,6 +174,7 @@ async def test_decimal_types():
     )
 
     result = await conn.query_first("SELECT * FROM test_decimal_types")
+    assert result
     assert result.to_tuple() == (
         Decimal("123456789012345678901234567890"),
         Decimal("123.45"),
@@ -236,6 +239,7 @@ async def test_null_values():
     )
 
     result = await conn.query_first("SELECT * FROM test_null_types")
+    assert result
     assert result.to_tuple() == (None, None, None)
 
     await conn.query_drop("DROP TABLE test_null_types")

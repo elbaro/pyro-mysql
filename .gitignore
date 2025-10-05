@@ -6,3 +6,4 @@ devenv.lock
 /CLAUDE.md
 /uv.lock
 __pycache__
+*.so

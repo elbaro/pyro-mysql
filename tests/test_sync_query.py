@@ -57,7 +57,7 @@ def test_sync_query_first():
     )
 
     result = conn.exec_first("SELECT name, age FROM test_table ORDER BY age DESC", ())
-
+    assert result
     assert result.to_tuple() == ("Alice", 30)
 
     result = conn.exec_first("SELECT name, age FROM test_table WHERE age > ?", (100,))
@@ -112,7 +112,7 @@ def test_sync_named_params():
     result = conn.exec_first(
         "SELECT name, age FROM test_table WHERE name = :name", {"name": "Alice"}
     )
-
+    assert result
     assert result.to_tuple() == ("Alice", 30)
 
     cleanup_test_table_sync(conn)
@@ -136,7 +136,7 @@ def test_sync_batch_exec():
     conn.exec_batch("INSERT INTO test_table (name, age) VALUES (?, ?)", params)
 
     count = conn.query_first("SELECT COUNT(*) FROM test_table")
-
+    assert count
     assert count.to_tuple() == (5,)
 
     cleanup_test_table_sync(conn)
@@ -176,7 +176,7 @@ def test_sync_multi_statement_query():
     )
 
     count = conn.query_first("SELECT COUNT(*) FROM test_table")
-
+    assert count
     assert count.to_tuple() == (2,)
 
     cleanup_test_table_sync(conn)

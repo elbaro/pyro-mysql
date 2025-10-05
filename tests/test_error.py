@@ -4,4 +4,4 @@ import pytest
 
 def test_url():
     with pytest.raises(pyro_mysql.error.UrlError):
-        conn = pyro_mysql.sync.Conn("seaweed")
+        _conn = pyro_mysql.sync.Conn("seaweed")

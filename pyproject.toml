@@ -8,7 +8,8 @@ features = ["pyo3/extension-module"]
 [tool.uv]
 cache-keys = [
   { file = "pyproject.toml" },
-  { file = "pyro_mysql.pyi" },
+  { file = "pyro_mysql/*.pyi" }, # typing stub
+  { file = "pyro_mysql/*.py" },  # typing stub
   { file = "src/**/*.rs" },
 ]
 
@@ -38,9 +39,7 @@ classifiers = [
   "Framework :: AsyncIO",
   "Typing :: Typed",
 ]
-dependencies = [
-    "ty>=0.0.1a21",
-]
+dependencies = ["ty>=0.0.1a21"]
 
 [project.urls]
 Repository = "https://github.com/elbaro/pyro-mysql"

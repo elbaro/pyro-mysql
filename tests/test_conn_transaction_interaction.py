@@ -2,11 +2,6 @@
 Test that using Conn while Transaction is active raises an error.
 """
 
-import pytest
-from pyro_mysql import AsyncConn
-
-from .conftest import get_test_db_url
-
 # TODO: raise 'Conn is already in use' instead of deadlock
 # class TestSyncConnTransactionInteraction:
 #     def test_conn_usage_during_transaction_raises(self):

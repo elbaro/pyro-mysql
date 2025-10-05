@@ -1,5 +1,5 @@
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from datetime import time as dt_time
 from decimal import Decimal
 
@@ -26,6 +26,7 @@ def test_none_type():
     conn.exec_drop("INSERT INTO test_none_types VALUES (?, ?, ?)", (None, None, None))
 
     result = conn.query_first("SELECT * FROM test_none_types")
+    assert result
     assert result.to_tuple() == (None, None, None)
 
     conn.query_drop("DROP TABLE test_none_types")
@@ -51,6 +52,7 @@ def test_int_type():
     conn.exec_drop("INSERT INTO test_int_types VALUES (?, ?, ?)", test_values)
 
     result = conn.query_first("SELECT * FROM test_int_types")
+    assert result
     assert result.to_tuple() == test_values
 
     conn.query_drop("DROP TABLE test_int_types")
@@ -78,12 +80,16 @@ def test_float_type():
     conn.exec_drop("INSERT INTO test_float_types VALUES (?, ?)", test_values2)
 
     result = conn.query_first("SELECT * FROM test_float_types WHERE float_val > 3")
+    assert result
     float_val, double_val = result.to_tuple()
+    assert isinstance(float_val, float) and isinstance(double_val, float)
     assert abs(float_val - test_values1[0]) < 0.001
     assert abs(double_val - test_values1[1]) < 0.000001
 
     result = conn.query_first("SELECT * FROM test_float_types WHERE float_val < 3.14")
+    assert result
     float_val, double_val = result.to_tuple()
+    assert isinstance(float_val, float) and isinstance(double_val, float)
     assert abs(float_val - test_values2[0]) < 0.001
     assert abs(double_val - test_values2[1]) < 0.000001
 
@@ -117,8 +123,10 @@ def test_str_type():
     )
     conn.exec_drop("INSERT INTO test_str_types VALUES (?, ?, ?, ?, ?)", test_values)
 
-    result = conn.query_first("SELECT * FROM test_str_types").to_tuple()
-    assert result[0].encode() == test_values[0]
+    result = conn.query_first("SELECT * FROM test_str_types")
+    assert result
+    result = result.to_tuple()
+    assert result[0] == test_values[0].decode()
     assert result[1] == test_values[1]
     assert result[2] == test_values[2].encode()
     assert result[3] == int(test_values[3])
@@ -148,6 +156,7 @@ def test_bytearray_type():
     )
 
     result = conn.query_first("SELECT * FROM test_bytearray_types")
+    assert result
     binary_val, blob_val = result.to_tuple()
     # MySQL returns bytes, not bytearray
     assert binary_val == bytes(test_data)
@@ -176,10 +185,11 @@ def test_tuple_type():
     conn.exec_drop("INSERT INTO test_tuple_types VALUES (?, ?, ?)", test_tuple)
 
     result = conn.query_first("SELECT * FROM test_tuple_types")
+    assert result
     val1, val2, val3 = result.to_tuple()
     assert val1 == 42
     assert val2 == "hello"
-    assert abs(val3 - 3.14) < 0.001
+    assert isinstance(val3, float) and abs(val3 - 3.14) < 0.001
 
     conn.query_drop("DROP TABLE test_tuple_types")
     conn.close()
@@ -204,10 +214,11 @@ def test_list_type():
     conn.exec_drop("INSERT INTO test_list_types VALUES (?, ?, ?)", test_list)
 
     result = conn.query_first("SELECT * FROM test_list_types")
+    assert result
     val1, val2, val3 = result.to_tuple()
     assert val1 == 100
     assert val2 == "world"
-    assert abs(val3 - 2.718) < 0.001
+    assert isinstance(val3, float) and abs(val3 - 2.718) < 0.001
 
     conn.query_drop("DROP TABLE test_list_types")
     conn.close()
@@ -237,6 +248,7 @@ def test_set_type():
     conn.exec_drop("INSERT INTO test_set_types VALUES (?, ?)", test_params)
 
     result = conn.query_first("SELECT * FROM test_set_types")
+    assert result
     val1, val2 = result.to_tuple()
     assert val1 == 123
     assert val2 == "test"
@@ -269,6 +281,7 @@ def test_frozenset_type():
     conn.exec_drop("INSERT INTO test_frozenset_types VALUES (?, ?)", test_params)
 
     result = conn.query_first("SELECT * FROM test_frozenset_types")
+    assert result
     val1, val2 = result.to_tuple()
     assert val1 == 456
     assert val2 == "frozen"
@@ -300,10 +313,11 @@ def test_dict_type():
     )
 
     result = conn.query_first("SELECT * FROM test_dict_types")
+    assert result
     name, age, score = result.to_tuple()
     assert name == "Alice"
     assert age == 30
-    assert abs(score - 95.5) < 0.001
+    assert isinstance(score, float) and abs(score - 95.5) < 0.001
 
     conn.query_drop("DROP TABLE test_dict_types")
     conn.close()
@@ -334,6 +348,7 @@ def test_datetime_types():
     )
 
     result = conn.query_first("SELECT * FROM test_datetime_types")
+    assert result
     date_val, time_val, datetime_val = result.to_tuple()
 
     # Verify the types and values
@@ -341,10 +356,11 @@ def test_datetime_types():
     assert date_val == test_date
 
     # time might be returned as timedelta or time, check value
-    if hasattr(time_val, "hour"):
-        assert time_val.hour == 15
-        assert time_val.minute == 30
-        assert time_val.second == 45
+    assert isinstance(time_val, timedelta)
+    # TODO
+    # assert time_val.hour == 15
+    # assert time_val.minute == 30
+    # assert time_val.second == 45
 
     assert isinstance(datetime_val, datetime)
     assert datetime_val == test_datetime
@@ -373,6 +389,7 @@ def test_struct_time_type():
     conn.exec_drop("INSERT INTO test_struct_time_types VALUES (?)", (test_datetime,))
 
     result = conn.query_first("SELECT * FROM test_struct_time_types")
+    assert result
     timestamp_val = result.to_tuple()[0]
 
     assert isinstance(timestamp_val, datetime)
@@ -409,6 +426,7 @@ def test_decimal_type():
     )
 
     result = conn.query_first("SELECT * FROM test_decimal_types")
+    assert result
     decimal_val, numeric_val = result.to_tuple()
 
     assert isinstance(decimal_val, Decimal)
@@ -456,11 +474,12 @@ def test_combined_data_types():
     )
 
     result = conn.query_first("SELECT * FROM test_combined_types")
+    assert result
     values = result.to_tuple()
 
     assert values[0] is None
     assert values[1] == 42
-    assert abs(values[2] - 3.14) < 0.001
+    assert isinstance(values[2], float) and abs(values[2] - 3.14) < 0.001
     assert values[3] == "test string"
     assert values[4] == b"binary\x00data"  # MySQL returns bytes
     assert values[5] == date(2023, 1, 1)

@@ -62,7 +62,7 @@ async def test_query_first():
     result = await conn.exec_first(
         "SELECT name, age FROM test_table ORDER BY age DESC", ()
     )
-
+    assert result
     assert result.to_tuple() == ("Alice", 30)
 
     result = await conn.exec_first(
@@ -125,7 +125,7 @@ async def test_named_params():
     result = await conn.exec_first(
         "SELECT name, age FROM test_table WHERE name = :name", {"name": "Alice"}
     )
-
+    assert result
     assert result.to_tuple() == ("Alice", 30)
 
     await cleanup_test_table_async(conn)
@@ -151,7 +151,7 @@ async def test_batch_exec():
     await conn.exec_batch("INSERT INTO test_table (name, age) VALUES (?, ?)", params)
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
-
+    assert count
     assert count.to_tuple() == (5,)
 
     await cleanup_test_table_async(conn)
@@ -195,7 +195,7 @@ async def test_multi_statement_query():
     )
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
-
+    assert count
     assert count.to_tuple() == (2,)
 
     await cleanup_test_table_async(conn)

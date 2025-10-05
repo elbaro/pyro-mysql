@@ -1,8 +1,6 @@
-from datetime import timedelta
-
 import pytest
 from pyro_mysql import AsyncOptsBuilder
-from pyro_mysql.async_ import Conn, Pool, PoolOpts
+from pyro_mysql.async_ import Conn
 
 from .conftest import get_async_opts, get_test_db_url
 
