@@ -39,7 +39,6 @@ classifiers = [
   "Framework :: AsyncIO",
   "Typing :: Typed",
 ]
-dependencies = ["ty>=0.0.1a21"]
 
 [project.urls]
 Repository = "https://github.com/elbaro/pyro-mysql"
