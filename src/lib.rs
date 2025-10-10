@@ -63,6 +63,19 @@ mod pyro_mysql {
     #[pymodule_export]
     use super::PyroFuture;
 
+    // ─── Pep249 ──────────────────────────────────────────────────────────
+    #[pymodule_export]
+    #[allow(non_upper_case_globals)]
+    const apilevel: &'static str = "2.0";
+
+    #[pymodule_export]
+    #[allow(non_upper_case_globals)]
+    const threadsafety: u8 = 1;
+
+    #[pymodule_export]
+    #[allow(non_upper_case_globals)]
+    const paramstyle: &'static str = "named";
+
     #[pymodule]
     mod error {
         use crate::error as error_types;
@@ -101,13 +114,17 @@ mod pyro_mysql {
         use crate::r#async::transaction::AsyncTransaction;
 
         #[pymodule_export]
-        use crate::r#async::AsyncOpts;
+        use crate::r#async::opts::AsyncOpts;
 
         #[pymodule_export]
-        use crate::r#async::AsyncOptsBuilder;
+        use crate::r#async::opts::AsyncOptsBuilder;
 
         #[pymodule_export]
-        use crate::r#async::AsyncPoolOpts;
+        use crate::r#async::pool_opts::AsyncPoolOpts;
+
+        // ─── Pep249 ──────────────────────────────────────────────────
+        #[pymodule_export]
+        use crate::r#async::connect;
     }
 
     #[pymodule]
@@ -135,6 +152,10 @@ mod pyro_mysql {
 
         #[pymodule_export]
         use crate::sync::iterator::ResultSetIterator;
+
+        // ─── Pep249 ──────────────────────────────────────────────────
+        #[pymodule_export]
+        use crate::sync::connect;
     }
 
     #[pymodule_init]

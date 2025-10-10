@@ -19,7 +19,7 @@ pub struct SyncConn {
 #[pymethods]
 impl SyncConn {
     #[new]
-    fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> PyroResult<Self> {
+    pub fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> PyroResult<Self> {
         let opts = match url_or_opts {
             Either::Left(url) => Opts::from_url(&url)?,
             Either::Right(opts) => opts.opts.clone(),
