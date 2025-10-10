@@ -2,6 +2,7 @@
 
 pub mod r#async;
 pub mod capability_flags;
+pub mod dbapi_error;
 pub mod error;
 pub mod isolation_level;
 pub mod params;
@@ -102,6 +103,41 @@ mod pyro_mysql {
 
         #[pymodule_export]
         use error_types::DecodeError;
+    }
+
+    #[pymodule]
+    mod dbapi_error {
+        use crate::dbapi_error as error_types;
+
+        #[pymodule_export]
+        use error_types::Warning;
+
+        #[pymodule_export]
+        use error_types::Error;
+
+        #[pymodule_export]
+        use error_types::InterfaceError;
+
+        #[pymodule_export]
+        use error_types::DatabaseError;
+
+        #[pymodule_export]
+        use error_types::DataError;
+
+        #[pymodule_export]
+        use error_types::OperationalError;
+
+        #[pymodule_export]
+        use error_types::IntegrityError;
+
+        #[pymodule_export]
+        use error_types::InternalError;
+
+        #[pymodule_export]
+        use error_types::ProgrammingError;
+
+        #[pymodule_export]
+        use error_types::NotSupportedError;
     }
 
     #[pymodule]

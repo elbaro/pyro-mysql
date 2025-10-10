@@ -8,7 +8,8 @@ use pyo3::prelude::*;
 use crate::{
     error::{Error, PyroResult},
     params::Params,
-    sync::opts::SyncOpts,
+    row::Row,
+    sync::{cursor::SyncCursor, opts::SyncOpts},
 };
 
 #[pyclass]
@@ -24,11 +25,25 @@ impl SyncDbApiConn {
         Ok(Self(RwLock::new(Some(conn))))
     }
 
+    pub fn exec(&self, query: &str, params: Params) -> PyroResult<Vec<Row>> {
+        let mut guard = self.0.write();
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        log::debug!("execute {query}");
+        Ok(conn.exec(query, params)?)
+    }
+
     fn exec_drop(&self, query: &str, params: Params) -> PyroResult<()> {
         let mut guard = self.0.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         log::debug!("execute {query}");
         Ok(conn.exec_drop(query, params)?)
+    }
+
+    pub fn exec_batch(&self, query: &str, params: Vec<Params>) -> PyroResult<()> {
+        let mut guard = self.0.write();
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        log::debug!("execute {query}");
+        Ok(conn.exec_batch(query, params)?)
     }
 }
 
@@ -36,7 +51,7 @@ impl SyncDbApiConn {
 impl SyncDbApiConn {
     // ─── Pep249 ──────────────────────────────────────────────────────────
 
-    fn close(&self) {
+    pub fn close(&self) {
         // TODO: consdier raising if already closed
         *self.0.write() = None;
     }
@@ -50,8 +65,8 @@ impl SyncDbApiConn {
     }
 
     /// Cursor instances hold a reference to the python connection object.
-    fn cursor(&self) {
-        todo!()
+    fn cursor(slf: Py<SyncDbApiConn>) -> SyncCursor {
+        SyncCursor::new(slf)
     }
 
     // ─── Helper ──────────────────────────────────────────────────────────

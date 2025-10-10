@@ -182,7 +182,7 @@ impl SyncConn {
         })
     }
 
-    fn close(&self) {
+    pub fn close(&self) {
         *self.inner.write() = None;
     }
 

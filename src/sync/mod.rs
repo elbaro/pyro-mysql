@@ -1,4 +1,5 @@
 pub mod conn;
+pub mod cursor;
 pub mod dbapi_conn;
 pub mod iterator;
 pub mod opts;
