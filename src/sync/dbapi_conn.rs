@@ -8,7 +8,6 @@ use pyo3::prelude::*;
 use crate::{
     error::{Error, PyroResult},
     params::Params,
-    row::Row,
     sync::opts::SyncOpts,
 };
 
@@ -24,15 +23,7 @@ impl SyncDbApiConn {
         let conn = mysql::Conn::new(opts)?;
         Ok(Self(RwLock::new(Some(conn))))
     }
-}
 
-impl SyncDbApiConn {
-    fn exec(&self, query: &str, params: Params) -> PyroResult<Vec<Row>> {
-        let mut guard = self.0.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        log::debug!("execute {query}");
-        Ok(conn.exec(query, params)?)
-    }
     fn exec_drop(&self, query: &str, params: Params) -> PyroResult<()> {
         let mut guard = self.0.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
