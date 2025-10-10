@@ -13,7 +13,7 @@ async def test_basic_pool():
     opts = get_async_opts()
     pool = Pool(opts)
 
-    conn = await pool.get_conn()
+    conn = await pool.get()
 
     result = await conn.query_first("SELECT 1")
     assert result
@@ -36,8 +36,8 @@ async def test_pool_constraints():
 
     pool = Pool(opts.pool_opts(pool_opts))
 
-    conn1 = await pool.get_conn()
-    conn2 = await pool.get_conn()
+    conn1 = await pool.get()
+    conn2 = await pool.get()
 
     result1 = await conn1.query_first("SELECT 1")
     result2 = await conn2.query_first("SELECT 2")
@@ -60,7 +60,7 @@ async def test_concurrent_connections():
     pool = Pool(opts.pool_opts(pool_opts))
 
     async def worker(worker_id):
-        conn = await pool.get_conn()
+        conn = await pool.get()
         result = await conn.query_first(f"SELECT {worker_id}")
         await conn.close()
         assert result
@@ -82,7 +82,7 @@ async def test_pool_with_transactions():
     opts = get_async_opts()
     pool = Pool(opts)
 
-    conn = await pool.get_conn()
+    conn = await pool.get()
     await setup_test_table_async(conn)
 
     async with conn.start_transaction() as tx:
@@ -110,12 +110,12 @@ async def test_pool_with_transactions():
 #     pool = Pool(opts.pool_opts(pool_opts))
 
 #     # Get and release a connection
-#     conn1 = await pool.get_conn()
+#     conn1 = await pool.get()
 #     connection_id1 = await conn1.id()
 #     await conn1.close()
 
 #     # Get another connection - should be the same one reused
-#     conn2 = await pool.get_conn()
+#     conn2 = await pool.get()
 #     connection_id2 = await conn2.id()
 #     await conn2.close()
 
@@ -132,8 +132,8 @@ async def test_pool_max_connections():
     pool_opts = PoolOpts().with_constraints((1, 2))
     pool = Pool(opts.pool_opts(pool_opts))
 
-    conn1 = await pool.get_conn()
-    conn2 = await pool.get_conn()
+    conn1 = await pool.get()
+    conn2 = await pool.get()
 
     # Both connections should work
     result1 = await conn1.query_first("SELECT 1")
@@ -161,7 +161,7 @@ async def test_pool_connection_timeout():
 
     pool = Pool(opts.pool_opts(pool_opts))
 
-    conn = await pool.get_conn()
+    conn = await pool.get()
     await conn.query_first("SELECT 1")
     await conn.close()
 
@@ -169,7 +169,7 @@ async def test_pool_connection_timeout():
     await asyncio.sleep(0.2)
 
     # Get another connection
-    conn2 = await pool.get_conn()
+    conn2 = await pool.get()
     result = await conn2.query_first("SELECT 2")
     assert result
     assert result.to_tuple() == (2,)

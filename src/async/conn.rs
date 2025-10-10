@@ -1,8 +1,6 @@
-use std::sync::Arc;
-
 use either::Either;
-use mysql_async::Opts;
 use pyo3::prelude::*;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::r#async::AsyncOpts;
@@ -14,15 +12,13 @@ use crate::params::Params;
 use crate::util::{PyroFuture, rust_future_into_py, url_error_to_pyerr};
 
 #[pyclass(module = "pyro_mysql.async_", name = "Conn")]
-/// ### Concurrency
-/// The API is thread-safe. The underlying implementation is protected by RwLock.
-/// Conn.exec_*() receives &mut self, so there is at most one statement being executed at any point.
 pub struct AsyncConn {
     pub inner: Arc<RwLock<Option<mysql_async::Conn>>>, // Although mysql_async::Conn is already Send + Sync, the field can be only accessed via GIL if it's without Arc.
 }
 
 #[pymethods]
 impl AsyncConn {
+    // ─── Connection Management ───────────────────────────────────────────
     #[new]
     fn _new() -> PyroResult<Self> {
         Err(Error::IncorrectApiUsageError(
@@ -37,10 +33,9 @@ impl AsyncConn {
         url_or_opts: Either<String, PyRef<AsyncOpts>>,
     ) -> PyResult<Py<PyroFuture>> {
         let opts = match url_or_opts {
-            Either::Left(url) => Opts::from_url(&url).map_err(url_error_to_pyerr)?,
+            Either::Left(url) => mysql_async::Opts::from_url(&url).map_err(url_error_to_pyerr)?,
             Either::Right(opts) => opts.opts.clone(),
         };
-
         rust_future_into_py(py, async move {
             Ok(Self {
                 inner: Arc::new(RwLock::new(Some(mysql_async::Conn::new(opts).await?))),
@@ -93,8 +88,35 @@ impl AsyncConn {
             .ok_or_else(|| Error::ConnectionClosedError)?
             .last_insert_id())
     }
+    async fn close(&self) -> PyroResult<()> {
+        let mut inner = self.inner.write().await;
+        if let Some(conn) = inner.take() {
+            conn.disconnect().await?;
+        }
+        Ok(())
+    }
 
-    // ─── Queryable ───────────────────────────────────────────────────────
+    async fn reset(&self) -> PyroResult<()> {
+        let mut inner = self.inner.write().await;
+        inner
+            .as_mut()
+            .ok_or_else(|| Error::ConnectionClosedError)?
+            .reset()
+            .await?;
+        Ok(())
+    }
+
+    fn server_version<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+        let inner = self.inner.clone();
+        rust_future_into_py(py, async move {
+            Ok(inner
+                .read()
+                .await
+                .as_ref()
+                .ok_or_else(|| Error::ConnectionClosedError)?
+                .server_version())
+        })
+    }
     fn ping<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
         self.inner.ping(py)
     }
@@ -146,35 +168,5 @@ impl AsyncConn {
         params: Vec<Params>,
     ) -> PyResult<Py<PyroFuture>> {
         self.inner.exec_batch(py, query, params)
-    }
-
-    async fn close(&self) -> PyroResult<()> {
-        let mut inner = self.inner.write().await;
-        if let Some(conn) = inner.take() {
-            conn.disconnect().await?;
-        }
-        Ok(())
-    }
-
-    async fn reset(&self) -> PyroResult<()> {
-        let mut inner = self.inner.write().await;
-        inner
-            .as_mut()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .reset()
-            .await?;
-        Ok(())
-    }
-
-    fn server_version<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
-        rust_future_into_py(py, async move {
-            Ok(inner
-                .read()
-                .await
-                .as_ref()
-                .ok_or_else(|| Error::ConnectionClosedError)?
-                .server_version())
-        })
     }
 }

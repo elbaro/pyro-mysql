@@ -464,7 +464,7 @@ class PooledConn:
     def __init__(self) -> None:
         """
         Direct instantiation is not allowed.
-        Use SyncPool.get_conn() or SyncPool.acquire() instead.
+        Use SyncPool.get() instead.
         """
         ...
 
@@ -606,18 +606,9 @@ class Pool:
         """
         ...
 
-    def get_conn(self) -> PooledConn:
+    def get(self) -> PooledConn:
         """
         Get a connection from the pool.
-
-        Returns:
-            Connection from the pool.
-        """
-        ...
-
-    def acquire(self) -> PooledConn:
-        """
-        Acquire a connection from the pool (alias for get_conn).
 
         Returns:
             Connection from the pool.

@@ -192,12 +192,12 @@ async def test_connection_lost_error():
 #     pool = Pool(opts.pool_opts(pool_opts))
 
 #     # Get the only available connection
-#     conn1 = await pool.get_conn()
+#     conn1 = await pool.get()
 
 #     # Trying to get another connection should timeout or fail
 #     # (behavior depends on implementation)
 #     try:
-#         conn2 = await pool.get_conn()
+#         conn2 = await pool.get()
 #         await conn2.close()
 #     except Exception:
 #         pass  # Expected to potentially fail

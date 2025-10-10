@@ -56,15 +56,15 @@ class TestSyncTransaction:
         """Test start_transaction with pooled connections"""
         pool = SyncPool(get_test_db_url())
 
-        with pool.acquire() as conn:
+        with pool.get() as conn:
             with conn.start_transaction() as tx:
                 rows = tx.exec("SELECT 1 as n")
                 assert rows[0].to_dict()["n"] == 1
                 tx.commit()
 
         # Test multiple transactions from pool
-        with pool.acquire() as conn1:
-            with pool.acquire() as conn2:
+        with pool.get() as conn1:
+            with pool.get() as conn2:
                 with conn1.start_transaction() as tx1:
                     with conn2.start_transaction() as tx2:
                         tx1.exec("SELECT 1")

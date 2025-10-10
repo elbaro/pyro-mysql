@@ -20,7 +20,7 @@ impl SyncPooledConn {
     #[new]
     fn __init__() -> PyResult<Self> {
         Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-            "SyncPooledConn cannot be instantiated directly. Use SyncPool.get_conn() or SyncPool.acquire().",
+            "SyncPooledConn cannot be instantiated directly. Use SyncPool.get() or SyncPool.get().",
         ))
     }
 

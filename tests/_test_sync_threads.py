@@ -48,7 +48,7 @@ def sync_pool():
 
     pool = SyncPool(opts)
     # Create test table using a connection from pool
-    conn = pool.get_conn()
+    conn = pool.get()
     try:
         conn.exec_drop(
             """
@@ -67,7 +67,7 @@ def sync_pool():
     yield pool
 
     # Cleanup
-    conn = pool.get_conn()
+    conn = pool.get()
     try:
         conn.exec_drop("DROP TABLE IF EXISTS test_threads")
     finally:
@@ -190,7 +190,7 @@ class TestSyncConnThreadSafety:
 #         def worker(thread_id: int):
 #             try:
 #                 # Get connection from pool
-#                 conn = sync_pool.get_conn()
+#                 conn = sync_pool.get()
 #                 try:
 #                     # Use the connection
 #                     for i in range(3):
@@ -230,7 +230,7 @@ class TestSyncConnThreadSafety:
 #             assert count == 3
 
 #         # Verify total
-#         conn = sync_pool.get_conn()
+#         conn = sync_pool.get()
 #         try:
 #             total = conn.exec_first("SELECT COUNT(*) as cnt FROM test_threads")
 #             if total:
@@ -245,7 +245,7 @@ class TestSyncConnThreadSafety:
 #         lock = threading.Lock()
 
 #         def worker(thread_id: int):
-#             conn = sync_pool.get_conn()
+#             conn = sync_pool.get()
 #             try:
 #                 # Get connection ID
 #                 row = conn.exec_first("SELECT CONNECTION_ID() as id")

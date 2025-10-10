@@ -50,10 +50,10 @@ def example2():
             .compression(3)
             .build()
     )
-    conn = await pool.acquire()
+    conn = await pool.get()
 
 def example3(pool):
-    with pool.acquire() as conn:
+    with pool.get() as conn:
         ...
 ```
 

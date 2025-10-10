@@ -27,14 +27,10 @@ impl SyncPool {
         Ok(Self { pool })
     }
 
-    fn get_conn(&self) -> PyroResult<SyncPooledConn> {
+    fn get(&self) -> PyroResult<SyncPooledConn> {
         let conn = self.pool.get_conn()?;
         Ok(SyncPooledConn {
             inner: RwLock::new(Some(conn)),
         })
-    }
-
-    fn acquire(&self) -> PyroResult<SyncPooledConn> {
-        self.get_conn()
     }
 }

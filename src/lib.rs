@@ -63,45 +63,6 @@ mod pyro_mysql {
     #[pymodule_export]
     use super::PyroFuture;
 
-    #[pymodule_export]
-    use super::AsyncPool;
-
-    #[pymodule_export]
-    use super::AsyncConn;
-
-    #[pymodule_export]
-    use super::AsyncTransaction;
-
-    #[pymodule_export]
-    use super::AsyncOpts;
-
-    #[pymodule_export]
-    use super::AsyncOptsBuilder;
-
-    #[pymodule_export]
-    use super::AsyncPoolOpts;
-
-    #[pymodule_export]
-    use super::SyncConn;
-
-    #[pymodule_export]
-    use super::SyncPool;
-
-    #[pymodule_export]
-    use super::SyncPooledConn;
-
-    #[pymodule_export]
-    use super::SyncPoolOpts;
-
-    #[pymodule_export]
-    use super::SyncTransaction;
-
-    #[pymodule_export]
-    use super::SyncOpts;
-
-    #[pymodule_export]
-    use super::SyncOptsBuilder;
-
     #[pymodule]
     mod error {
         use crate::error as error_types;
@@ -187,6 +148,24 @@ mod pyro_mysql {
         }
 
         super::init(Some(1), None);
+
+        // ─── Alias ───────────────────────────────────────────────────
+        Python::attach(|py| {
+            m.add("AsyncPool", py.get_type::<super::AsyncPool>())?;
+            m.add("AsyncConn", py.get_type::<super::AsyncConn>())?;
+            m.add("AsyncOpts", py.get_type::<super::AsyncOpts>())?;
+            m.add("AsyncOptsBuilder", py.get_type::<super::AsyncOptsBuilder>())?;
+            m.add("AsyncPoolOpts", py.get_type::<super::AsyncPoolOpts>())?;
+            m.add("AsyncTransaction", py.get_type::<super::AsyncTransaction>())?;
+            m.add("SyncConn", py.get_type::<super::SyncConn>())?;
+            m.add("SyncOpts", py.get_type::<super::SyncOpts>())?;
+            m.add("SyncOptsBuilder", py.get_type::<super::SyncOptsBuilder>())?;
+            m.add("SyncPool", py.get_type::<super::SyncPool>())?;
+            m.add("SyncPoolOpts", py.get_type::<super::SyncPoolOpts>())?;
+            m.add("SyncPooledConn", py.get_type::<super::SyncPooledConn>())?;
+            m.add("SyncTransaction", py.get_type::<super::SyncTransaction>())?;
+            PyResult::Ok(())
+        })?;
 
         let py = m.py();
         let sys_modules = py.import("sys")?.getattr("modules")?;

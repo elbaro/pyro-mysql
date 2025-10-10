@@ -455,18 +455,9 @@ class Pool:
         """
         ...
 
-    async def get_conn(self) -> "Conn":
+    async def get(self) -> "Conn":
         """
         Get a connection from the pool.
-
-        Returns:
-            Connection from the pool.
-        """
-        ...
-
-    async def acquire(self) -> "Conn":
-        """
-        Acquire a connection from the pool (alias for get_conn).
 
         Returns:
             Connection from the pool.
