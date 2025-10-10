@@ -1,4 +1,5 @@
 pub mod conn;
+pub mod dbapi_conn;
 pub mod iterator;
 pub mod opts;
 pub mod pool;
@@ -6,7 +7,7 @@ pub mod pool_opts;
 pub mod pooled_conn;
 pub mod transaction;
 
-pub use conn::SyncConn;
+pub use dbapi_conn::SyncDbApiConn;
 use either::Either;
 pub use pool::SyncPool;
 pub use pool_opts::SyncPoolOpts;
@@ -18,6 +19,14 @@ use pyo3::prelude::*;
 use crate::{error::PyroResult, sync::opts::SyncOpts};
 
 #[pyfunction]
-pub fn connect(url_or_opts: Either<String, PyRef<SyncOpts>>) -> PyroResult<SyncConn> {
-    SyncConn::new(url_or_opts)
+#[pyo3(signature = (url_or_opts, autocommit=Some(false)))]
+pub fn connect(
+    url_or_opts: Either<String, PyRef<SyncOpts>>,
+    autocommit: Option<bool>,
+) -> PyroResult<SyncDbApiConn> {
+    let conn = SyncDbApiConn::new(url_or_opts)?;
+    if let Some(on) = autocommit {
+        conn.set_autocommit(on)?;
+    }
+    Ok(conn)
 }

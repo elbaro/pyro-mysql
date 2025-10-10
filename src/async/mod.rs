@@ -13,7 +13,6 @@ use crate::{r#async::conn::AsyncConn, util::PyroFuture};
 pub fn connect(
     py: Python,
     url_or_opts: either::Either<String, PyRef<opts::AsyncOpts>>,
-    is_async: bool,
 ) -> PyResult<Py<PyroFuture>> {
     AsyncConn::new(py, url_or_opts)
 }

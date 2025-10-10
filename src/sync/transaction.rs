@@ -7,7 +7,7 @@ use pyo3::prelude::*;
 
 use crate::error::{Error, PyroResult};
 use crate::sync::iterator::ResultSetIterator;
-use crate::sync::{SyncConn, SyncPooledConn};
+use crate::sync::{conn::SyncConn, pooled_conn::SyncPooledConn};
 use crate::{params::Params, row::Row};
 
 #[pyclass(module = "pyro_mysql.sync", name = "Transaction")]

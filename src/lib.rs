@@ -13,16 +13,17 @@ pub mod value;
 use pyo3::prelude::*;
 use tokio::runtime::Builder;
 
+use crate::r#async::opts::AsyncOpts;
+use crate::r#async::opts::AsyncOptsBuilder;
+use crate::r#async::pool_opts::AsyncPoolOpts;
 use crate::{
-    r#async::{
-        AsyncOpts, AsyncOptsBuilder, AsyncPoolOpts, conn::AsyncConn, pool::AsyncPool,
-        transaction::AsyncTransaction,
-    },
+    r#async::{conn::AsyncConn, pool::AsyncPool, transaction::AsyncTransaction},
     capability_flags::CapabilityFlags,
     isolation_level::IsolationLevel,
     row::Row,
     sync::{
-        SyncConn, SyncPool, SyncPoolOpts, SyncPooledConn, SyncTransaction,
+        SyncPool, SyncPoolOpts, SyncPooledConn, SyncTransaction,
+        conn::SyncConn,
         opts::{SyncOpts, SyncOptsBuilder},
     },
     util::PyroFuture,
@@ -46,6 +47,7 @@ fn init(worker_threads: Option<usize>, thread_name: Option<&str>) {
 /// A Python module implemented in Rust.
 #[pymodule]
 mod pyro_mysql {
+
     use super::*;
 
     #[pymodule_export]
@@ -130,7 +132,7 @@ mod pyro_mysql {
     #[pymodule]
     mod sync {
         #[pymodule_export]
-        use crate::sync::SyncConn;
+        use crate::sync::conn::SyncConn;
 
         #[pymodule_export]
         use crate::sync::SyncPool;
@@ -172,19 +174,19 @@ mod pyro_mysql {
 
         // ─── Alias ───────────────────────────────────────────────────
         Python::attach(|py| {
-            m.add("AsyncPool", py.get_type::<super::AsyncPool>())?;
-            m.add("AsyncConn", py.get_type::<super::AsyncConn>())?;
-            m.add("AsyncOpts", py.get_type::<super::AsyncOpts>())?;
-            m.add("AsyncOptsBuilder", py.get_type::<super::AsyncOptsBuilder>())?;
-            m.add("AsyncPoolOpts", py.get_type::<super::AsyncPoolOpts>())?;
-            m.add("AsyncTransaction", py.get_type::<super::AsyncTransaction>())?;
-            m.add("SyncConn", py.get_type::<super::SyncConn>())?;
-            m.add("SyncOpts", py.get_type::<super::SyncOpts>())?;
-            m.add("SyncOptsBuilder", py.get_type::<super::SyncOptsBuilder>())?;
-            m.add("SyncPool", py.get_type::<super::SyncPool>())?;
-            m.add("SyncPoolOpts", py.get_type::<super::SyncPoolOpts>())?;
-            m.add("SyncPooledConn", py.get_type::<super::SyncPooledConn>())?;
-            m.add("SyncTransaction", py.get_type::<super::SyncTransaction>())?;
+            m.add("AsyncPool", py.get_type::<AsyncPool>())?;
+            m.add("AsyncConn", py.get_type::<AsyncConn>())?;
+            m.add("AsyncOpts", py.get_type::<AsyncOpts>())?;
+            m.add("AsyncOptsBuilder", py.get_type::<AsyncOptsBuilder>())?;
+            m.add("AsyncPoolOpts", py.get_type::<AsyncPoolOpts>())?;
+            m.add("AsyncTransaction", py.get_type::<AsyncTransaction>())?;
+            m.add("SyncConn", py.get_type::<SyncConn>())?;
+            m.add("SyncOpts", py.get_type::<SyncOpts>())?;
+            m.add("SyncOptsBuilder", py.get_type::<SyncOptsBuilder>())?;
+            m.add("SyncPool", py.get_type::<SyncPool>())?;
+            m.add("SyncPoolOpts", py.get_type::<SyncPoolOpts>())?;
+            m.add("SyncPooledConn", py.get_type::<SyncPooledConn>())?;
+            m.add("SyncTransaction", py.get_type::<SyncTransaction>())?;
             PyResult::Ok(())
         })?;
 

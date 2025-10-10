@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::r#async::AsyncOpts;
+use crate::r#async::opts::AsyncOpts;
 use crate::r#async::queryable::Queryable;
 use crate::r#async::transaction::AsyncTransaction;
 use crate::error::{Error, PyroResult};
