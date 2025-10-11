@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 
-use pyo3::prelude::*;
+use pyo3::{prelude::*, types::PyList};
 
-use crate::{dbapi_error, error::PyroResult, params::Params, row::Row, sync::SyncDbApiConn};
+use crate::{dbapi_error, params::Params, row::Row, sync::SyncDbApiConn};
 
 #[pyclass]
 pub struct SyncCursor {
@@ -14,7 +14,7 @@ pub struct SyncCursor {
 
     // ─── Pep249 size
     #[pyo3(get)]
-    description: Option<Py<PyAny>>,
+    description: Option<Py<PyList>>,
 
     #[pyo3(get)]
     rowcount: i64,
@@ -45,13 +45,32 @@ impl SyncCursor {
     }
 
     // TODO: parameter style?
-    fn execute(&mut self, py: Python, query: &str, params: Params) -> PyroResult<()> {
+    fn execute(&mut self, py: Python, query: &str, params: Params) -> PyResult<()> {
         let conn = self.conn.borrow(py);
         let rows = conn.exec(query, params)?;
         if rows.is_empty() {
             self.rowcount = 0;
             self.result = None;
+            self.description = None;
         } else {
+            self.description = Some(
+                PyList::new(
+                    py,
+                    rows[0].inner.columns_ref().iter().map(|col|
+                        // tuple of 7 items
+                        (
+                            col.name_str(),          // name
+                            col.column_type() as u8, // type_code
+                            col.column_length(),     // display_size
+                            None::<Option<()>>,      // internal_size
+                            None::<Option<()>>,      // precision
+                            None::<Option<()>>,      // scale
+                            None::<Option<()>>,      // null_ok
+                        )
+                        .into_pyobject(py).unwrap()),
+                )?
+                .unbind(),
+            );
             self.rowcount = rows.len() as i64;
             self.result = Some(rows.into());
         }

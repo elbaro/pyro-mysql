@@ -1,5 +1,5 @@
 pub mod conn;
-pub mod dbapi_conn;
+
 pub mod opts;
 pub mod pool;
 pub mod pool_opts;
