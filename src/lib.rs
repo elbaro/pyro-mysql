@@ -196,6 +196,30 @@ mod pyro_mysql {
         use crate::sync::connect;
     }
 
+    #[pymodule]
+    mod dbapi {
+        #[pymodule_export]
+        use crate::sync::type_constructor::date;
+
+        #[pymodule_export]
+        use crate::sync::type_constructor::time;
+
+        #[pymodule_export]
+        use crate::sync::type_constructor::timestamp;
+
+        #[pymodule_export]
+        use crate::sync::type_constructor::date_from_ticks;
+
+        #[pymodule_export]
+        use crate::sync::type_constructor::time_from_ticks;
+
+        #[pymodule_export]
+        use crate::sync::type_constructor::timestamp_from_ticks;
+
+        #[pymodule_export]
+        use crate::sync::type_constructor::binary;
+    }
+
     #[pymodule_init]
     fn module_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
         pyo3_log::init();
@@ -228,7 +252,7 @@ mod pyro_mysql {
 
         let py = m.py();
         let sys_modules = py.import("sys")?.getattr("modules")?;
-        for module in ["error", "sync", "async_"] {
+        for module in ["error", "sync", "async_", "dbapi"] {
             sys_modules.set_item(format!("pyro_mysql.{module}"), m.getattr(module)?)?;
         }
 

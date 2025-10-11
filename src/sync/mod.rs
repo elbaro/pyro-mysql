@@ -7,6 +7,8 @@ pub mod pool;
 pub mod pool_opts;
 pub mod pooled_conn;
 pub mod transaction;
+pub mod type_constructor;
+pub mod type_object;
 
 pub use dbapi_conn::SyncDbApiConn;
 use either::Either;

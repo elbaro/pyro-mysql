@@ -79,6 +79,7 @@ impl SyncCursor {
     fn executemany(&mut self, py: Python, query: &str, params: Vec<Params>) -> PyResult<()> {
         let conn = self.conn.borrow(py);
         conn.exec_batch(query, params)?;
+        self.description = None;
         self.result = None;
         self.rowcount = -1;
         Ok(())
