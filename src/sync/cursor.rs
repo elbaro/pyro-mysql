@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use pyo3::{prelude::*, types::PyList};
 
-use crate::{dbapi_error, params::Params, row::Row, sync::SyncDbApiConn};
+use crate::{dbapi_error, params::Params, row::Row, sync::dbapi_conn::SyncDbApiConn};
 
 #[pyclass]
 pub struct SyncCursor {

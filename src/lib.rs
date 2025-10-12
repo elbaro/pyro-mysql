@@ -2,6 +2,7 @@
 
 pub mod r#async;
 pub mod capability_flags;
+pub mod dbapi;
 pub mod dbapi_error;
 pub mod error;
 pub mod isolation_level;
@@ -23,7 +24,6 @@ use crate::{
     isolation_level::IsolationLevel,
     row::Row,
     sync::{
-        SyncPool, SyncPoolOpts, SyncPooledConn, SyncTransaction,
         conn::SyncConn,
         opts::{SyncOpts, SyncOptsBuilder},
     },
@@ -48,6 +48,11 @@ fn init(worker_threads: Option<usize>, thread_name: Option<&str>) {
 /// A Python module implemented in Rust.
 #[pymodule]
 mod pyro_mysql {
+
+    use crate::sync::pool::SyncPool;
+    use crate::sync::pool_opts::SyncPoolOpts;
+    use crate::sync::pooled_conn::SyncPooledConn;
+    use crate::sync::transaction::SyncTransaction;
 
     use super::*;
 
@@ -171,13 +176,13 @@ mod pyro_mysql {
         use crate::sync::conn::SyncConn;
 
         #[pymodule_export]
-        use crate::sync::SyncPool;
+        use crate::sync::pool::SyncPool;
 
         #[pymodule_export]
-        use crate::sync::SyncPooledConn;
+        use crate::sync::pooled_conn::SyncPooledConn;
 
         #[pymodule_export]
-        use crate::sync::SyncTransaction;
+        use crate::sync::transaction::SyncTransaction;
 
         #[pymodule_export]
         use crate::sync::opts::SyncOpts;
@@ -186,38 +191,58 @@ mod pyro_mysql {
         use crate::sync::opts::SyncOptsBuilder;
 
         #[pymodule_export]
-        use crate::sync::SyncPoolOpts;
+        use crate::sync::pool_opts::SyncPoolOpts;
 
         #[pymodule_export]
         use crate::sync::iterator::ResultSetIterator;
 
         // ─── Pep249 ──────────────────────────────────────────────────
         #[pymodule_export]
-        use crate::sync::connect;
+        use crate::dbapi::connect;
     }
 
     #[pymodule]
     mod dbapi {
+        // ─── Type Constructor ────────────────────────────────────────
         #[pymodule_export]
-        use crate::sync::type_constructor::date;
+        use crate::dbapi::type_constructor::date;
 
         #[pymodule_export]
-        use crate::sync::type_constructor::time;
+        use crate::dbapi::type_constructor::time;
 
         #[pymodule_export]
-        use crate::sync::type_constructor::timestamp;
+        use crate::dbapi::type_constructor::timestamp;
 
         #[pymodule_export]
-        use crate::sync::type_constructor::date_from_ticks;
+        use crate::dbapi::type_constructor::date_from_ticks;
 
         #[pymodule_export]
-        use crate::sync::type_constructor::time_from_ticks;
+        use crate::dbapi::type_constructor::time_from_ticks;
 
         #[pymodule_export]
-        use crate::sync::type_constructor::timestamp_from_ticks;
+        use crate::dbapi::type_constructor::timestamp_from_ticks;
 
         #[pymodule_export]
-        use crate::sync::type_constructor::binary;
+        use crate::dbapi::type_constructor::binary;
+
+        // ─── Type Object ─────────────────────────────────────────────
+        #[pymodule_export]
+        use crate::dbapi::type_object::TypeObject;
+
+        #[pymodule_export]
+        const BINARY: TypeObject = crate::dbapi::type_object::BINARY;
+
+        #[pymodule_export]
+        const DATETIME: TypeObject = crate::dbapi::type_object::DATETIME;
+
+        #[pymodule_export]
+        const NUMBER: TypeObject = crate::dbapi::type_object::NUMBER;
+
+        #[pymodule_export]
+        const ROWID: TypeObject = crate::dbapi::type_object::ROWID;
+
+        #[pymodule_export]
+        const STRING: TypeObject = crate::dbapi::type_object::STRING;
     }
 
     #[pymodule_init]
