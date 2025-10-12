@@ -42,7 +42,14 @@ pub fn time_from_ticks(py: Python, ticks: i64) -> PyResult<Bound<PyTime>> {
             PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid timestamp: {}", ticks))
         })?
         .with_timezone(&Utc);
-    PyTime::new(py, dt.hour() as u8, dt.minute() as u8, dt.second() as u8, 0, None)
+    PyTime::new(
+        py,
+        dt.hour() as u8,
+        dt.minute() as u8,
+        dt.second() as u8,
+        0,
+        None,
+    )
 }
 
 #[pyfunction]

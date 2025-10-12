@@ -74,7 +74,7 @@ mod pyro_mysql {
     // ─── Pep249 ──────────────────────────────────────────────────────────
     #[pymodule_export]
     #[allow(non_upper_case_globals)]
-    const apilevel: &'static str = "2.0";
+    const apilevel: &str = "2.0";
 
     #[pymodule_export]
     #[allow(non_upper_case_globals)]
@@ -82,7 +82,7 @@ mod pyro_mysql {
 
     #[pymodule_export]
     #[allow(non_upper_case_globals)]
-    const paramstyle: &'static str = "named";
+    const paramstyle: &str = "named";
 
     #[pymodule]
     mod error {
