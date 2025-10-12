@@ -1,12 +1,19 @@
 use std::collections::VecDeque;
 
-use pyo3::{prelude::*, types::PyList};
+use pyo3::{
+    prelude::*,
+    types::{PyList, PyTuple},
+};
 
-use crate::{dbapi::conn::DbApiConn, dbapi_error, params::Params, row::Row};
+use crate::{
+    dbapi::{conn::DbApiConn, error::Error},
+    params::Params,
+    row::Row,
+};
 
 #[pyclass(module = "pyro_mysql.dbapi", name = "Cursor")]
 pub struct Cursor {
-    conn: Py<DbApiConn>,
+    conn: Option<Py<DbApiConn>>,
     result: Option<VecDeque<Row>>, // TODO: add a lock
 
     #[pyo3(get, set)]
@@ -22,7 +29,7 @@ pub struct Cursor {
 impl Cursor {
     pub fn new(conn: Py<DbApiConn>) -> Self {
         Self {
-            conn,
+            conn: Some(conn),
             result: None,
             arraysize: 1,
             description: None,
@@ -38,14 +45,21 @@ impl Cursor {
     //     todo!()
     // }
 
-    fn close(&self, py: Python) {
-        let conn = self.conn.borrow(py);
-        conn.close();
+    /// Closes the cursor. The connection is still alive
+    fn close(&mut self) {
+        self.conn = None;
+        self.result = None;
+        self.description = None;
     }
 
     // TODO: parameter style?
+    #[pyo3(signature = (query, params=Params::default()))]
     fn execute(&mut self, py: Python, query: &str, params: Params) -> PyResult<()> {
-        let conn = self.conn.borrow(py);
+        let conn = self
+            .conn
+            .as_ref()
+            .ok_or_else(|| Error::new_err("The cursor is closed"))?
+            .borrow(py);
         let rows = conn.exec(query, params)?;
         if rows.is_empty() {
             self.rowcount = 0;
@@ -75,31 +89,48 @@ impl Cursor {
         }
         Ok(())
     }
+
     fn executemany(&mut self, py: Python, query: &str, params: Vec<Params>) -> PyResult<()> {
-        let conn = self.conn.borrow(py);
+        let conn = self
+            .conn
+            .as_ref()
+            .ok_or_else(|| Error::new_err("The cursor is closed"))?
+            .borrow(py);
         conn.exec_batch(query, params)?;
         self.description = None;
         self.result = None;
         self.rowcount = -1;
         Ok(())
     }
-    fn fetchone(&mut self) -> PyResult<Option<Row>> {
+    fn fetchone<'py>(&mut self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyTuple>>> {
         if let Some(result) = &mut self.result {
-            Ok(result.pop_front())
+            if let Some(row) = result.pop_front() {
+                Ok(Some(row.to_tuple(py)?))
+            } else {
+                Ok(None)
+            }
         } else {
-            Err(dbapi_error::Error::new_err(
+            Err(Error::new_err(
                 "the previous call to .execute*() did not produce any result set or no call was issued yet",
             ))
         }
     }
 
     #[pyo3(signature=(size=None))]
-    fn fetchmany(&mut self, size: Option<usize>) -> PyResult<Vec<Row>> {
+    fn fetchmany<'py>(
+        &mut self,
+        py: Python<'py>,
+        size: Option<usize>,
+    ) -> PyResult<Vec<Bound<'py, PyTuple>>> {
         let size = size.unwrap_or(self.arraysize);
         if let Some(result) = &mut self.result {
-            Ok(result.drain(..size).collect())
+            let mut vec = vec![];
+            for row in result.drain(..size) {
+                vec.push(row.to_tuple(py)?);
+            }
+            Ok(vec)
         } else {
-            Err(dbapi_error::Error::new_err(
+            Err(Error::new_err(
                 "the previous call to .execute*() did not produce any result set or no call was issued yet",
             ))
         }
@@ -109,7 +140,7 @@ impl Cursor {
             self.result = Some(VecDeque::new());
             Ok(Vec::from(result))
         } else {
-            Err(dbapi_error::Error::new_err(
+            Err(Error::new_err(
                 "the previous call to .execute*() did not produce any result set or no call was issued yet",
             ))
         }

@@ -1,5 +1,6 @@
 pub mod conn;
 pub mod cursor;
+pub mod error;
 pub mod type_constructor;
 pub mod type_object;
 

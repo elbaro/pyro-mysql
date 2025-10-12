@@ -3,7 +3,6 @@
 pub mod r#async;
 pub mod capability_flags;
 pub mod dbapi;
-pub mod dbapi_error;
 pub mod error;
 pub mod isolation_level;
 pub mod params;
@@ -71,19 +70,6 @@ mod pyro_mysql {
     #[pymodule_export]
     use super::PyroFuture;
 
-    // ─── Pep249 ──────────────────────────────────────────────────────────
-    #[pymodule_export]
-    #[allow(non_upper_case_globals)]
-    const apilevel: &str = "2.0";
-
-    #[pymodule_export]
-    #[allow(non_upper_case_globals)]
-    const threadsafety: u8 = 1;
-
-    #[pymodule_export]
-    #[allow(non_upper_case_globals)]
-    const paramstyle: &str = "named";
-
     #[pymodule]
     mod error {
         use crate::error as error_types;
@@ -108,41 +94,6 @@ mod pyro_mysql {
 
         #[pymodule_export]
         use error_types::DecodeError;
-    }
-
-    #[pymodule]
-    mod dbapi_error {
-        use crate::dbapi_error as error_types;
-
-        #[pymodule_export]
-        use error_types::Warning;
-
-        #[pymodule_export]
-        use error_types::Error;
-
-        #[pymodule_export]
-        use error_types::InterfaceError;
-
-        #[pymodule_export]
-        use error_types::DatabaseError;
-
-        #[pymodule_export]
-        use error_types::DataError;
-
-        #[pymodule_export]
-        use error_types::OperationalError;
-
-        #[pymodule_export]
-        use error_types::IntegrityError;
-
-        #[pymodule_export]
-        use error_types::InternalError;
-
-        #[pymodule_export]
-        use error_types::ProgrammingError;
-
-        #[pymodule_export]
-        use error_types::NotSupportedError;
     }
 
     #[pymodule]
@@ -203,6 +154,56 @@ mod pyro_mysql {
 
     #[pymodule]
     mod dbapi {
+        #[pymodule_export]
+        use crate::dbapi::connect;
+
+        // ─── Global Constant ─────────────────────────────────────────
+
+        #[pymodule_export]
+        #[allow(non_upper_case_globals)]
+        const apilevel: &str = "2.0";
+
+        #[pymodule_export]
+        #[allow(non_upper_case_globals)]
+        const threadsafety: u8 = 1;
+
+        #[pymodule_export]
+        #[allow(non_upper_case_globals)]
+        const paramstyle: &str = "qmark";
+
+        // ─── Error ───────────────────────────────────────────────────
+        use crate::dbapi::error;
+
+        #[pymodule_export]
+        use error::Warning;
+
+        #[pymodule_export]
+        use error::Error;
+
+        #[pymodule_export]
+        use error::InterfaceError;
+
+        #[pymodule_export]
+        use error::DatabaseError;
+
+        #[pymodule_export]
+        use error::DataError;
+
+        #[pymodule_export]
+        use error::OperationalError;
+
+        #[pymodule_export]
+        use error::IntegrityError;
+
+        #[pymodule_export]
+        use error::InternalError;
+
+        #[pymodule_export]
+        use error::ProgrammingError;
+
+        #[pymodule_export]
+        use error::NotSupportedError;
+
         // ─── Type Constructor ────────────────────────────────────────
         #[pymodule_export]
         use crate::dbapi::conn::DbApiConn;

@@ -158,3 +158,27 @@ pyro-mysql sends the Rust logs to the Python logging system, which can be config
 # Queries are logged with the DEBUG level
 logging.getLogger("pyro_mysql").setLevel(logging.DEBUG)
 ```
+
+## PEP-249, sqlalchemy
+
+PEP-249 is supported via `pyro_mysql.dbapi`.
+
+There is also an experimental support for sqlalchemy.
+
+```py
+from sqlalchemy import create_engine, text
+
+engine = create_engine("mysql+pyro_mysql://test:1234@localhost/test")
+conn = engine.connect()
+cursor_result = conn.execute(text("SHOW TABLES"))
+for row in cursor_result:
+    print(row)
+```
+
+```
+('information_schema',)
+('mysql',)
+('performance_schema',)
+('sys',)
+('test',)
+```

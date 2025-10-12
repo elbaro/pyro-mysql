@@ -316,6 +316,20 @@ class OptsBuilder:
         """
         ...
 
+    @staticmethod
+    def from_map(params: dict[str, str]) -> "OptsBuilder":
+        """Create builder from a dictionary of parameters.
+
+        Note: Boolean values should be encoded as 'true' and 'false' strings.
+
+        Args:
+            params: Dictionary mapping parameter names to values
+
+        Returns:
+            OptsBuilder configured from the parameters
+        """
+        ...
+
     def from_hash_map(self, params: dict[str, str]) -> "OptsBuilder":
         """Initialize from a dictionary of parameters."""
         ...

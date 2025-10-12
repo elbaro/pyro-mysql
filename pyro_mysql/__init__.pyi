@@ -47,6 +47,7 @@ asyncio.run(example_transaction())
 """
 
 from . import async_, sync
+from . import dbapi as dbapi
 from . import error as error
 from .base import (
     CapabilityFlags as CapabilityFlags,

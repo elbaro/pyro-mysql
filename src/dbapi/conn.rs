@@ -13,7 +13,7 @@ use crate::{
     sync::opts::SyncOpts,
 };
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql.dbapi", name = "Connection")]
 pub struct DbApiConn(RwLock<Option<mysql::Conn>>);
 
 impl DbApiConn {
@@ -78,5 +78,11 @@ impl DbApiConn {
         } else {
             self.exec_drop("SET autocommit=0", Params::default())
         }
+    }
+
+    fn ping(&self) -> PyroResult<()> {
+        let mut guard = self.0.write();
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        Ok(conn.ping()?)
     }
 }

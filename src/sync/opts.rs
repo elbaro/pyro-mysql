@@ -55,6 +55,14 @@ impl SyncOptsBuilder {
         })
     }
 
+    #[staticmethod]
+    fn from_map(params: HashMap<String, String>) -> PyroResult<Self> {
+        let builder = mysql::OptsBuilder::new().from_hash_map(&params)?;
+        Ok(Self {
+            builder: Some(builder),
+        })
+    }
+
     fn from_hash_map(
         mut self_: PyRefMut<Self>,
         params: HashMap<String, String>,
