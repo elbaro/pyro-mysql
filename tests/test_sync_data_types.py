@@ -4,7 +4,6 @@ from datetime import time as dt_time
 from decimal import Decimal
 
 from pyro_mysql.sync import Conn
-
 from tests.conftest import get_test_db_url
 
 

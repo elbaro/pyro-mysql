@@ -3,11 +3,11 @@
 use either::Either;
 use mysql::{Opts, prelude::Queryable};
 use parking_lot::RwLock;
-use pyo3::prelude::*;
+use pyo3::{prelude::*, types::PyList};
 
 use crate::{
-    dbapi::cursor::Cursor,
-    error::{Error, PyroResult},
+    dbapi::{cursor::Cursor, error::DbApiResult},
+    error::Error,
     params::Params,
     row::Row,
     sync::opts::SyncOpts,
@@ -17,34 +17,71 @@ use crate::{
 pub struct DbApiConn(RwLock<Option<mysql::Conn>>);
 
 impl DbApiConn {
-    pub fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> PyroResult<Self> {
+    pub fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> DbApiResult<Self> {
         let opts = match url_or_opts {
-            Either::Left(url) => Opts::from_url(&url)?,
+            Either::Left(url) => Opts::from_url(&url).map_err(Error::from)?,
             Either::Right(opts) => opts.opts.clone(),
         };
-        let conn = mysql::Conn::new(opts)?;
+        let conn = mysql::Conn::new(opts).map_err(Error::from)?;
         Ok(Self(RwLock::new(Some(conn))))
     }
 
-    pub fn exec(&self, query: &str, params: Params) -> PyroResult<Vec<Row>> {
+    // For
+    pub fn exec(&self, query: &str, params: Params) -> DbApiResult<Option<(Vec<Row>, Py<PyList>)>> {
         let mut guard = self.0.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         log::debug!("execute {query}");
-        Ok(conn.exec(query, params)?)
+
+        let mut query_result = conn.exec_iter(query, params).map_err(Error::from)?;
+        if query_result.columns().as_ref().iter().count() > 0 {
+            let description = Python::attach(|py| {
+                PyList::new(
+                    py,
+                    query_result.columns().as_ref().iter().map(|col|
+                        // tuple of 7 items
+                        (
+                            col.name_str(),          // name
+                            col.column_type() as u8, // type_code
+                            col.column_length(),     // display_size
+                            None::<Option<()>>,      // internal_size
+                            None::<Option<()>>,      // precision
+                            None::<Option<()>>,      // scale
+                            None::<Option<()>>,      // null_ok
+                        )
+                        .into_pyobject(py).unwrap()),
+                )
+                .map(|bound| bound.unbind())
+            })?;
+
+            Ok(Some((
+                query_result
+                    .try_fold(Vec::new(), |mut vec, row| {
+                        row.map(|row| {
+                            vec.push(mysql::from_row(row));
+                            vec
+                        })
+                    })
+                    .map_err(Error::from)?,
+                description,
+            )))
+        } else {
+            // no result set (different from empty set)
+            Ok(None)
+        }
     }
 
-    fn exec_drop(&self, query: &str, params: Params) -> PyroResult<()> {
+    fn exec_drop(&self, query: &str, params: Params) -> DbApiResult<()> {
         let mut guard = self.0.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         log::debug!("execute {query}");
-        Ok(conn.exec_drop(query, params)?)
+        Ok(conn.exec_drop(query, params).map_err(Error::from)?)
     }
 
-    pub fn exec_batch(&self, query: &str, params: Vec<Params>) -> PyroResult<()> {
+    pub fn exec_batch(&self, query: &str, params: Vec<Params>) -> DbApiResult<()> {
         let mut guard = self.0.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         log::debug!("execute {query}");
-        Ok(conn.exec_batch(query, params)?)
+        Ok(conn.exec_batch(query, params).map_err(Error::from)?)
     }
 }
 
@@ -57,11 +94,11 @@ impl DbApiConn {
         *self.0.write() = None;
     }
 
-    fn commit(&self) -> PyroResult<()> {
+    fn commit(&self) -> DbApiResult<()> {
         self.exec_drop("COMMIT", Params::default())
     }
 
-    fn rollback(&self) -> PyroResult<()> {
+    fn rollback(&self) -> DbApiResult<()> {
         self.exec_drop("ROLLBACK", Params::default())
     }
 
@@ -72,7 +109,7 @@ impl DbApiConn {
 
     // ─── Helper ──────────────────────────────────────────────────────────
 
-    pub fn set_autocommit(&self, on: bool) -> PyroResult<()> {
+    pub fn set_autocommit(&self, on: bool) -> DbApiResult<()> {
         if on {
             self.exec_drop("SET autocommit=1", Params::default())
         } else {
@@ -80,9 +117,18 @@ impl DbApiConn {
         }
     }
 
-    fn ping(&self) -> PyroResult<()> {
+    fn ping(&self) -> DbApiResult<()> {
         let mut guard = self.0.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        Ok(conn.ping()?)
+        Ok(conn.ping().map_err(Error::from)?)
+    }
+
+    /// Returns 0 if there was no last insert id.
+    pub fn last_insert_id(&self) -> DbApiResult<Option<u64>> {
+        let guard = self.0.read();
+        let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
+
+        let id = conn.last_insert_id();
+        Ok(if id == 0 { None } else { Some(id) })
     }
 }

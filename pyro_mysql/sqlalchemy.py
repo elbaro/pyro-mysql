@@ -25,7 +25,6 @@ class MySQLDialect_pyro(MySQLDialect):
     # supports_sane_rowcount = True
     # supports_sane_multi_rowcount = True
     supports_server_side_cursors: bool = False
-    supports_native_boolean: bool = True
     supports_native_decimal: bool = True
     default_paramstyle: str = "qmark"
 
@@ -86,7 +85,13 @@ class MySQLDialect_pyro(MySQLDialect):
 
     def _extract_error_code(self, exception: Exception) -> int | None:
         """Extract MySQL error code from exception."""
-        # TODO: https://docs.rs/mysql/latest/mysql/struct.MySqlError.html
+        # MySQL error format: "ERROR 1146 (42S02): Table 'test.asdf' doesn't exist"
+        import re
+
+        error_str = str(exception)
+        match = re.search(r"ERROR\s+(\d+)\s+\([^)]+\):", error_str)
+        if match:
+            return int(match.group(1))
         return None
 
 
