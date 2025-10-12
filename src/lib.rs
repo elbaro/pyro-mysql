@@ -205,6 +205,13 @@ mod pyro_mysql {
     mod dbapi {
         // ─── Type Constructor ────────────────────────────────────────
         #[pymodule_export]
+        use crate::dbapi::conn::DbApiConn;
+
+        #[pymodule_export]
+        use crate::dbapi::cursor::Cursor;
+
+        // ─── Type Constructor ────────────────────────────────────────
+        #[pymodule_export]
         use crate::dbapi::type_constructor::date;
 
         #[pymodule_export]

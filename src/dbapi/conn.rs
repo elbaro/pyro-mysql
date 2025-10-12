@@ -6,16 +6,17 @@ use parking_lot::RwLock;
 use pyo3::prelude::*;
 
 use crate::{
+    dbapi::cursor::Cursor,
     error::{Error, PyroResult},
     params::Params,
     row::Row,
-    sync::{cursor::SyncCursor, opts::SyncOpts},
+    sync::opts::SyncOpts,
 };
 
 #[pyclass]
-pub struct SyncDbApiConn(RwLock<Option<mysql::Conn>>);
+pub struct DbApiConn(RwLock<Option<mysql::Conn>>);
 
-impl SyncDbApiConn {
+impl DbApiConn {
     pub fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> PyroResult<Self> {
         let opts = match url_or_opts {
             Either::Left(url) => Opts::from_url(&url)?,
@@ -48,7 +49,7 @@ impl SyncDbApiConn {
 }
 
 #[pymethods]
-impl SyncDbApiConn {
+impl DbApiConn {
     // ─── Pep249 ──────────────────────────────────────────────────────────
 
     pub fn close(&self) {
@@ -65,8 +66,8 @@ impl SyncDbApiConn {
     }
 
     /// Cursor instances hold a reference to the python connection object.
-    fn cursor(slf: Py<SyncDbApiConn>) -> SyncCursor {
-        SyncCursor::new(slf)
+    fn cursor(slf: Py<DbApiConn>) -> Cursor {
+        Cursor::new(slf)
     }
 
     // ─── Helper ──────────────────────────────────────────────────────────

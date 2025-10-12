@@ -1,10 +1,9 @@
+pub mod conn;
+pub mod cursor;
 pub mod type_constructor;
 pub mod type_object;
 
-use crate::{
-    error::PyroResult,
-    sync::{dbapi_conn::SyncDbApiConn, opts::SyncOpts},
-};
+use crate::{dbapi::conn::DbApiConn, error::PyroResult, sync::opts::SyncOpts};
 use either::Either;
 
 use pyo3::prelude::*;
@@ -14,8 +13,8 @@ use pyo3::prelude::*;
 pub fn connect(
     url_or_opts: Either<String, PyRef<SyncOpts>>,
     autocommit: Option<bool>,
-) -> PyroResult<SyncDbApiConn> {
-    let conn = SyncDbApiConn::new(url_or_opts)?;
+) -> PyroResult<DbApiConn> {
+    let conn = DbApiConn::new(url_or_opts)?;
     if let Some(on) = autocommit {
         conn.set_autocommit(on)?;
     }

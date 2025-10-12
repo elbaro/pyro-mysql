@@ -2,17 +2,16 @@ use std::collections::VecDeque;
 
 use pyo3::{prelude::*, types::PyList};
 
-use crate::{dbapi_error, params::Params, row::Row, sync::dbapi_conn::SyncDbApiConn};
+use crate::{dbapi::conn::DbApiConn, dbapi_error, params::Params, row::Row};
 
-#[pyclass]
-pub struct SyncCursor {
-    conn: Py<SyncDbApiConn>,
+#[pyclass(module = "pyro_mysql.dbapi", name = "Cursor")]
+pub struct Cursor {
+    conn: Py<DbApiConn>,
     result: Option<VecDeque<Row>>, // TODO: add a lock
 
     #[pyo3(get, set)]
     arraysize: usize,
 
-    // ─── Pep249 size
     #[pyo3(get)]
     description: Option<Py<PyList>>,
 
@@ -20,8 +19,8 @@ pub struct SyncCursor {
     rowcount: i64,
 }
 
-impl SyncCursor {
-    pub fn new(conn: Py<SyncDbApiConn>) -> Self {
+impl Cursor {
+    pub fn new(conn: Py<DbApiConn>) -> Self {
         Self {
             conn,
             result: None,
@@ -33,7 +32,7 @@ impl SyncCursor {
 }
 
 #[pymethods]
-impl SyncCursor {
+impl Cursor {
     // TODO: optional
     // fn callproc(&self) {
     //     todo!()
