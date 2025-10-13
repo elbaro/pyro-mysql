@@ -7,9 +7,15 @@ integrating pyro-mysql with SQLAlchemy.
 
 from typing import Any, cast, override
 
-from sqlalchemy.dialects.mysql.base import MySQLDialect
+from sqlalchemy.dialects.mysql.base import MySQLDialect, MySQLExecutionContext
+from sqlalchemy.dialects.mysql.mariadb import MariaDBDialect
 from sqlalchemy.engine.base import Connection
-from sqlalchemy.engine.interfaces import ConnectArgsType, DBAPIConnection, DBAPIModule
+from sqlalchemy.engine.interfaces import (
+    ConnectArgsType,
+    DBAPIConnection,
+    DBAPIModule,
+    ExecutionContext,
+)
 from sqlalchemy.engine.url import URL
 
 from pyro_mysql.dbapi import Error
@@ -19,14 +25,15 @@ class MySQLDialect_pyro(MySQLDialect):
     """Synchronous SQLAlchemy dialect for pyro-mysql."""
 
     driver: str = "pyro_mysql"
-    supports_statement_cache: bool = False
     supports_unicode_statements: bool = True
     # TODO:
     # supports_sane_rowcount = True
     # supports_sane_multi_rowcount = True
-    supports_server_side_cursors: bool = False
+    supports_statement_cache: bool = True
+    supports_server_side_cursors: bool = False  # sqlalchemy converts 1/0 to True/False
     supports_native_decimal: bool = True
     default_paramstyle: str = "qmark"
+    execution_ctx_cls: type[ExecutionContext] = MySQLExecutionContext
 
     @override
     @classmethod
@@ -357,3 +364,17 @@ class MySQLDialect_pyro(MySQLDialect):
 
 # Auto-register on import
 # register_dialects()
+
+
+MariaDBDialect_pyro = type(
+    "MariaDBDialect_pyro_mysql",
+    (
+        MariaDBDialect,
+        MySQLDialect_pyro,
+    ),
+    {
+        # although parent classes already have this attribute, sqlalchemy test requires this
+        "supports_statement_cache": True,
+        "supports_native_uuid": True,  # mariadb supports native 128-bit UUID data type
+    },
+)

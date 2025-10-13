@@ -12,7 +12,7 @@ use pyo3::{
 };
 
 static DATETIME_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
-
+static DATE_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 static TIMEDELTA_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 static DECIMAL_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 static JSON_MODULE: PyOnceLock<Py<PyModule>> = PyOnceLock::new();
@@ -23,6 +23,18 @@ fn get_datetime_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> 
             PyModule::import(py, "datetime")
                 .unwrap()
                 .getattr("datetime")
+                .unwrap()
+                .unbind()
+        })
+        .bind(py))
+}
+
+fn get_date_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
+    Ok(DATE_CLASS
+        .get_or_init(py, || {
+            PyModule::import(py, "datetime")
+                .unwrap()
+                .getattr("date")
                 .unwrap()
                 .unbind()
         })
@@ -174,10 +186,15 @@ impl FromPyObject<'_, '_> for Value {
                 let decimal_str = ob.str()?.to_str()?.as_bytes().to_vec();
                 MySqlValue::Bytes(decimal_str)
             }
+            // uuid.UUID
+            "UUID" => {
+                let hex = ob.getattr("hex")?.extract::<String>()?;
+                MySqlValue::Bytes(hex.into_bytes())
+            }
             _ => {
                 return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
-                    "Unsupported value type: {}",
-                    type_name
+                    "Unsupported value type: {:?}",
+                    type_obj.fully_qualified_name()
                 )));
             }
         };
@@ -199,15 +216,18 @@ pub fn value_to_python<'py>(
         MySqlValue::Float(f) => f.into_bound_py_any(py)?,
         MySqlValue::Double(f) => f.into_bound_py_any(py)?,
         MySqlValue::Date(year, month, day, hour, minutes, seconds, microseconds) => {
-            get_datetime_class(py)?.call1((
-                year,
-                month,
-                day,
-                hour,
-                minutes,
-                seconds,
-                microseconds,
-            ))?
+            match column.column_type() {
+                ColumnType::MYSQL_TYPE_DATE => get_date_class(py)?.call1((year, month, day))?,
+                _ => get_datetime_class(py)?.call1((
+                    year,
+                    month,
+                    day,
+                    hour,
+                    minutes,
+                    seconds,
+                    microseconds,
+                ))?,
+            }
         }
         MySqlValue::Time(is_negative, days, hours, minutes, seconds, microseconds) => {
             let timedelta =
@@ -247,26 +267,26 @@ pub fn value_to_python<'py>(
                 }
 
                 // Text types - return as str
-                // Some text types have BLOB ColumnType
+                // BLOB column -> binary flag + charset=63
+                // TEXT column + utfmb4 + bin collation -> binary flag + charset=45
+                // TEXT column + utfmb4 + non-bin collation -> charset=45
                 ColumnType::MYSQL_TYPE_VARCHAR
                 | ColumnType::MYSQL_TYPE_VAR_STRING
                 | ColumnType::MYSQL_TYPE_STRING
-                | ColumnType::MYSQL_TYPE_TINY_BLOB
+                | ColumnType::MYSQL_TYPE_TINY_BLOB // MySQL uses BLOB for TEXT in the protocol
                 | ColumnType::MYSQL_TYPE_MEDIUM_BLOB
                 | ColumnType::MYSQL_TYPE_LONG_BLOB
-                | ColumnType::MYSQL_TYPE_BLOB => {
-                    // Check if it's a BINARY flag (BINARY/VARBINARY columns)
-                    if flags.contains(ColumnFlags::BINARY_FLAG) {
+                | ColumnType::MYSQL_TYPE_BLOB=> {
+                    if column.character_set() == 63 {
                         PyBytes::new(py, b).into_any()
                     } else {
-                        // Text column - try UTF-8, fall back to bytes
+                        // TODO: this can be non-utf8 if character_set_results is not utf8*
                         match PyString::from_bytes(py, b) {
                             Ok(s) => s.into_any(),
                             Err(_) => PyBytes::new(py, b).into_any(),
                         }
                     }
                 }
-
                 // ENUM and SET - return as str
                 ColumnType::MYSQL_TYPE_ENUM | ColumnType::MYSQL_TYPE_SET => {
                     match PyString::from_bytes(py, b) {
