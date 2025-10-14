@@ -213,7 +213,14 @@ pub fn value_to_python<'py>(
         MySqlValue::NULL => py.None().into_bound(py),
         MySqlValue::Int(i) => i.into_bound_py_any(py)?,
         MySqlValue::UInt(u) => u.into_bound_py_any(py)?,
-        MySqlValue::Float(f) => f.into_bound_py_any(py)?,
+        MySqlValue::Float(f) => {
+            let mut buffer = ryu::Buffer::new();
+            buffer
+                .format(*f)
+                .parse::<f64>()
+                .unwrap() // unwrap(): f32 -> str -> f64 never fails
+                .into_bound_py_any(py)?
+        }
         MySqlValue::Double(f) => f.into_bound_py_any(py)?,
         MySqlValue::Date(year, month, day, hour, minutes, seconds, microseconds) => {
             match column.column_type() {
@@ -239,9 +246,7 @@ pub fn value_to_python<'py>(
             }
         }
         MySqlValue::Bytes(b) => {
-            // Use column metadata to determine the best Python type
             let col_type = column.column_type();
-            let flags = column.flags();
 
             // Note: column.column_length() provides max length for string types
             // column.decimals() provides scale for DECIMAL or fractional seconds for TIME types
