@@ -32,9 +32,8 @@ class MySQLDialect_pyro(MySQLDialect):
 
     driver: str = "pyro_mysql"
     supports_unicode_statements: bool = True
-    # TODO:
-    # supports_sane_rowcount = True
-    # supports_sane_multi_rowcount = True
+    supports_sane_rowcount: bool = True
+    supports_sane_multi_rowcount: bool = True
     supports_statement_cache: bool = True
     supports_server_side_cursors: bool = False  # sqlalchemy converts 1/0 to True/False
     supports_native_decimal: bool = True
@@ -66,6 +65,11 @@ class MySQLDialect_pyro(MySQLDialect):
             | url.query
         )
 
+        if capabilities := dic.get("capabilities"):
+            del dic["capabilities"]
+        else:
+            capabilities = 2  # for compatibility with other mysql dialects
+
         str_dic: dict[str, str] = {}
         for k, v in dic.items():
             if isinstance(v, str):
@@ -81,7 +85,11 @@ class MySQLDialect_pyro(MySQLDialect):
         from pyro_mysql.sync import OptsBuilder
 
         try:
-            opts = OptsBuilder.from_map(str_dic).build()
+            opts = (
+                OptsBuilder.from_map(str_dic)
+                .additional_capabilities(capabilities)
+                .build()
+            )
         except Exception as e:
             raise Error("wrong connection argument") from e
 
@@ -110,6 +118,23 @@ class MySQLDialect_pyro(MySQLDialect):
         if match:
             return int(match.group(1))
         return None
+
+    @override
+    def is_disconnect(
+        self,
+        e: Exception,
+        connection: DBAPIConnection | None,
+        cursor: Any | None,
+    ) -> bool:
+        """Check if an exception indicates a disconnect."""
+        if super().is_disconnect(e, connection, cursor):
+            return True
+
+        # Check for pyro_mysql specific disconnect errors
+        if isinstance(e, Error):
+            return "Connection is already closed" in str(e)
+
+        return False
 
     @override
     @classmethod
@@ -179,3 +204,12 @@ class MariaDBDialect_pyro(MariaDBDialect, MySQLDialect_pyro):
                 sql.bindparam("xid", xid, literal_execute=True)
             )
         )
+
+    @override
+    def is_disconnect(
+        self,
+        e: Exception,
+        connection: DBAPIConnection | None,
+        cursor: Any | None,
+    ) -> bool:
+        return MySQLDialect_pyro.is_disconnect(self, e, connection, cursor)

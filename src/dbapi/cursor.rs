@@ -68,6 +68,8 @@ impl Cursor {
             .as_ref()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .borrow(py);
+        // println!("### query: {query}");
+        // println!("### params: {params:?}");
         match conn.exec(query, params)? {
             DbApiExecResult::WithDescription {
                 rows,
@@ -96,9 +98,9 @@ impl Cursor {
             .as_ref()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .borrow(py);
-        conn.exec_batch(query, params)?;
+        let affected = conn.exec_batch(query, params)?;
         self.description = None;
-        self.rowcount = -1;
+        self.rowcount = affected as i64;
         self.result = None;
         self.lastrowid = None;
         Ok(())
@@ -153,4 +155,15 @@ impl Cursor {
 
     // Implementations are free to have this method do nothing and users are free to not use it.
     fn setoutputsize(&self) {}
+
+    // Iterator protocol for PEP 249 compliance
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__<'py>(&mut self, py: Python<'py>) -> DbApiResult<Option<Bound<'py, PyTuple>>> {
+        // When fetchone returns Ok(None), PyO3 automatically raises StopIteration
+        // When fetchone returns an error (no result set), we propagate it
+        self.fetchone(py)
+    }
 }

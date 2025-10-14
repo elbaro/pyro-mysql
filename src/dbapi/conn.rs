@@ -1,7 +1,10 @@
 // PEP 249 – Python Database API Specification v2.0
 
 use either::Either;
-use mysql::{Opts, prelude::Queryable};
+use mysql::{
+    Opts,
+    prelude::{AsStatement, Queryable},
+};
 use parking_lot::RwLock;
 use pyo3::{prelude::*, types::PyList};
 
@@ -91,11 +94,18 @@ impl DbApiConn {
         Ok(conn.exec_drop(query, params).map_err(Error::from)?)
     }
 
-    pub fn exec_batch(&self, query: &str, params: Vec<Params>) -> DbApiResult<()> {
+    pub fn exec_batch(&self, query: &str, params: Vec<Params>) -> DbApiResult<u64> {
         let mut guard = self.0.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         log::debug!("execute {query}");
-        Ok(conn.exec_batch(query, params).map_err(Error::from)?)
+
+        let mut affected = 0;
+        let stmt = query.as_statement(conn).map_err(Error::from)?;
+        for params in params {
+            conn.exec_drop(stmt.as_ref(), params).map_err(Error::from)?;
+            affected += conn.affected_rows();
+        }
+        Ok(affected)
     }
 }
 
@@ -144,5 +154,10 @@ impl DbApiConn {
 
         let id = conn.last_insert_id();
         Ok(if id == 0 { None } else { Some(id) })
+    }
+
+    pub fn is_closed(&self) -> bool {
+        let guard = self.0.read();
+        guard.is_some()
     }
 }
