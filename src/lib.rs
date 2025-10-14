@@ -285,8 +285,10 @@ mod pyro_mysql {
 
         let py = m.py();
         let sys_modules = py.import("sys")?.getattr("modules")?;
-        for module in ["error", "sync", "async_", "dbapi"] {
-            sys_modules.set_item(format!("pyro_mysql.{module}"), m.getattr(module)?)?;
+        for name in ["error", "sync", "async_", "dbapi"] {
+            let module = m.getattr(name)?;
+            module.setattr("__name__", format!("pyro_mysql.{name}"))?;
+            sys_modules.set_item(format!("pyro_mysql.{module}"), module)?;
         }
 
         Ok(())

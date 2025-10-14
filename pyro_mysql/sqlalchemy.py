@@ -7,6 +7,7 @@ integrating pyro-mysql with SQLAlchemy.
 
 from typing import Any, cast, override
 
+from sqlalchemy import sql
 from sqlalchemy.dialects.mysql.base import (
     MySQLCompiler,
     MySQLDialect,
@@ -14,7 +15,6 @@ from sqlalchemy.dialects.mysql.base import (
     MySQLIdentifierPreparer,
 )
 from sqlalchemy.dialects.mysql.mariadb import MariaDBDialect
-from sqlalchemy.dialects.mysql.mysqldb import MySQLCompiler_mysqldb
 from sqlalchemy.engine.base import Connection
 from sqlalchemy.engine.interfaces import (
     ConnectArgsType,
@@ -40,7 +40,7 @@ class MySQLDialect_pyro(MySQLDialect):
     supports_native_decimal: bool = True
     default_paramstyle: str = "qmark"
     execution_ctx_cls: type[ExecutionContext] = MySQLExecutionContext
-    statement_compiler: type[MySQLCompiler] = MySQLCompiler_mysqldb
+    statement_compiler: type[MySQLCompiler] = MySQLCompiler
     preparer: type[MySQLIdentifierPreparer] = MySQLIdentifierPreparer
 
     @override
@@ -87,6 +87,7 @@ class MySQLDialect_pyro(MySQLDialect):
 
         return cast(ConnectArgsType, ((opts,), {}))
 
+    @override
     def do_ping(self, dbapi_connection: DBAPIConnection) -> bool:
         """Check if connection is alive."""
         try:
@@ -94,10 +95,11 @@ class MySQLDialect_pyro(MySQLDialect):
         except Exception:
             return False
 
+    @override
     def _detect_charset(self, connection: Connection) -> str:
-        # TODO
         return "utf8mb4"
 
+    @override
     def _extract_error_code(self, exception: Exception) -> int | None:
         """Extract MySQL error code from exception."""
         # MySQL error format: "ERROR 1146 (42S02): Table 'test.asdf' doesn't exist"
@@ -115,279 +117,65 @@ class MySQLDialect_pyro(MySQLDialect):
         import sqlalchemy.dialects.mysql.provision
 
 
-# class AsyncAdapt_pyro_mysql_cursor:
-#     """Async adapter for pyro-mysql cursor."""
+class MariaDBDialect_pyro(MariaDBDialect, MySQLDialect_pyro):
+    # although parent classes already have this attribute, sqlalchemy test requires this
+    supports_statement_cache: bool = True
+    supports_native_uuid: bool = True  # mariadb supports native 128-bit UUID data type
 
-#     def __init__(self, cursor):
-#         self._cursor = cursor
-#         self.description = cursor.description
-#         self.rowcount = cursor.rowcount
-#         self.lastrowid = cursor.lastrowid
+    # MariaDB does not support parameter in 'XA BEGIN ?'
+    @override
+    def do_commit_twophase(
+        self,
+        connection: Connection,
+        xid: Any,
+        is_prepared: bool = True,
+        recover: bool = False,
+    ) -> None:
+        if not is_prepared:
+            self.do_prepare_twophase(connection, xid)
+        connection.execute(
+            sql.text("XA COMMIT :xid").bindparams(
+                sql.bindparam("xid", xid, literal_execute=True)
+            )
+        )
 
-#     async def execute(self, query: str, parameters: Any | None = None):
-#         """Execute a query asynchronously."""
-#         return await self._cursor.execute(query, parameters)
+    @override
+    def do_rollback_twophase(
+        self,
+        connection: Connection,
+        xid: Any,
+        is_prepared: bool = True,
+        recover: bool = False,
+    ) -> None:
+        if not is_prepared:
+            connection.execute(
+                sql.text("XA END :xid").bindparams(
+                    sql.bindparam("xid", xid, literal_execute=True)
+                )
+            )
+        connection.execute(
+            sql.text("XA ROLLBACK :xid").bindparams(
+                sql.bindparam("xid", xid, literal_execute=True)
+            )
+        )
 
-#     async def executemany(self, query: str, parameters: list[Any]):
-#         """Execute a query with multiple parameter sets."""
-#         return await self._cursor.executemany(query, parameters)
+    @override
+    def do_begin_twophase(self, connection: Connection, xid: Any) -> None:
+        connection.execute(
+            sql.text("XA BEGIN :xid").bindparams(
+                sql.bindparam("xid", xid, literal_execute=True)
+            )
+        )
 
-#     async def fetchone(self):
-#         """Fetch one row."""
-#         return await self._cursor.fetchone()
-
-#     async def fetchmany(self, size: int | None = None):
-#         """Fetch multiple rows."""
-#         return await self._cursor.fetchmany(size)
-
-#     async def fetchall(self):
-#         """Fetch all rows."""
-#         return await self._cursor.fetchall()
-
-#     async def close(self):
-#         """Close the cursor."""
-#         return await self._cursor.close()
-
-#     def __aiter__(self):
-#         """Make cursor async iterable."""
-#         return self
-
-#     async def __anext__(self):
-#         """Get next row in async iteration."""
-#         row = await self.fetchone()
-#         if row is None:
-#             raise StopAsyncIteration
-#         return row
-
-
-# class AsyncAdapt_pyro_mysql_connection(AdaptedConnection):
-#     """Async adapter for pyro-mysql connection."""
-
-#     __slots__ = ("_connection",)
-
-#     def __init__(self, connection):
-#         self._connection = connection
-
-#     @property
-#     def driver_connection(self):
-#         """Return the underlying driver connection."""
-#         return self._connection
-
-#     async def ping(self, reconnect: bool = True):
-#         """Ping the server to check if connection is alive."""
-#         if hasattr(self._connection, "ping"):
-#             return await self._connection.ping()
-#         else:
-#             # Fallback to executing a simple query
-#             cursor = await self.cursor()
-#             await cursor.execute("SELECT 1")
-#             await cursor.close()
-
-#     async def cursor(self):
-#         """Create a new cursor."""
-#         cursor = await self._connection.cursor()
-#         return AsyncAdapt_pyro_mysql_cursor(cursor)
-
-#     async def commit(self):
-#         """Commit the current transaction."""
-#         return await self._connection.commit()
-
-#     async def rollback(self):
-#         """Rollback the current transaction."""
-#         return await self._connection.rollback()
-
-#     async def close(self):
-#         """Close the connection."""
-#         return await self._connection.close()
-
-#     async def begin(self):
-#         """Begin a transaction."""
-#         if hasattr(self._connection, "begin"):
-#             return await self._connection.begin()
-#         # Some drivers start transactions implicitly
-
-
-# class AsyncAdapt_pyro_mysql_dbapi:
-#     """Async DBAPI adapter for pyro-mysql."""
-
-#     def __init__(self):
-#         self._dbapi = None
-
-#     @property
-#     def dbapi(self):
-#         """Lazy import of async module."""
-#         if self._dbapi is None:
-#             import pyro_mysql.async_ as async_module
-
-#             self._dbapi = async_module
-#         return self._dbapi
-
-#     @property
-#     def paramstyle(self):
-#         """Parameter style used by the driver."""
-#         return "qmark"
-
-#     @property
-#     def Error(self):
-#         """Base error class."""
-#         return self.dbapi.Error if hasattr(self.dbapi, "Error") else Exception
-
-#     @property
-#     def InterfaceError(self):
-#         """Interface error class."""
-#         return (
-#             self.dbapi.InterfaceError
-#             if hasattr(self.dbapi, "InterfaceError")
-#             else self.Error
-#         )
-
-#     @property
-#     def DatabaseError(self):
-#         """Database error class."""
-#         return (
-#             self.dbapi.DatabaseError
-#             if hasattr(self.dbapi, "DatabaseError")
-#             else self.Error
-#         )
-
-#     @property
-#     def DataError(self):
-#         """Data error class."""
-#         return (
-#             self.dbapi.DataError
-#             if hasattr(self.dbapi, "DataError")
-#             else self.DatabaseError
-#         )
-
-#     @property
-#     def OperationalError(self):
-#         """Operational error class."""
-#         return (
-#             self.dbapi.OperationalError
-#             if hasattr(self.dbapi, "OperationalError")
-#             else self.DatabaseError
-#         )
-
-#     @property
-#     def IntegrityError(self):
-#         """Integrity error class."""
-#         return (
-#             self.dbapi.IntegrityError
-#             if hasattr(self.dbapi, "IntegrityError")
-#             else self.DatabaseError
-#         )
-
-#     @property
-#     def InternalError(self):
-#         """Internal error class."""
-#         return (
-#             self.dbapi.InternalError
-#             if hasattr(self.dbapi, "InternalError")
-#             else self.DatabaseError
-#         )
-
-#     @property
-#     def ProgrammingError(self):
-#         """Programming error class."""
-#         return (
-#             self.dbapi.ProgrammingError
-#             if hasattr(self.dbapi, "ProgrammingError")
-#             else self.DatabaseError
-#         )
-
-#     @property
-#     def NotSupportedError(self):
-#         """Not supported error class."""
-#         return (
-#             self.dbapi.NotSupportedError
-#             if hasattr(self.dbapi, "NotSupportedError")
-#             else self.DatabaseError
-#         )
-
-#     async def connect(self, *args, **kwargs):
-#         """Create an async connection."""
-#         # Convert URL if provided as first argument
-#         if args and isinstance(args[0], str):
-#             conn_url = args[0]
-#             connection = await self.dbapi.connect(conn_url)
-#         else:
-#             connection = await self.dbapi.connect(**kwargs)
-
-#         return AsyncAdapt_pyro_mysql_connection(connection)
-
-
-# class MySQLDialect_pyro_async(MySQLDialect_pyro):
-#     """Asynchronous SQLAlchemy dialect for pyro-mysql."""
-
-#     driver = "pyro_mysql_async"
-#     is_async = True
-#     supports_statement_cache = True
-
-#     @classmethod
-#     def import_dbapi(cls):
-#         """Import and return the async DBAPI adapter."""
-#         return AsyncAdapt_pyro_mysql_dbapi()
-
-#     @classmethod
-#     def get_pool_class(cls, url: URL):
-#         """Return the pool class to use."""
-#         # Use NullPool for async to avoid connection sharing issues
-#         return NullPool
-
-#     def create_connect_args(
-#         self, url: URL, _translate_args: dict | None = None
-#     ) -> tuple[tuple, dict]:
-#         """Convert SQLAlchemy URL to async connection arguments."""
-#         # Use the parent class method to build the URL
-#         args, kwargs = super().create_connect_args(url, _translate_args)
-#         return args, kwargs
-
-#     async def _do_ping_async(
-#         self, dbapi_connection: AsyncAdapt_pyro_mysql_connection
-#     ) -> bool:
-#         """Async version of connection ping."""
-#         try:
-#             await dbapi_connection.ping()
-#             return True
-#         except Exception:
-#             return False
-
-#     def do_ping(self, dbapi_connection: DBAPIConnection) -> bool:
-#         """Check if connection is alive (async version)."""
-#         return await_fallback(self._do_ping_async(dbapi_connection))
-
-
-# # Register the dialects
-# def register_dialects():
-#     """Register pyro-mysql dialects with SQLAlchemy."""
-#     try:
-#         from sqlalchemy.dialects import registry
-
-#         registry.register(
-#             "mysql.pyro_mysql", "pyro_mysql.sqlalchemy", "MySQLDialect_pyro"
-#         )
-
-#         # registry.register(
-#         #     "mysql.pyro_mysql_async", "pyro_mysql.sqlalchemy", "MySQLDialect_pyro_async"
-#         # )
-#     except ImportError:
-#         # SQLAlchemy not installed or version incompatible
-#         pass
-
-
-# Auto-register on import
-# register_dialects()
-
-
-MariaDBDialect_pyro = type(
-    "MariaDBDialect_pyro_mysql",
-    (
-        MariaDBDialect,
-        MySQLDialect_pyro,
-    ),
-    {
-        # although parent classes already have this attribute, sqlalchemy test requires this
-        "supports_statement_cache": True,
-        "supports_native_uuid": True,  # mariadb supports native 128-bit UUID data type
-    },
-)
+    @override
+    def do_prepare_twophase(self, connection: Connection, xid: Any) -> None:
+        connection.execute(
+            sql.text("XA END :xid").bindparams(
+                sql.bindparam("xid", xid, literal_execute=True)
+            )
+        )
+        connection.execute(
+            sql.text("XA PREPARE :xid").bindparams(
+                sql.bindparam("xid", xid, literal_execute=True)
+            )
+        )
