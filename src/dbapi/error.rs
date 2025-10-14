@@ -47,7 +47,12 @@ impl From<crate::error::Error> for DbApiError {
             crate::error::Error::IncorrectApiUsageError(s) => Error::new_err(s),
             crate::error::Error::SyncUrlError(url_error) => Error::new_err(url_error.to_string()),
             crate::error::Error::AsyncUrlError(url_error) => Error::new_err(url_error.to_string()),
-            crate::error::Error::SyncError(error) => Error::new_err(error.to_string()),
+            crate::error::Error::SyncError(error) => match error {
+                mysql::Error::MySqlError(mysql::MySqlError { code: 1062, .. }) => {
+                    IntegrityError::new_err(error.to_string())
+                }
+                _ => Error::new_err(error.to_string()),
+            },
             crate::error::Error::AsyncError(error) => Error::new_err(error.to_string()),
             crate::error::Error::ConnectionClosedError => Error::new_err(err.to_string()),
             crate::error::Error::TransactionClosedError => Error::new_err(err.to_string()),

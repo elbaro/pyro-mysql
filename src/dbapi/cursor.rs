@@ -28,6 +28,9 @@ pub struct Cursor {
 
     #[pyo3(get)]
     rowcount: i64,
+
+    #[pyo3(get)]
+    lastrowid: Option<u64>,
 }
 
 impl Cursor {
@@ -38,6 +41,7 @@ impl Cursor {
             arraysize: 1,
             description: None,
             rowcount: -1,
+            lastrowid: None,
         }
     }
 }
@@ -69,10 +73,12 @@ impl Cursor {
             self.description = Some(description);
             self.rowcount = rows.len() as i64;
             self.result = Some(rows.into());
+            self.lastrowid = None;
         } else {
             self.rowcount = -1;
             self.result = None;
             self.description = None;
+            self.lastrowid = conn.last_insert_id()?; // TODO: in multi-threads, exec and last_insert_id() should be called at once
         }
         Ok(())
     }
@@ -87,6 +93,7 @@ impl Cursor {
         self.rowcount = -1;
         self.result = None;
         self.description = None;
+        self.lastrowid = None;
         Ok(())
     }
     fn fetchone<'py>(&mut self, py: Python<'py>) -> DbApiResult<Option<Bound<'py, PyTuple>>> {
@@ -110,7 +117,7 @@ impl Cursor {
         let size = size.unwrap_or(self.arraysize);
         if let Some(result) = &mut self.result {
             let mut vec = vec![];
-            for row in result.drain(..size) {
+            for row in result.drain(..size.min(result.len())) {
                 vec.push(row.to_tuple(py)?);
             }
             Ok(vec)
@@ -139,15 +146,4 @@ impl Cursor {
 
     // Implementations are free to have this method do nothing and users are free to not use it.
     fn setoutputsize(&self) {}
-
-    // ─── Optional Extensions For Sqlalchemy ──────────────────────────────
-    #[getter]
-    fn lastrowid(&self, py: Python) -> DbApiResult<Option<u64>> {
-        let conn = self
-            .conn
-            .as_ref()
-            .ok_or_else(|| Error::ConnectionClosedError)?
-            .borrow(py);
-        conn.last_insert_id()
-    }
 }

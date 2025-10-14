@@ -7,8 +7,14 @@ integrating pyro-mysql with SQLAlchemy.
 
 from typing import Any, cast, override
 
-from sqlalchemy.dialects.mysql.base import MySQLDialect, MySQLExecutionContext
+from sqlalchemy.dialects.mysql.base import (
+    MySQLCompiler,
+    MySQLDialect,
+    MySQLExecutionContext,
+    MySQLIdentifierPreparer,
+)
 from sqlalchemy.dialects.mysql.mariadb import MariaDBDialect
+from sqlalchemy.dialects.mysql.mysqldb import MySQLCompiler_mysqldb
 from sqlalchemy.engine.base import Connection
 from sqlalchemy.engine.interfaces import (
     ConnectArgsType,
@@ -34,6 +40,8 @@ class MySQLDialect_pyro(MySQLDialect):
     supports_native_decimal: bool = True
     default_paramstyle: str = "qmark"
     execution_ctx_cls: type[ExecutionContext] = MySQLExecutionContext
+    statement_compiler: type[MySQLCompiler] = MySQLCompiler_mysqldb
+    preparer: type[MySQLIdentifierPreparer] = MySQLIdentifierPreparer
 
     @override
     @classmethod
@@ -100,6 +108,11 @@ class MySQLDialect_pyro(MySQLDialect):
         if match:
             return int(match.group(1))
         return None
+
+    @override
+    @classmethod
+    def load_provisioning(cls):
+        import sqlalchemy.dialects.mysql.provision
 
 
 # class AsyncAdapt_pyro_mysql_cursor:
