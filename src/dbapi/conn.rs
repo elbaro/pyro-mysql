@@ -16,6 +16,17 @@ use crate::{
 #[pyclass(module = "pyro_mysql.dbapi", name = "Connection")]
 pub struct DbApiConn(RwLock<Option<mysql::Conn>>);
 
+pub enum DbApiExecResult {
+    WithDescription {
+        rows: Vec<Row>,
+        description: Py<PyList>,
+        affected_rows: u64,
+    },
+    NoDescription {
+        affected_rows: u64,
+    },
+}
+
 impl DbApiConn {
     pub fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> DbApiResult<Self> {
         let opts = match url_or_opts {
@@ -26,13 +37,13 @@ impl DbApiConn {
         Ok(Self(RwLock::new(Some(conn))))
     }
 
-    // For
-    pub fn exec(&self, query: &str, params: Params) -> DbApiResult<Option<(Vec<Row>, Py<PyList>)>> {
+    pub fn exec(&self, query: &str, params: Params) -> DbApiResult<DbApiExecResult> {
         let mut guard = self.0.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         log::debug!("execute {query}");
 
         let mut query_result = conn.exec_iter(query, params).map_err(Error::from)?;
+        let affected_rows = query_result.affected_rows();
         if query_result.columns().as_ref().iter().count() > 0 {
             let description = Python::attach(|py| {
                 PyList::new(
@@ -53,20 +64,23 @@ impl DbApiConn {
                 .map(|bound| bound.unbind())
             })?;
 
-            Ok(Some((
-                query_result
-                    .try_fold(Vec::new(), |mut vec, row| {
-                        row.map(|row| {
-                            vec.push(mysql::from_row(row));
-                            vec
-                        })
+            let rows = query_result
+                .try_fold(Vec::new(), |mut vec, row| {
+                    row.map(|row| {
+                        vec.push(mysql::from_row(row));
+                        vec
                     })
-                    .map_err(Error::from)?,
+                })
+                .map_err(Error::from)?;
+
+            Ok(DbApiExecResult::WithDescription {
+                rows,
                 description,
-            )))
+                affected_rows,
+            })
         } else {
             // no result set (different from empty set)
-            Ok(None)
+            Ok(DbApiExecResult::NoDescription { affected_rows })
         }
     }
 

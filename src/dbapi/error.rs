@@ -47,11 +47,12 @@ impl From<crate::error::Error> for DbApiError {
             crate::error::Error::IncorrectApiUsageError(s) => Error::new_err(s),
             crate::error::Error::SyncUrlError(url_error) => Error::new_err(url_error.to_string()),
             crate::error::Error::AsyncUrlError(url_error) => Error::new_err(url_error.to_string()),
-            crate::error::Error::SyncError(error) => match error {
-                mysql::Error::MySqlError(mysql::MySqlError { code: 1062, .. }) => {
-                    IntegrityError::new_err(error.to_string())
+            crate::error::Error::SyncError(error) => {
+                if let mysql::Error::MySqlError(ref mysql_error) = error {
+                    map_mysql_error_to_dbapi(mysql_error, error.to_string())
+                } else {
+                    Error::new_err(error.to_string())
                 }
-                _ => Error::new_err(error.to_string()),
             },
             crate::error::Error::AsyncError(error) => Error::new_err(error.to_string()),
             crate::error::Error::ConnectionClosedError => Error::new_err(err.to_string()),
@@ -63,6 +64,23 @@ impl From<crate::error::Error> for DbApiError {
             crate::error::Error::DecodeError { .. } => Error::new_err(err.to_string()),
             crate::error::Error::PoisonError(s) => Error::new_err(s),
         })
+    }
+}
+
+fn map_mysql_error_to_dbapi(mysql_error: &mysql::MySqlError, error_msg: String) -> PyErr {
+    match mysql_error.state.as_str() {
+        "23000" => IntegrityError::new_err(error_msg),
+        "22001" | "22003" | "22007" | "22012" => DataError::new_err(error_msg),
+        "42000" | "42S02" | "42S22" => ProgrammingError::new_err(error_msg),
+        "28000" | "08004" | "40001" => OperationalError::new_err(error_msg),
+        "0A000" => NotSupportedError::new_err(error_msg),
+        _ => {
+            // Fallback to error code for unmapped SQLSTATEs
+            match mysql_error.code {
+                code if code < 1000 => InternalError::new_err(error_msg),
+                _ => OperationalError::new_err(error_msg),
+            }
+        }
     }
 }
 

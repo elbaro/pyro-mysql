@@ -7,7 +7,7 @@ use pyo3::{
 
 use crate::{
     dbapi::{
-        conn::DbApiConn,
+        conn::{DbApiConn, DbApiExecResult},
         error::{DbApiError, DbApiResult},
     },
     error::Error,
@@ -69,17 +69,25 @@ impl Cursor {
             .ok_or_else(|| Error::ConnectionClosedError)?
             .borrow(py);
 
-        if let Some((rows, description)) = conn.exec(query, params)? {
-            self.description = Some(description);
-            self.rowcount = rows.len() as i64;
-            self.result = Some(rows.into());
-            self.lastrowid = None;
-        } else {
-            self.rowcount = -1;
-            self.result = None;
-            self.description = None;
-            self.lastrowid = conn.last_insert_id()?; // TODO: in multi-threads, exec and last_insert_id() should be called at once
+        match conn.exec(query, params)? {
+            DbApiExecResult::WithDescription {
+                rows,
+                description,
+                affected_rows,
+            } => {
+                self.description = Some(description);
+                self.rowcount = affected_rows as i64;
+                self.result = Some(rows.into());
+                self.lastrowid = None;
+            }
+            DbApiExecResult::NoDescription { affected_rows } => {
+                self.description = None;
+                self.rowcount = affected_rows as i64;
+                self.result = None;
+                self.lastrowid = conn.last_insert_id()?; // TODO: in multi-threads, exec and last_insert_id() should be called at once
+            }
         }
+
         Ok(())
     }
 
@@ -90,9 +98,9 @@ impl Cursor {
             .ok_or_else(|| Error::ConnectionClosedError)?
             .borrow(py);
         conn.exec_batch(query, params)?;
+        self.description = None;
         self.rowcount = -1;
         self.result = None;
-        self.description = None;
         self.lastrowid = None;
         Ok(())
     }
