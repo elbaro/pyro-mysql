@@ -161,6 +161,8 @@ logging.getLogger("pyro_mysql").setLevel(logging.DEBUG)
 
 ## PEP-249, sqlalchemy
 
+<img src="https://github.com/elbaro/pyro-mysql/blob/main/report/chart_sqlalchemy.png?raw=true" width="800px" />
+
 `pyro_mysql.dbapi` implements PEP-249.
 This only exists for compatibility with ORM libraries.
 The primary API set (`pyro_mysql.sync`, `pyro_mysql.async_`) is simpler and faster.
@@ -205,3 +207,9 @@ pytest -p pyro_mysql.testing.sqlalchemy_pytest_plugin --dburi=mariadb+pyro_mysql
 ```
 
 `sqlalchemy_pytest_plugin` is required to skip incompatible tests.
+
+## Perf Notes
+- Text Protocol vs Binary Protocol
+    - Binary Protocol is slower for one-time statements because it always prepares the statement and then execute (2 round trips), but is safer against SQL injections. If you reuse the prepared statement many times, Binary Protocol is faster. Most Python MySQL libraries use Text Protocol.
+- executemany() vs exec_batch()
+    - `pyro_mysql.Conn.exec_batch()` prepares a statement once and make a network call for each parameter item. MySQL libraries using Text Protocol implement `executemany()` as one large sql statement: they repeat the SQL statement, concatenate, stringify parameters in the client-side and then send the large string to the server. This manual sql building is actually twice faster. If it's worth, you can try manually building the statement and call `pyro_mysql.Conn.exec()`.
