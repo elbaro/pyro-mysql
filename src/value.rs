@@ -216,8 +216,6 @@ pub fn value_to_python<'py>(
 
     let col_type = column.column_type();
 
-    // println!("col type : {:?}", col_type);
-
     let bound = match col_type {
         // Date type
         ColumnType::MYSQL_TYPE_DATE => {

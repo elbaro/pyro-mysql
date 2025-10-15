@@ -69,8 +69,6 @@ impl Cursor {
             .as_ref()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .borrow(py);
-        // println!("### query: {query}");
-        // println!("### params: {params:?}");
         match conn.exec(query, params)? {
             DbApiExecResult::WithDescription {
                 rows,

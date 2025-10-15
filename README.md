@@ -66,16 +66,16 @@ def example3(pool):
 ```py
 
 # Text Protocols - supports multiple statements concatenated with ';' but accepts no arguemnt
-def query(self, query: str) -> PyroFuture[list[Row]]
-def query_first(self, query: str) -> PyroFuture[Row | None]
-def query_drop(self, query: str) -> PyroFuture[None]
-def query_batch(self, query: str) -> PyroFuture[None]
+def query(self, query: str) -> PyroFuture[list[Row]]: ...
+def query_first(self, query: str) -> PyroFuture[Row | None]: ...
+def query_drop(self, query: str) -> PyroFuture[None]: ...
+def query_batch(self, query: str) -> PyroFuture[None]: ...
 
 # Binary Protocols - supports arguments but no multiple statement
-def exec(self, query: str, params: Params) -> PyroFuture[list[Row]]
-def exec_first(self, query: str, params: Params) -> PyroFuture[Row | None]
-def exec_drop(self, query: str, params: Params) -> PyroFuture[None]
-def exec_batch(self, query: str, params: Iterable[Params]) -> PyroFuture[None]
+def exec(self, query: str, params: Params) -> PyroFuture[list[Row]]: ...
+def exec_first(self, query: str, params: Params) -> PyroFuture[Row | None]: ...
+def exec_drop(self, query: str, params: Params) -> PyroFuture[None]: ...
+def exec_batch(self, query: str, params: Iterable[Params]) -> PyroFuture[None]: ...
 
 # Examples
 rows = await conn.exec("SELECT * FROM my_table WHERE a=? AND b=?", (a, b))
@@ -161,9 +161,24 @@ logging.getLogger("pyro_mysql").setLevel(logging.DEBUG)
 
 ## PEP-249, sqlalchemy
 
-PEP-249 is supported via `pyro_mysql.dbapi`.
+`pyro_mysql.dbapi` implements PEP-249.
+This only exists for compatibility with ORM libraries.
+The primary API set (`pyro_mysql.sync`, `pyro_mysql.async_`) is simpler and faster.
 
-There is also an experimental support for sqlalchemy.
+```sh
+pyro_mysql.dbapi
+    # classes
+    ├─Connection
+    ├─Cursor
+    # exceptions
+    ├─Warning
+    ├─Error
+    ├─IntegrityError
+    ├─..
+```
+
+In sqlalchemy, use `mysql+pyro_mysql://` or `mariadb+pyro_mysql://`.
+The supported connection parameters are [the docs](https://docs.rs/mysql/latest/mysql/struct.OptsBuilder.html#method.from_hash_map) and [`capabilities`](https://docs.rs/mysql/latest/mysql/consts/struct.CapabilityFlags.html) (default 2).
 
 ```py
 from sqlalchemy import create_engine, text
@@ -182,3 +197,11 @@ for row in cursor_result:
 ('sys',)
 ('test',)
 ```
+
+To run sqlalchemy tests on pyro_mysql, use this command in the sqlalchemy repo:
+
+```sh
+pytest -p pyro_mysql.testing.sqlalchemy_pytest_plugin --dburi=mariadb+pyro_mysql://test:1234@localhost/test -v t
+```
+
+`sqlalchemy_pytest_plugin` is required to skip incompatible tests.
