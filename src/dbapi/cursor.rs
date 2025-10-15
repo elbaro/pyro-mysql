@@ -154,4 +154,12 @@ impl Cursor {
 
     // Implementations are free to have this method do nothing and users are free to not use it.
     fn setoutputsize(&self) {}
+
+    fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
+    }
+
+    fn __next__<'py>(&mut self, py: Python<'py>) -> DbApiResult<Option<Bound<'py, PyTuple>>> {
+        self.fetchone(py)
+    }
 }
