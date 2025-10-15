@@ -1,6 +1,5 @@
 use crate::error::Error;
 use mysql_common::Value as MySqlValue;
-use mysql_common::constants::ColumnFlags;
 use mysql_common::constants::ColumnType;
 use mysql_common::packets::Column;
 use pyo3::types::PyByteArray;

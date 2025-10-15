@@ -53,7 +53,7 @@ impl From<crate::error::Error> for DbApiError {
                 } else {
                     Error::new_err(error.to_string())
                 }
-            },
+            }
             crate::error::Error::AsyncError(error) => Error::new_err(error.to_string()),
             crate::error::Error::ConnectionClosedError => Error::new_err(err.to_string()),
             crate::error::Error::TransactionClosedError => Error::new_err(err.to_string()),
@@ -78,7 +78,9 @@ fn map_mysql_error_to_dbapi(mysql_error: &mysql::MySqlError, error_msg: String) 
             // Fallback to error code for unmapped SQLSTATEs
             match mysql_error.code {
                 // Connection/disconnect related errors should be OperationalError
-                1927 | 2006 | 2013 | 2014 | 2045 | 2055 | 4031 => OperationalError::new_err(error_msg),
+                1927 | 2006 | 2013 | 2014 | 2045 | 2055 | 4031 => {
+                    OperationalError::new_err(error_msg)
+                }
                 code if code < 1000 => InternalError::new_err(error_msg),
                 _ => OperationalError::new_err(error_msg),
             }
