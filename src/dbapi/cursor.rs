@@ -155,15 +155,4 @@ impl Cursor {
 
     // Implementations are free to have this method do nothing and users are free to not use it.
     fn setoutputsize(&self) {}
-
-    // Iterator protocol for PEP 249 compliance
-    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
-        slf
-    }
-
-    fn __next__<'py>(&mut self, py: Python<'py>) -> DbApiResult<Option<Bound<'py, PyTuple>>> {
-        // When fetchone returns Ok(None), PyO3 automatically raises StopIteration
-        // When fetchone returns an error (no result set), we propagate it
-        self.fetchone(py)
-    }
 }

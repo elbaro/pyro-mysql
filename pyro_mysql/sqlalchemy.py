@@ -27,6 +27,63 @@ from sqlalchemy.engine.url import URL
 from pyro_mysql.dbapi import Error
 
 
+class PyroMySQLCompiler(MySQLCompiler):
+    """Custom compiler for pyro-mysql that works around VALUES parameter binding issues."""
+
+    def _render_values(self, element, **kw):
+        """Override VALUES rendering to use UNION ALL when parameters are present.
+
+        MariaDB's prepared statement protocol doesn't properly handle parameter
+        binding in VALUES clauses, so we convert to UNION ALL syntax instead.
+        """
+        # Check if we're using literal binds
+        if element.literal_binds:
+            # Use default compilation
+            return super()._render_values(element, **kw)
+
+        # Check if there's data to process
+        if not element._data:
+            return super()._render_values(element, **kw)
+
+        # Convert VALUES to UNION ALL for parameter binding workaround
+        # Build SELECT statements for each row
+        from sqlalchemy.sql import elements
+
+        kw.setdefault("literal_binds", element.literal_binds)
+
+        # Process the data the same way as the parent class
+        # but then convert VALUES to UNION ALL
+        tuples = []
+        for chunk in element._data:
+            for elem in chunk:
+                tuple_elem = elements.Tuple(
+                    types=element._column_types, *elem
+                ).self_group()
+                tuples.append(tuple_elem)
+
+        # Build SELECT statements for each tuple
+        select_parts = []
+        columns = list(element.columns)
+
+        for tuple_elem in tuples:
+            # Process the tuple to get the parameter placeholders
+            processed_tuple = self.process(tuple_elem, **kw)
+            # Remove the parentheses from the tuple
+            values_part = processed_tuple.strip("()")
+
+            # Split the values and pair with column names
+            values = values_part.split(", ")
+            select_list = []
+            for value, column in zip(values, columns):
+                select_list.append(f"{value} AS {self.preparer.format_column(column)}")
+
+            select_parts.append(f"SELECT {', '.join(select_list)}")
+
+        # Return the UNION ALL statement wrapped in parentheses
+        # to match the VALUES syntax for CTEs
+        return "(" + " UNION ALL ".join(select_parts) + ")"
+
+
 class MySQLDialect_pyro(MySQLDialect):
     """Synchronous SQLAlchemy dialect for pyro-mysql."""
 
@@ -39,7 +96,7 @@ class MySQLDialect_pyro(MySQLDialect):
     supports_native_decimal: bool = True
     default_paramstyle: str = "qmark"
     execution_ctx_cls: type[ExecutionContext] = MySQLExecutionContext
-    statement_compiler: type[MySQLCompiler] = MySQLCompiler
+    statement_compiler: type[MySQLCompiler] = PyroMySQLCompiler
     preparer: type[MySQLIdentifierPreparer] = MySQLIdentifierPreparer
 
     @override
@@ -98,10 +155,8 @@ class MySQLDialect_pyro(MySQLDialect):
     @override
     def do_ping(self, dbapi_connection: DBAPIConnection) -> bool:
         """Check if connection is alive."""
-        try:
-            return dbapi_connection.ping()
-        except Exception:
-            return False
+        # For compatibility with tests, raise instead of return False
+        return dbapi_connection.ping()
 
     @override
     def _detect_charset(self, connection: Connection) -> str:
