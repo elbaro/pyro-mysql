@@ -155,8 +155,8 @@ class MySQLDialect_pyro(MySQLDialect):
     @override
     def do_ping(self, dbapi_connection: DBAPIConnection) -> bool:
         """Check if connection is alive."""
-        # For compatibility with tests, raise instead of return False
-        return dbapi_connection.ping()
+        dbapi_connection.ping()
+        return True
 
     @override
     def _detect_charset(self, connection: Connection) -> str:

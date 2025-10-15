@@ -209,131 +209,23 @@ pub fn value_to_python<'py>(
     value: &MySqlValue,
     column: &Column,
 ) -> PyResult<Bound<'py, PyAny>> {
-    let bound = match value {
-        MySqlValue::NULL => py.None().into_bound(py),
-        MySqlValue::Int(i) => i.into_bound_py_any(py)?,
-        MySqlValue::UInt(u) => u.into_bound_py_any(py)?,
-        MySqlValue::Float(f) => {
-            let mut buffer = ryu::Buffer::new();
-            buffer
-                .format(*f)
-                .parse::<f64>()
-                .unwrap() // unwrap(): f32 -> str -> f64 never fails
-                .into_bound_py_any(py)?
-        }
-        MySqlValue::Double(f) => f.into_bound_py_any(py)?,
-        MySqlValue::Date(year, month, day, hour, minutes, seconds, microseconds) => {
-            match column.column_type() {
-                ColumnType::MYSQL_TYPE_DATE => get_date_class(py)?.call1((year, month, day))?,
-                _ => get_datetime_class(py)?.call1((
-                    year,
-                    month,
-                    day,
-                    hour,
-                    minutes,
-                    seconds,
-                    microseconds,
-                ))?,
-            }
-        }
-        MySqlValue::Time(is_negative, days, hours, minutes, seconds, microseconds) => {
-            let timedelta =
-                get_timedelta_class(py)?.call1((days, seconds, microseconds, 0, minutes, hours))?;
-            if *is_negative {
-                timedelta.call_method0("__neg__")?
-            } else {
-                timedelta
-            }
-        }
-        MySqlValue::Bytes(b) => {
-            let col_type = column.column_type();
+    // Handle NULL first as it's independent of column type
+    if matches!(value, MySqlValue::NULL) {
+        return Ok(py.None().into_bound(py));
+    }
 
-            // Note: column.column_length() provides max length for string types
-            // column.decimals() provides scale for DECIMAL or fractional seconds for TIME types
-            // These aren't needed for Bytes conversion as MySQL already formats the data
-            match col_type {
-                // JSON columns - parse as Python dict/list
-                ColumnType::MYSQL_TYPE_JSON => match PyString::from_bytes(py, b) {
-                    Ok(json_str) => {
-                        let json_module = get_json_module(py)?;
-                        json_module.call_method1("loads", (json_str,))?
-                    }
-                    Err(_) => PyBytes::new(py, b).into_any(),
-                },
+    let col_type = column.column_type();
 
-                // Decimal/Numeric - use Python Decimal class
-                // Note: Precision/scale info from col.decimals() isn't needed here
-                // because MySQL already sends the string with correct precision applied
-                ColumnType::MYSQL_TYPE_DECIMAL | ColumnType::MYSQL_TYPE_NEWDECIMAL => {
-                    match PyString::from_bytes(py, b) {
-                        Ok(decimal_str) => get_decimal_class(py)?.call1((decimal_str,))?,
-                        Err(_) => PyBytes::new(py, b).into_any(),
-                    }
+    // println!("col type : {:?}", col_type);
+
+    let bound = match col_type {
+        // Date type
+        ColumnType::MYSQL_TYPE_DATE => {
+            match value {
+                MySqlValue::Date(year, month, day, _, _, _, _) => {
+                    get_date_class(py)?.call1((year, month, day))?
                 }
-
-                // Text types - return as str
-                // BLOB column -> binary flag + charset=63
-                // TEXT column + utfmb4 + bin collation -> binary flag + charset=45
-                // TEXT column + utfmb4 + non-bin collation -> charset=45
-                ColumnType::MYSQL_TYPE_VARCHAR
-                | ColumnType::MYSQL_TYPE_VAR_STRING
-                | ColumnType::MYSQL_TYPE_STRING
-                | ColumnType::MYSQL_TYPE_TINY_BLOB // MySQL uses BLOB for TEXT in the protocol
-                | ColumnType::MYSQL_TYPE_MEDIUM_BLOB
-                | ColumnType::MYSQL_TYPE_LONG_BLOB
-                | ColumnType::MYSQL_TYPE_BLOB=> {
-                    if column.character_set() == 63 {
-                        PyBytes::new(py, b).into_any()
-                    } else {
-                        // TODO: this can be non-utf8 if character_set_results is not utf8*
-                        match PyString::from_bytes(py, b) {
-                            Ok(s) => s.into_any(),
-                            Err(_) => PyBytes::new(py, b).into_any(),
-                        }
-                    }
-                }
-                // ENUM and SET - return as str
-                ColumnType::MYSQL_TYPE_ENUM | ColumnType::MYSQL_TYPE_SET => {
-                    match PyString::from_bytes(py, b) {
-                        Ok(s) => s.into_any(),
-                        Err(_) => PyBytes::new(py, b).into_any(),
-                    }
-                }
-
-                // Integer types - parse bytes as integers
-                ColumnType::MYSQL_TYPE_LONGLONG
-                | ColumnType::MYSQL_TYPE_LONG
-                | ColumnType::MYSQL_TYPE_INT24
-                | ColumnType::MYSQL_TYPE_SHORT
-                | ColumnType::MYSQL_TYPE_TINY
-                | ColumnType::MYSQL_TYPE_YEAR => {
-                    match std::str::from_utf8(b) {
-                        Ok(int_str) => {
-                            // Use PyLong::from_str to handle arbitrarily large integers
-                            match py.import("builtins")?.getattr("int")?.call1((int_str,)) {
-                                Ok(py_int) => py_int,
-                                Err(_) => PyBytes::new(py, b).into_any(),
-                            }
-                        }
-                        Err(_) => PyBytes::new(py, b).into_any(),
-                    }
-                }
-
-                // Floating point types - parse bytes as float
-                ColumnType::MYSQL_TYPE_FLOAT | ColumnType::MYSQL_TYPE_DOUBLE => {
-                    match std::str::from_utf8(b) {
-                        Ok(float_str) => match float_str.parse::<f64>() {
-                            Ok(f) => f.into_bound_py_any(py)?,
-                            Err(_) => PyBytes::new(py, b).into_any(),
-                        },
-                        Err(_) => PyBytes::new(py, b).into_any(),
-                    }
-                }
-
-                // BIT type - return as bytes
-                ColumnType::MYSQL_TYPE_BIT => PyBytes::new(py, b).into_any(),
-
-                ColumnType::MYSQL_TYPE_DATE => {
+                MySqlValue::Bytes(b) => {
                     let date_str =
                         std::str::from_utf8(b).map_err(|_| Error::decode_error(col_type, b))?;
 
@@ -353,11 +245,36 @@ pub fn value_to_python<'py>(
                         .parse::<u8>()
                         .map_err(|_| Error::decode_error(col_type, b))?;
 
-                    py.import("datetime")?
-                        .getattr("date")?
-                        .call1((year, month, day))?
+                    get_date_class(py)?.call1((year, month, day))?
                 }
-                ColumnType::MYSQL_TYPE_TIME => {
+                _ => {
+                    return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Unexpected value type for DATE column: {:?}",
+                        value
+                    )));
+                }
+            }
+        }
+
+        // Time type
+        ColumnType::MYSQL_TYPE_TIME => {
+            match value {
+                MySqlValue::Time(is_negative, days, hours, minutes, seconds, microseconds) => {
+                    let timedelta = get_timedelta_class(py)?.call1((
+                        days,
+                        seconds,
+                        microseconds,
+                        0,
+                        minutes,
+                        hours,
+                    ))?;
+                    if *is_negative {
+                        timedelta.call_method0("__neg__")?
+                    } else {
+                        timedelta
+                    }
+                }
+                MySqlValue::Bytes(b) => {
                     let time_str =
                         std::str::from_utf8(b).map_err(|_| Error::decode_error(col_type, b))?;
 
@@ -413,7 +330,30 @@ pub fn value_to_python<'py>(
                         timedelta
                     }
                 }
-                ColumnType::MYSQL_TYPE_DATETIME | ColumnType::MYSQL_TYPE_TIMESTAMP => {
+                _ => {
+                    return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Unexpected value type for TIME column: {:?}",
+                        value
+                    )));
+                }
+            }
+        }
+
+        // DateTime and Timestamp types
+        ColumnType::MYSQL_TYPE_DATETIME | ColumnType::MYSQL_TYPE_TIMESTAMP => {
+            match value {
+                MySqlValue::Date(year, month, day, hour, minutes, seconds, microseconds) => {
+                    get_datetime_class(py)?.call1((
+                        year,
+                        month,
+                        day,
+                        hour,
+                        minutes,
+                        seconds,
+                        microseconds,
+                    ))?
+                }
+                MySqlValue::Bytes(b) => {
                     let datetime_str =
                         std::str::from_utf8(b).map_err(|_| Error::decode_error(col_type, b))?;
 
@@ -477,21 +417,220 @@ pub fn value_to_python<'py>(
                         microsecond,
                     ))?
                 }
-
-                // GEOMETRY type - return as bytes (WKB format)
-                ColumnType::MYSQL_TYPE_GEOMETRY => PyBytes::new(py, b).into_any(),
-
-                // Default: try string, fall back to bytes
                 _ => {
-                    log::error!("Unimplemented column type: {:?}", col_type);
-                    match PyString::from_bytes(py, b) {
-                        Ok(s) => s.into_any(),
-                        Err(_) => PyBytes::new(py, b).into_any(),
-                    }
+                    return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Unexpected value type for DATETIME/TIMESTAMP column: {:?}",
+                        value
+                    )));
                 }
             }
         }
+
+        // Integer types
+        ColumnType::MYSQL_TYPE_LONGLONG
+        | ColumnType::MYSQL_TYPE_LONG
+        | ColumnType::MYSQL_TYPE_INT24
+        | ColumnType::MYSQL_TYPE_SHORT
+        | ColumnType::MYSQL_TYPE_TINY
+        | ColumnType::MYSQL_TYPE_YEAR => {
+            match value {
+                MySqlValue::Int(i) => i.into_bound_py_any(py)?,
+                MySqlValue::UInt(u) => u.into_bound_py_any(py)?,
+                MySqlValue::Bytes(b) => {
+                    match std::str::from_utf8(b) {
+                        Ok(int_str) => {
+                            // Use PyLong::from_str to handle arbitrarily large integers
+                            match py.import("builtins")?.getattr("int")?.call1((int_str,)) {
+                                Ok(py_int) => py_int,
+                                Err(_) => PyBytes::new(py, b).into_any(),
+                            }
+                        }
+                        Err(_) => PyBytes::new(py, b).into_any(),
+                    }
+                }
+                _ => {
+                    return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Unexpected value type for integer column: {:?}",
+                        value
+                    )));
+                }
+            }
+        }
+
+        // Floating point types
+        ColumnType::MYSQL_TYPE_FLOAT | ColumnType::MYSQL_TYPE_DOUBLE => {
+            match value {
+                MySqlValue::Float(f) => {
+                    let mut buffer = ryu::Buffer::new();
+                    buffer
+                        .format(*f)
+                        .parse::<f64>()
+                        .unwrap() // unwrap(): f32 -> str -> f64 never fails
+                        .into_bound_py_any(py)?
+                }
+                MySqlValue::Double(f) => f.into_bound_py_any(py)?,
+                MySqlValue::Bytes(b) => match std::str::from_utf8(b) {
+                    Ok(float_str) => match float_str.parse::<f64>() {
+                        Ok(f) => f.into_bound_py_any(py)?,
+                        Err(_) => PyBytes::new(py, b).into_any(),
+                    },
+                    Err(_) => PyBytes::new(py, b).into_any(),
+                },
+                _ => {
+                    return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Unexpected value type for float column: {:?}",
+                        value
+                    )));
+                }
+            }
+        }
+
+        // JSON type
+        ColumnType::MYSQL_TYPE_JSON => match value {
+            MySqlValue::Bytes(b) => match PyString::from_bytes(py, b) {
+                Ok(json_str) => {
+                    let json_module = get_json_module(py)?;
+                    json_module.call_method1("loads", (json_str,))?
+                }
+                Err(_) => PyBytes::new(py, b).into_any(),
+            },
+            _ => {
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                    "Unexpected value type for JSON column: {:?}",
+                    value
+                )));
+            }
+        },
+
+        // Decimal types
+        ColumnType::MYSQL_TYPE_DECIMAL | ColumnType::MYSQL_TYPE_NEWDECIMAL => match value {
+            MySqlValue::Bytes(b) => match PyString::from_bytes(py, b) {
+                Ok(decimal_str) => get_decimal_class(py)?.call1((decimal_str,))?,
+                Err(_) => PyBytes::new(py, b).into_any(),
+            },
+            _ => {
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                    "Unexpected value type for DECIMAL column: {:?}",
+                    value
+                )));
+            }
+        },
+
+        // Text and string types
+        ColumnType::MYSQL_TYPE_VARCHAR
+        | ColumnType::MYSQL_TYPE_VAR_STRING
+        | ColumnType::MYSQL_TYPE_STRING
+        | ColumnType::MYSQL_TYPE_TINY_BLOB
+        | ColumnType::MYSQL_TYPE_MEDIUM_BLOB
+        | ColumnType::MYSQL_TYPE_LONG_BLOB
+        | ColumnType::MYSQL_TYPE_BLOB => {
+            match value {
+                MySqlValue::Bytes(b) => {
+                    if column.character_set() == 63 {
+                        PyBytes::new(py, b).into_any()
+                    } else {
+                        // TODO: this can be non-utf8 if character_set_results is not utf8*
+                        match PyString::from_bytes(py, b) {
+                            Ok(s) => s.into_any(),
+                            Err(_) => PyBytes::new(py, b).into_any(),
+                        }
+                    }
+                }
+                _ => {
+                    return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Unexpected value type for text column: {:?}",
+                        value
+                    )));
+                }
+            }
+        }
+
+        // ENUM and SET types
+        ColumnType::MYSQL_TYPE_ENUM | ColumnType::MYSQL_TYPE_SET => match value {
+            MySqlValue::Bytes(b) => match PyString::from_bytes(py, b) {
+                Ok(s) => s.into_any(),
+                Err(_) => PyBytes::new(py, b).into_any(),
+            },
+            _ => {
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                    "Unexpected value type for ENUM/SET column: {:?}",
+                    value
+                )));
+            }
+        },
+
+        // BIT type
+        ColumnType::MYSQL_TYPE_BIT => match value {
+            MySqlValue::Bytes(b) => PyBytes::new(py, b).into_any(),
+            _ => {
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                    "Unexpected value type for BIT column: {:?}",
+                    value
+                )));
+            }
+        },
+
+        // GEOMETRY type
+        ColumnType::MYSQL_TYPE_GEOMETRY => match value {
+            MySqlValue::Bytes(b) => PyBytes::new(py, b).into_any(),
+            _ => {
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                    "Unexpected value type for GEOMETRY column: {:?}",
+                    value
+                )));
+            }
+        },
+
+        // Default: handle any unimplemented types
+        _ => {
+            log::error!("Unimplemented column type: {:?}", col_type);
+            match value {
+                MySqlValue::Int(i) => i.into_bound_py_any(py)?,
+                MySqlValue::UInt(u) => u.into_bound_py_any(py)?,
+                MySqlValue::Float(f) => {
+                    let mut buffer = ryu::Buffer::new();
+                    buffer
+                        .format(*f)
+                        .parse::<f64>()
+                        .unwrap()
+                        .into_bound_py_any(py)?
+                }
+                MySqlValue::Double(f) => f.into_bound_py_any(py)?,
+                MySqlValue::Date(year, month, day, hour, minutes, seconds, microseconds) => {
+                    get_datetime_class(py)?.call1((
+                        year,
+                        month,
+                        day,
+                        hour,
+                        minutes,
+                        seconds,
+                        microseconds,
+                    ))?
+                }
+                MySqlValue::Time(is_negative, days, hours, minutes, seconds, microseconds) => {
+                    let timedelta = get_timedelta_class(py)?.call1((
+                        days,
+                        seconds,
+                        microseconds,
+                        0,
+                        minutes,
+                        hours,
+                    ))?;
+                    if *is_negative {
+                        timedelta.call_method0("__neg__")?
+                    } else {
+                        timedelta
+                    }
+                }
+                MySqlValue::Bytes(b) => match PyString::from_bytes(py, b) {
+                    Ok(s) => s.into_any(),
+                    Err(_) => PyBytes::new(py, b).into_any(),
+                },
+                MySqlValue::NULL => unreachable!(), // Already handled at the beginning
+            }
+        }
     };
+
     Ok(bound)
 }
 

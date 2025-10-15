@@ -56,6 +56,7 @@ impl Cursor {
     /// Closes the cursor. The connection is still alive
     fn close(&mut self) {
         self.conn = None;
+        self.rowcount = -1;
         self.result = None;
         self.description = None;
     }
