@@ -39,11 +39,7 @@ classifiers = [
   "Framework :: AsyncIO",
   "Typing :: Typed",
 ]
-dependencies = [
-  # "mysqlclient>=2.2.7",
-  "pep249>=1.1.0",
-  "pymysql>=1.1.2",
-]
+dependencies = ["pep249>=1.1.0", "sqlalchemy>=2.0.44"]
 
 [project.urls]
 Repository = "https://github.com/elbaro/pyro-mysql"
@@ -51,16 +47,12 @@ Repository = "https://github.com/elbaro/pyro-mysql"
 [dependency-groups]
 dev = [
   "maturin>=1.9.4",
-  "pdoc>=15.0.4",
   "pyright>=1.1.406",
   "pytest-asyncio>=1.2.0",
   "pytest-benchmark>=5.1.0",
   "rich>=14.1.0",
   "aiomysql>=0.2.0",
   "asyncmy>=0.2.10",
-  # "mysqlclient>=2.2.7",
-  "pymysql>=1.1.2",
-  "sqlalchemy>=2.0.44",
 ]
 
 [project.entry-points."sqlalchemy.dialects"]

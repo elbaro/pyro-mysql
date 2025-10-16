@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql")]
 pub struct CapabilityFlags;
 
 #[pymethods]

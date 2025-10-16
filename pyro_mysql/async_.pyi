@@ -2,7 +2,7 @@ import datetime
 from types import TracebackType
 from typing import Any, Self, Sequence
 
-from .base import IsolationLevel, Params, PyroFuture, Row
+from pyro_mysql import IsolationLevel, Params, PyroFuture, Row
 
 class PoolOpts:
     """Pool options for async connections."""

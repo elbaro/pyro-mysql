@@ -17,7 +17,7 @@ pub fn url_error_to_pyerr(error: mysql_async::UrlError) -> PyErr {
 }
 
 /// A wrapper around a Python future that cancels the associated Rust future when dropped.
-#[pyclass]
+#[pyclass(module = "pyro_mysql")]
 pub struct PyroFuture {
     py_future: Py<PyAny>,
     abort_handle: AbortHandle,

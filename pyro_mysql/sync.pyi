@@ -1,8 +1,9 @@
 """Synchronous MySQL driver components."""
 
+from types import TracebackType
 from typing import Any, Self, Sequence
 
-from .base import IsolationLevel, Params, Row
+from pyro_mysql import IsolationLevel, Params, Row
 
 class RowIterator:
     def __iter__(self) -> "RowIterator": ...
@@ -23,7 +24,12 @@ class Transaction:
     """
 
     def __enter__(self) -> Self: ...
-    def __exit__(self, _, __, ___) -> None: ...
+    def __exit__(
+        self,
+        type_: type[BaseException] | None,
+        value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None: ...
     def commit(self) -> None:
         """Commit the transaction."""
         ...

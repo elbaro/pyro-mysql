@@ -4,7 +4,7 @@ use pyo3::{
     types::{PyDict, PyTuple},
 };
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql")]
 pub struct Row {
     pub inner: mysql_common::Row,
 }

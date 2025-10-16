@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-#[pyclass(frozen)]
+#[pyclass(frozen, module = "pyro_mysql")]
 #[derive(Clone)]
 pub enum IsolationLevel {
     ReadUncommitted,

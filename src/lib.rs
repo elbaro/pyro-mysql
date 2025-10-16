@@ -115,10 +115,6 @@ mod pyro_mysql {
 
         #[pymodule_export]
         use crate::r#async::pool_opts::AsyncPoolOpts;
-
-        // ─── Pep249 ──────────────────────────────────────────────────
-        #[pymodule_export]
-        use crate::r#async::connect;
     }
 
     #[pymodule]
@@ -146,10 +142,6 @@ mod pyro_mysql {
 
         #[pymodule_export]
         use crate::sync::iterator::ResultSetIterator;
-
-        // ─── Pep249 ──────────────────────────────────────────────────
-        #[pymodule_export]
-        use crate::dbapi::connect;
     }
 
     #[pymodule]

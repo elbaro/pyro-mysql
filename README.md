@@ -2,9 +2,13 @@
 
 A high-performance MySQL driver for Python, backed by Rust.
 
-- [API Reference](https://htmlpreview.github.io/?https://raw.githubusercontent.com/elbaro/pyro-mysql/main/docs/pyro_mysql.html)
+- [API Overview](#api-overview)
+- [Usage](#usage)
+- [DataType Mapping](#datatype-mapping)
+- [Logging](#logging)
+- [PEP-249, sqlalchemy](#pep-249-sqlalchemy)
+- [Perf Notes](#perf-notes)
 - [Benchmark](https://htmlpreview.github.io/?https://github.com/elbaro/pyro-mysql/blob/main/report/report/index.html)
-
 
 <img src="https://github.com/elbaro/pyro-mysql/blob/main/report/chart.png?raw=true" width="800px" />
 
@@ -28,7 +32,6 @@ from pyro_mysql import SyncConn, SyncTransaction
 
 
 ```py
-import pyro_mysql
 from pyro_mysql.async_ import Conn, Pool, OptsBuilder
 
 
@@ -100,15 +103,15 @@ del fut  # this is equivalent to .cancel()
 async with conn.start_transaction() as tx:
     await tx.exec('INSERT ..')
     await tx.exec('INSERT ..')
-    await tx.commit()  # tx cannot be used anymore
-    await conn.exec(..)  # error
+    await tx.commit()
+    await conn.exec(..)  # this is not allowed
 
 # sync API
 with conn.start_transaction() as tx:
     tx.exec('INSERT ..')
     tx.exec('INSERT ..')
-    conn.exec('INSERT ..')  # error
-    tx.commit()  # tx cannot be used anymore
+    conn.exec('INSERT ..')  # this is not allowed
+    tx.rollback()
 ```
 
 ## DataType Mapping
@@ -121,14 +124,15 @@ with conn.start_transaction() as tx:
 | `bool` | `Int64` |
 | `int` | `Int64` |
 | `float` | `Double(Float64)` |
-| `str \| bytearray` | `Bytes` |
+| `str \| bytes \| bytearray` | `Bytes` |
 | `tuple \| list \| set \| frozenset \| dict` | json-encoded string as `Bytes` |
 | `datetime.datetime` | `Date(year, month, day, hour, minute, second, microsecond)` |
 | `datetime.date` | `Date(year, month, day, 0, 0, 0, 0)` |
 | `datetime.time` | `Time(false, 0, hour, minute, second, microsecond)` |
 | `datetime.timedelta` | `Time(is_negative, days, hours, minutes, seconds, microseconds)` |
 | `time.struct_time` | `Date(year, month, day, hour, minute, second, 0)` |
-| `decimal.Decimal` | `Bytes` |
+| `decimal.Decimal` | `Bytes(str(Decimal))` |
+| `uuid.UUID` | `Bytes(UUID.hex)` |
 
 ### MySQL -> Python
 
@@ -212,4 +216,65 @@ pytest -p pyro_mysql.testing.sqlalchemy_pytest_plugin --dburi=mariadb+pyro_mysql
 - Text Protocol vs Binary Protocol
     - Binary Protocol is slower for one-time statements because it always prepares the statement and then execute (2 round trips), but is safer against SQL injections. If you reuse the prepared statement many times, Binary Protocol is faster. Most Python MySQL libraries use Text Protocol.
 - executemany() vs exec_batch()
-    - `pyro_mysql.Conn.exec_batch()` prepares a statement once and make a network call for each parameter item. MySQL libraries using Text Protocol implement `executemany()` as one large sql statement: they repeat the SQL statement, concatenate, stringify parameters in the client-side and then send the large string to the server. This manual sql building is actually twice faster. If it's worth, you can try manually building the statement and call `pyro_mysql.Conn.exec()`.
+    - `pyro_mysql.Conn.exec_batch()` prepares a statement once and make a network call for each parameter item. MySQL libraries using Text Protocol implement `executemany()` as one large sql statement: they repeat the SQL statement, concatenate, stringify parameters in the client-side and then send the large string to the server. This manual sql building is actually twice faster. If it's worth, you can try manually building the statement and call `pyro_mysql.Conn.exec()` at the cost of risking SQL injections.
+
+## API Overview
+
+- [pyro_mysql](https://github.com/elbaro/pyro-mysql/blob/main/pyro_mysql/__init__.pyi)
+- [pyro_mysql,sync](https://github.com/elbaro/pyro-mysql/blob/main/pyro_mysql/sync.pyi)
+- [pyro_mysql.async_](https://github.com/elbaro/pyro-mysql/blob/main/pyro_mysql/async_.pyi)
+- [pyro_mysql.dbapi](https://github.com/elbaro/pyro-mysql/blob/main/pyro_mysql/dbapi.pyi)
+- [pyro_mysql.error](https://github.com/elbaro/pyro-mysql/blob/main/pyro_mysql/error.pyi)
+
+```
+.
+└── pyro_mysql/
+    ├── init()
+    ├── (common classes)/
+    │   ├── Row
+    │   ├── IsolationLevel
+    │   ├── CapabilityFlags
+    │   └── PyroFuture
+    ├── sync/
+    │   ├── Conn
+    │   ├── Transaction
+    │   ├── Pool
+    │   ├── Opts
+    │   ├── OptsBuilder
+    │   └── PoolOpts
+    ├── async_/
+    │   ├── Conn
+    │   ├── Transaction
+    │   ├── Pool
+    │   ├── Opts
+    │   ├── OptsBuilder
+    │   └── PoolOpts
+    ├── dbapi/
+    │   ├── connect()
+    │   ├── Connection
+    │   ├── Cursor
+    │   └── (exceptions)/
+    │       ├── Warning
+    │       ├── Error
+    │       ├── InterfaceError
+    │       ├── DatabaseError
+    │       ├── DataError
+    │       ├── OperationalError
+    │       ├── IntegrityError
+    │       ├── InternalError
+    │       ├── ProgrammingError
+    │       └── NotSupportedError
+    └── (aliases)/
+        ├── SyncConn
+        ├── SyncTransaction
+        ├── SyncPool
+        ├── SyncOpts
+        ├── SyncOptsBuilder
+        ├── SyncPoolOpts
+        ├── AsyncConn
+        ├── AsyncTransaction
+        ├── AsyncPool
+        ├── AsyncOpts
+        ├── AsyncOptsBuilder
+        └── AsyncPoolOpts
+```
