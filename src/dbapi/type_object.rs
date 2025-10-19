@@ -1,7 +1,7 @@
 use mysql::consts::ColumnType;
 use pyo3::prelude::*;
 
-#[pyclass]
+#[pyclass(module = "pyro_mysql.dbapi")]
 pub struct TypeObject(&'static [ColumnType]);
 
 #[pymethods]

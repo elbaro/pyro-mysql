@@ -68,16 +68,16 @@ def example3(pool):
 ```py
 
 # Text Protocols - supports multiple statements concatenated with ';' but accepts no arguemnt
-def query(self, query: str) -> PyroFuture[list[Row]]: ...
-def query_first(self, query: str) -> PyroFuture[Row | None]: ...
-def query_drop(self, query: str) -> PyroFuture[None]: ...
-def query_batch(self, query: str) -> PyroFuture[None]: ...
+def query(self, query: str) -> Awaitable[list[Row]]: ...
+def query_first(self, query: str) -> Awaitable[Row | None]: ...
+def query_drop(self, query: str) -> Awaitable[None]: ...
+def query_batch(self, query: str) -> Awaitable[None]: ...
 
 # Binary Protocols - supports arguments but no multiple statement
-def exec(self, query: str, params: Params) -> PyroFuture[list[Row]]: ...
-def exec_first(self, query: str, params: Params) -> PyroFuture[Row | None]: ...
-def exec_drop(self, query: str, params: Params) -> PyroFuture[None]: ...
-def exec_batch(self, query: str, params: Iterable[Params]) -> PyroFuture[None]: ...
+def exec(self, query: str, params: Params) -> Awaitable[list[Row]]: ...
+def exec_first(self, query: str, params: Params) -> Awaitable[Row | None]: ...
+def exec_drop(self, query: str, params: Params) -> Awaitable[None]: ...
+def exec_batch(self, query: str, params: Iterable[Params]) -> Awaitable[None]: ...
 
 # Examples
 rows = await conn.exec("SELECT * FROM my_table WHERE a=? AND b=?", (a, b))
@@ -85,15 +85,7 @@ rows = await conn.exec("SELECT * FROM my_table WHERE a=:x AND b=:y AND c=:y", {'
 await conn.exec_batch("SELECT * FROM my_table WHERE a=? AND b=?", [(a1, b1), (a2, b2)])
 ```
 
-`PyroFuture` is a Future-like object that tracks a task in the Rust thread. When an object of `PyroFuture` is dropped before completion or cancellation, the corresponding task in the Rust thread is cancelled.
-
-```py
-fut = conn.exec("SELECT ...")  # the Rust thread starts to execute the query before we await the Python future.
-
-print(fut.get_loop())  # get the associated Python event loop
-fut.cancel()  # cancels the Rust task
-del fut  # this is equivalent to .cancel()
-```
+`Awaitable` is a coroutine or `PyroFuture`, which is a Future-like object that tracks a task in the Rust thread. If the returned object is dropped before completion or cancellation, the corresponding task in the Rust thread is cancelled as well.
 
 ### 3. Transaction
 
@@ -182,7 +174,12 @@ pyro_mysql.dbapi
     ├─..
 ```
 
-In sqlalchemy, use `mysql+pyro_mysql://` or `mariadb+pyro_mysql://`.
+In sqlalchemy, the following dialects are supported.
+- `mysql+pyro_mysql://` (sync)
+- `mariadb+pyro_mysql://` (sync)
+- `mysql+pyro_mysql_async://` (async)
+- `mariadb+pyro_mysql_async://` (async)
+
 The supported connection parameters are [the docs](https://docs.rs/mysql/latest/mysql/struct.OptsBuilder.html#method.from_hash_map) and [`capabilities`](https://docs.rs/mysql/latest/mysql/consts/struct.CapabilityFlags.html) (default 2).
 
 ```py
@@ -218,6 +215,7 @@ pytest -p pyro_mysql.testing.sqlalchemy_pytest_plugin --dburi=mariadb+pyro_mysql
 - [pyro_mysql,sync](https://github.com/elbaro/pyro-mysql/blob/main/pyro_mysql/sync.pyi)
 - [pyro_mysql.async_](https://github.com/elbaro/pyro-mysql/blob/main/pyro_mysql/async_.pyi)
 - [pyro_mysql.dbapi](https://github.com/elbaro/pyro-mysql/blob/main/pyro_mysql/dbapi.pyi)
+- [pyro_mysql.dbapi_async](https://github.com/elbaro/pyro-mysql/blob/main/pyro_mysql/dbapi_async.pyi)
 - [pyro_mysql.error](https://github.com/elbaro/pyro-mysql/blob/main/pyro_mysql/error.pyi)
 
 ```
@@ -244,6 +242,21 @@ pytest -p pyro_mysql.testing.sqlalchemy_pytest_plugin --dburi=mariadb+pyro_mysql
     │   ├── OptsBuilder
     │   └── PoolOpts
     ├── dbapi/
+    │   ├── connect()
+    │   ├── Connection
+    │   ├── Cursor
+    │   └── (exceptions)/
+    │       ├── Warning
+    │       ├── Error
+    │       ├── InterfaceError
+    │       ├── DatabaseError
+    │       ├── DataError
+    │       ├── OperationalError
+    │       ├── IntegrityError
+    │       ├── InternalError
+    │       ├── ProgrammingError
+    │       └── NotSupportedError
+    ├── dbapi_async/
     │   ├── connect()
     │   ├── Connection
     │   ├── Cursor

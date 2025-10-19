@@ -53,9 +53,11 @@ dev = [
   "rich>=14.1.0",
   "aiomysql>=0.2.0",
   "asyncmy>=0.2.10",
+  "greenlet>=3.2.4",
 ]
 
 [project.entry-points."sqlalchemy.dialects"]
-"mysql.pyro_mysql" = "pyro_mysql.sqlalchemy:MySQLDialect_pyro"
-"mariadb.pyro_mysql" = "pyro_mysql.sqlalchemy:MariaDBDialect_pyro"
-# "mysql.pyro_mysql_async" = "pyro_mysql.sqlalchemy:MySQLDialect_pyro_async"
+"mysql.pyro_mysql" = "pyro_mysql.sqlalchemy_sync:MySQLDialect_sync"
+"mariadb.pyro_mysql" = "pyro_mysql.sqlalchemy_sync:MariaDBDialect_sync"
+"mysql.pyro_mysql_async" = "pyro_mysql.sqlalchemy_async:MySQLDialect_async"
+"mariadb.pyro_mysql_async" = "pyro_mysql.sqlalchemy_async:MariaDBDialect_async"

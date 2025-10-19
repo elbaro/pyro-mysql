@@ -4,6 +4,7 @@ use futures::future::{AbortHandle, Abortable};
 use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
+use tokio_util::task::AbortOnDropHandle;
 
 use crate::error::Error;
 use crate::error::PyroResult;
@@ -102,6 +103,14 @@ impl PyroFuture {
     }
 }
 
+pub fn tokio_spawn_as_abort_on_drop<F>(fut: F) -> AbortOnDropHandle<F::Output>
+where
+    F: Future + Send + 'static,
+    F::Output: Send + 'static,
+{
+    AbortOnDropHandle::new(pyo3_async_runtimes::tokio::get_runtime().spawn(fut))
+}
+
 /// Convert a Rust future into a Python future wrapped with RaiiFuture for automatic cancellation.
 pub fn rust_future_into_py<F, T>(py: Python<'_>, fut: F) -> PyResult<Py<PyroFuture>>
 where
@@ -169,7 +178,6 @@ where
         });
     });
 
-    // Wrap it in RaiiFuture
     let raii_future = Py::new(
         py,
         PyroFuture {

@@ -5,7 +5,7 @@ use pyo3::{exceptions::PyStopIteration, prelude::*};
 use crate::{error::Error, row::Row};
 
 // TODO: cover both Text and Binary
-#[pyclass]
+#[pyclass(module = "pyro_mysql.sync")]
 pub struct ResultSetIterator {
     pub owner: Py<PyAny>, // To keep the owner alive for the lifetime of the iterator
     pub inner: Either<

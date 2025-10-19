@@ -929,8 +929,7 @@ dependencies = [
 [[package]]
 name = "mysql_async"
 version = "0.36.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "277ce2f2459b2af4cc6d0a0b7892381f80800832f57c533f03e2845f4ea331ea"
+source = "git+https://github.com/elbaro/mysql_async.git?rev=6e15682c8ddaa6f42978032126f239488dfb4801#6e15682c8ddaa6f42978032126f239488dfb4801"
 dependencies = [
  "bytes",
  "crossbeam-queue",
@@ -1288,6 +1287,7 @@ dependencies = [
  "ryu",
  "thiserror",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -1648,6 +1648,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
+ "futures-util",
  "pin-project-lite",
  "tokio",
 ]

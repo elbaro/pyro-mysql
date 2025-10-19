@@ -84,7 +84,7 @@ class PyroMySQLCompiler(MySQLCompiler):
         return "(" + " UNION ALL ".join(select_parts) + ")"
 
 
-class MySQLDialect_pyro(MySQLDialect):
+class MySQLDialect_sync(MySQLDialect):
     """Synchronous SQLAlchemy dialect for pyro-mysql."""
 
     driver: str = "pyro_mysql"
@@ -197,7 +197,7 @@ class MySQLDialect_pyro(MySQLDialect):
         import sqlalchemy.dialects.mysql.provision
 
 
-class MariaDBDialect_pyro(MariaDBDialect, MySQLDialect_pyro):
+class MariaDBDialect_sync(MariaDBDialect, MySQLDialect_sync):
     # although parent classes already have this attribute, sqlalchemy test requires this
     supports_statement_cache: bool = True
     supports_native_uuid: bool = True  # mariadb supports native 128-bit UUID data type
@@ -267,4 +267,4 @@ class MariaDBDialect_pyro(MariaDBDialect, MySQLDialect_pyro):
         connection: DBAPIConnection | None,
         cursor: Any | None,
     ) -> bool:
-        return MySQLDialect_pyro.is_disconnect(self, e, connection, cursor)
+        return MySQLDialect_sync.is_disconnect(self, e, connection, cursor)

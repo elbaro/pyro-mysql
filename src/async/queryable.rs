@@ -45,7 +45,7 @@ pub trait Queryable {
         query: String,
         params: Vec<Params>,
     ) -> PyResult<Py<PyroFuture>>;
-    // fn exec_iter<'py>(&self, py: Python<'py>, query: String, params: Params) -> PyResult<Py<RaiiFuture>>;
+    // fn exec_iter<'py>(&self, py: Python<'py>, query: String, params: Params) -> PyResult<Py<RaiiFuture>>;) -> PyResult<Py<PyroFuture>>;
 }
 
 impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable

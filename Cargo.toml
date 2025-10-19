@@ -30,11 +30,13 @@ pyo3-log = "0.13.0"
 ryu = "1.0.20"
 thiserror = "2.0.16"
 tokio = "1.47.1"
+tokio-util = { version = "0.7.16", features = ["rt"] }
 
 
 [patch.crates-io]
 pyo3 = { git = "https://github.com/elbaro/pyo3.git", rev = "e219540adf7bd00d03c251d53cb8d10cd3a5d16c" }
 pyo3-ffi = { git = "https://github.com/elbaro/pyo3.git", rev = "e219540adf7bd00d03c251d53cb8d10cd3a5d16c" }
+mysql_async = { git = "https://github.com/elbaro/mysql_async.git", rev = "6e15682c8ddaa6f42978032126f239488dfb4801" }
 
 
 [features]

@@ -1,5 +1,5 @@
 use mysql::consts::ColumnType;
-use pyo3::{create_exception, exceptions::PyException};
+use pyo3::{PyErr, create_exception, exceptions::PyException};
 use thiserror::Error;
 
 pub type PyroResult<T> = std::result::Result<T, Error>;
@@ -12,6 +12,7 @@ create_exception!(pyro_mysql.error, TransactionClosedError, PyException);
 create_exception!(pyro_mysql.error, BuilderConsumedError, PyException);
 create_exception!(pyro_mysql.error, DecodeError, PyException);
 create_exception!(pyro_mysql.error, PoisonError, PyException);
+create_exception!(pyro_mysql.error, PythonObjectCreationError, PyException);
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -46,6 +47,9 @@ pub enum Error {
         column_type: ColumnType,
         encoded: String,
     },
+
+    #[error("Failed to create a new Python object: {0}")]
+    PythonObjectCreationError(#[from] PyErr),
     // #[error("")]
     // NetworkTimeoutError(String),
     // #[error("invalid header (expected {expected:?}, found {found:?})")]
@@ -82,6 +86,9 @@ impl From<Error> for pyo3::PyErr {
             Error::PythonCancelledError => pyo3::exceptions::asyncio::CancelledError::new_err(()),
             Error::DecodeError { .. } => DecodeError::new_err(err.to_string()),
             Error::PoisonError(s) => PoisonError::new_err(s),
+            Error::PythonObjectCreationError(e) => {
+                PythonObjectCreationError::new_err(e.to_string())
+            }
         }
     }
 }

@@ -147,7 +147,6 @@ impl DbApiConn {
         Ok(conn.ping().map_err(Error::from)?)
     }
 
-    /// Returns 0 if there was no last insert id.
     pub fn last_insert_id(&self) -> DbApiResult<Option<u64>> {
         let guard = self.0.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;

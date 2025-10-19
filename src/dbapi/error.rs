@@ -54,7 +54,13 @@ impl From<crate::error::Error> for DbApiError {
                     Error::new_err(error.to_string())
                 }
             }
-            crate::error::Error::AsyncError(error) => Error::new_err(error.to_string()),
+            crate::error::Error::AsyncError(error) => {
+                if let mysql_async::Error::Server(ref server_error) = error {
+                    map_mysql_async_error_to_dbapi(server_error, error.to_string())
+                } else {
+                    Error::new_err(error.to_string())
+                }
+            }
             crate::error::Error::ConnectionClosedError => Error::new_err(err.to_string()),
             crate::error::Error::TransactionClosedError => Error::new_err(err.to_string()),
             crate::error::Error::BuilderConsumedError => Error::new_err(err.to_string()),
@@ -63,12 +69,13 @@ impl From<crate::error::Error> for DbApiError {
             }
             crate::error::Error::DecodeError { .. } => Error::new_err(err.to_string()),
             crate::error::Error::PoisonError(s) => Error::new_err(s),
+            crate::error::Error::PythonObjectCreationError(e) => Error::new_err(e.to_string()),
         })
     }
 }
 
-fn map_mysql_error_to_dbapi(mysql_error: &mysql::MySqlError, error_msg: String) -> PyErr {
-    match mysql_error.state.as_str() {
+fn map_server_error_to_dbapi(state: &str, code: u16, error_msg: String) -> PyErr {
+    match state {
         "23000" => IntegrityError::new_err(error_msg),
         "22001" | "22003" | "22007" | "22012" => DataError::new_err(error_msg),
         "42000" | "42S02" | "42S22" => ProgrammingError::new_err(error_msg),
@@ -76,7 +83,7 @@ fn map_mysql_error_to_dbapi(mysql_error: &mysql::MySqlError, error_msg: String) 
         "0A000" => NotSupportedError::new_err(error_msg),
         _ => {
             // Fallback to error code for unmapped SQLSTATEs
-            match mysql_error.code {
+            match code {
                 // Connection/disconnect related errors should be OperationalError
                 1927 | 2006 | 2013 | 2014 | 2045 | 2055 | 4031 => {
                     OperationalError::new_err(error_msg)
@@ -86,6 +93,17 @@ fn map_mysql_error_to_dbapi(mysql_error: &mysql::MySqlError, error_msg: String) 
             }
         }
     }
+}
+
+fn map_mysql_error_to_dbapi(mysql_error: &mysql::MySqlError, error_msg: String) -> PyErr {
+    map_server_error_to_dbapi(mysql_error.state.as_str(), mysql_error.code, error_msg)
+}
+
+fn map_mysql_async_error_to_dbapi(
+    server_error: &mysql_async::ServerError,
+    error_msg: String,
+) -> PyErr {
+    map_server_error_to_dbapi(server_error.state.as_str(), server_error.code, error_msg)
 }
 
 impl From<PyErr> for DbApiError {
