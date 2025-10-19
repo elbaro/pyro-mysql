@@ -1,3 +1,4 @@
+/.cargo
 /target
 /.devenv
 /.devenv.flake.nix
