@@ -40,6 +40,7 @@ def await_(awaitable):
     """
     return greenlet.getcurrent().parent.switch(awaitable)
 
+
 if TYPE_CHECKING:
     from sqlalchemy.connectors.asyncio import AsyncIODBAPICursor
     from sqlalchemy.engine.interfaces import (
@@ -168,9 +169,7 @@ class AsyncAdapt_pyro_mysql_dbapi(AsyncAdapt_dbapi_module):
                 return await async_creator_fn(*arg, **kw)
 
         # Call the awaitable creator function through await_
-        return AsyncAdapt_pyro_mysql_connection(
-            self, await_(_create_connection())
-        )
+        return AsyncAdapt_pyro_mysql_connection(self, await_(_create_connection()))
 
 
 class MySQLDialect_async(MySQLDialect):

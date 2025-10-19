@@ -25,9 +25,7 @@ class NotSupportedError(DatabaseError): ...
 
 # ─── Connection ───────────────────────────────────────────────────────────────
 
-def connect(
-    url_or_opts: str | Opts, autocommit: bool | None = False
-) -> Connection:
+def connect(url_or_opts: str | Opts, autocommit: bool | None = False) -> Connection:
     """
     Create a DB-API 2.0 compliant connection to a MySQL server.
 

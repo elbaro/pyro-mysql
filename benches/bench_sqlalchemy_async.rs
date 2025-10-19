@@ -1,7 +1,7 @@
 use std::ffi::CString;
 
-use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use mysql::{prelude::Queryable, TxOpts};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
+use mysql::{TxOpts, prelude::Queryable};
 use pyo3::{ffi::c_str, prelude::*};
 
 fn setup_db() {
@@ -98,7 +98,8 @@ pub fn bench_sqlalchemy_async(c: &mut Criterion) {
 
     // Benchmark SELECT operations
     for select_size in [1, 10, 100] {
-        let mut group = c.benchmark_group(format!("SQLAlchemy Async SELECT (batch {})", select_size));
+        let mut group =
+            c.benchmark_group(format!("SQLAlchemy Async SELECT (batch {})", select_size));
 
         for (name, statement) in [
             (

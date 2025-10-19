@@ -85,7 +85,7 @@ impl AsyncCursor {
     }
 
     /// Closes the cursor. The connection is still alive
-    async fn close<'py>(&self) -> PyResult<()> {
+    async fn close(&self) -> PyResult<()> {
         let mut cursor = self.0.write().await;
         cursor.conn = None;
         cursor.rowcount = -1;
@@ -95,7 +95,7 @@ impl AsyncCursor {
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    async fn execute<'py>(&self, query: String, params: Params) -> DbApiResult<()> {
+    async fn execute(&self, query: String, params: Params) -> DbApiResult<()> {
         let mut cursor = self.0.write().await;
 
         let conn = {
@@ -163,7 +163,7 @@ impl AsyncCursor {
         Ok(())
     }
 
-    async fn executemany<'py>(&self, query: String, params: Vec<Params>) -> DbApiResult<()> {
+    async fn executemany(&self, query: String, params: Vec<Params>) -> DbApiResult<()> {
         let mut cursor = self.0.write().await;
         let conn = {
             let conn = cursor
@@ -202,12 +202,12 @@ impl AsyncCursor {
                 Ok(None)
             }
         } else {
-            Err(DbApiError::no_result_set().into())
+            Err(DbApiError::no_result_set())
         }
     }
 
     #[pyo3(signature=(size=None))]
-    async fn fetchmany<'py>(&self, size: Option<usize>) -> DbApiResult<Vec<Py<PyTuple>>> {
+    async fn fetchmany(&self, size: Option<usize>) -> DbApiResult<Vec<Py<PyTuple>>> {
         let mut cursor = self.0.write().await;
         let size = size.unwrap_or(cursor.arraysize);
         if let Some(result) = &mut cursor.result {
@@ -219,11 +219,11 @@ impl AsyncCursor {
             }
             Ok(vec)
         } else {
-            Err(DbApiError::no_result_set().into())
+            Err(DbApiError::no_result_set())
         }
     }
 
-    async fn fetchall<'py>(&self) -> DbApiResult<Vec<Py<PyTuple>>> {
+    async fn fetchall(&self) -> DbApiResult<Vec<Py<PyTuple>>> {
         let mut cursor = self.0.write().await;
         if let Some(result) = cursor.result.take() {
             cursor.result = Some(VecDeque::new());
@@ -235,7 +235,7 @@ impl AsyncCursor {
             }
             Ok(vec)
         } else {
-            Err(DbApiError::no_result_set().into())
+            Err(DbApiError::no_result_set())
         }
     }
 

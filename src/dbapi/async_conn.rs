@@ -104,7 +104,7 @@ impl AsyncDbApiConn {
 
     // ─── Helper ──────────────────────────────────────────────────────────
 
-    pub async fn set_autocommit<'py>(&self, on: bool) -> PyroResult<()> {
+    pub async fn set_autocommit(&self, on: bool) -> PyroResult<()> {
         let arc = self.0.clone();
         let mut guard = arc.write().await;
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;

@@ -1,7 +1,7 @@
 use std::ffi::CString;
 
-use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use mysql::{prelude::Queryable, TxOpts};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
+use mysql::{TxOpts, prelude::Queryable};
 use pyo3::{ffi::c_str, prelude::*};
 
 fn setup_db() {
