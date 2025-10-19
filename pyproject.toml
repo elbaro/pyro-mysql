@@ -54,6 +54,7 @@ dev = [
   "aiomysql>=0.2.0",
   "asyncmy>=0.2.10",
   "greenlet>=3.2.4",
+  "sqlalchemy>=2.0.44",
 ]
 
 [project.entry-points."sqlalchemy.dialects"]

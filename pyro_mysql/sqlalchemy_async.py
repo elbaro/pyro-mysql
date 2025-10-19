@@ -17,6 +17,7 @@ from __future__ import annotations
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, NoReturn, override
 
+import greenlet
 from sqlalchemy import util
 from sqlalchemy.connectors.asyncio import (
     AsyncAdapt_dbapi_connection,
@@ -26,9 +27,18 @@ from sqlalchemy.connectors.asyncio import (
 )
 from sqlalchemy.dialects.mysql.base import MySQLDialect, MySQLExecutionContext
 from sqlalchemy.dialects.mysql.mariadb import MariaDBDialect
-from sqlalchemy.util.concurrency import await_
 
 from .sqlalchemy_sync import PyroMySQLCompiler
+
+
+# Vendor await_ function from sqlalchemy.util.concurrency (internal module)
+def await_(awaitable):
+    """Vendor implementation of SQLAlchemy's await_ function.
+
+    Runs an async coroutine in a greenlet context, switching control
+    back to the parent greenlet while waiting.
+    """
+    return greenlet.getcurrent().parent.switch(awaitable)
 
 if TYPE_CHECKING:
     from sqlalchemy.connectors.asyncio import AsyncIODBAPICursor
@@ -102,7 +112,6 @@ class AsyncAdapt_pyro_mysql_dbapi(AsyncAdapt_dbapi_module):
     """Async adapter for pyro-mysql DBAPI module."""
 
     def __init__(self, pyro_mysql: ModuleType):
-        super().__init__(pyro_mysql)
         self.pyro_mysql = pyro_mysql
         self.paramstyle = "qmark"
         self._init_dbapi_attributes()
@@ -158,9 +167,9 @@ class AsyncAdapt_pyro_mysql_dbapi(AsyncAdapt_dbapi_module):
                 # Use the provided creator function
                 return await async_creator_fn(*arg, **kw)
 
-        # Use await_ to call AsyncAdapt_dbapi_connection.create() in greenlet context
-        return await_(
-            AsyncAdapt_pyro_mysql_connection.create(self, _create_connection())
+        # Call the awaitable creator function through await_
+        return AsyncAdapt_pyro_mysql_connection(
+            self, await_(_create_connection())
         )
 
 

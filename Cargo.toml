@@ -50,3 +50,7 @@ harness = false
 [[bench]]
 name = "bench_sqlalchemy"
 harness = false
+
+[[bench]]
+name = "bench_sqlalchemy_async"
+harness = false
