@@ -81,7 +81,7 @@ class AsyncAdapt_pyro_mysql_connection(
             )
         raise error
 
-    def ping(self, reconnect: bool) -> None:
+    def ping(self, reconnect: bool = False) -> None:
         """Ping the connection to check if it's alive."""
         assert not reconnect
         return await_(self._do_ping())
@@ -89,8 +89,7 @@ class AsyncAdapt_pyro_mysql_connection(
     async def _do_ping(self) -> None:
         """Async implementation of ping."""
         try:
-            async with self._execute_mutex:
-                await self._connection.ping()
+            await self._connection.ping()
         except Exception as error:
             self._handle_exception(error)
 
@@ -113,6 +112,9 @@ class AsyncAdapt_pyro_mysql_dbapi(AsyncAdapt_dbapi_module):
     """Async adapter for pyro-mysql DBAPI module."""
 
     def __init__(self, pyro_mysql: ModuleType):
+        # Initialize parent with driver and dbapi_module
+        # pyro_mysql is the driver, and pyro_mysql.dbapi provides the exception hierarchy
+        super().__init__(driver=pyro_mysql, dbapi_module=pyro_mysql.dbapi)
         self.pyro_mysql = pyro_mysql
         self.paramstyle = "qmark"
         self._init_dbapi_attributes()

@@ -10,6 +10,7 @@ use crate::{
     error::{Error, PyroResult},
     params::Params,
     row::Row,
+    util::tokio_spawn_as_abort_on_drop,
 };
 
 #[pyclass(module = "pyro_mysql.dbapi_async", name = "Connection")]
@@ -119,14 +120,16 @@ impl AsyncDbApiConn {
         Ok(())
     }
 
-    fn ping<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    async fn ping<'py>(&self) -> DbApiResult<()> {
         let arc = self.0.clone();
-        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+        tokio_spawn_as_abort_on_drop(async move {
             let mut guard = arc.write().await;
             let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-            conn.ping().await.map_err(Error::from)?;
-            Ok(())
+            conn.ping().await?;
+            PyroResult::Ok(())
         })
+        .await??;
+        Ok(())
     }
 
     /// Returns 0 if there was no last insert id.

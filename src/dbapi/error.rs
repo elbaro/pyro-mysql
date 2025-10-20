@@ -112,6 +112,12 @@ impl From<PyErr> for DbApiError {
     }
 }
 
+impl From<tokio::task::JoinError> for DbApiError {
+    fn from(value: tokio::task::JoinError) -> Self {
+        Self(Error::new_err(value.to_string()))
+    }
+}
+
 impl From<DbApiError> for PyErr {
     fn from(value: DbApiError) -> Self {
         value.0
