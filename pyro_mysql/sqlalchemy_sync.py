@@ -62,7 +62,7 @@ class PyroMySQLCompiler(MySQLCompiler):
                 tuples.append(tuple_elem)
 
         # Build SELECT statements for each tuple
-        select_parts = []
+        select_parts: list[str] = []
         columns = list(element.columns)
 
         for tuple_elem in tuples:
@@ -73,7 +73,7 @@ class PyroMySQLCompiler(MySQLCompiler):
 
             # Split the values and pair with column names
             values = values_part.split(", ")
-            select_list = []
+            select_list: list[str] = []
             for value, column in zip(values, columns):
                 select_list.append(f"{value} AS {self.preparer.format_column(column)}")
 

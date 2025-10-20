@@ -62,3 +62,7 @@ dev = [
 "mariadb.pyro_mysql" = "pyro_mysql.sqlalchemy_sync:MariaDBDialect_sync"
 "mysql.pyro_mysql_async" = "pyro_mysql.sqlalchemy_async:MySQLDialect_async"
 "mariadb.pyro_mysql_async" = "pyro_mysql.sqlalchemy_async:MariaDBDialect_async"
+
+[tool.basedpyright]
+reportAny = false
+reportExplicitAny = false
