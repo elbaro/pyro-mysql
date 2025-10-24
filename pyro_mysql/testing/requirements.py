@@ -1460,19 +1460,6 @@ class DefaultRequirements(SuiteRequirements):
         return exclusions.open()
 
     @property
-    def precision_numerics_many_significant_digits(self):
-        """target backend supports values with many digits on both sides,
-        such as 319438950232418390.273596, 87673.594069654243
-
-        """
-
-        return fails_if(
-            [
-                ("sqlite", None, None, "SQLite numeric limitation"),
-            ]
-        )
-
-    @property
     def cast_precision_numerics_many_significant_digits(self):
         """same as precision_numerics_many_significant_digits but within the
         context of a CAST statement (hello MySQL)
@@ -2178,77 +2165,26 @@ class PyroMySQLRequirements(DefaultRequirements):
 
     @property
     def date_implicit_bound(self):
-        """
-        Target dialect when given a date object will bind it such
-        that the database server knows the object is a date, and not
-        a plain string.
-
-        Skips this test for pyro_mysql and other MySQL drivers that don't support this.
-        """
-        return exclusions.skip_if(
-            [
-                "+mysqldb",
-                "+pymysql",
-                "+asyncmy",
-                "+mysqlconnector",
-                "+cymysql",
-                "+aiomysql",
-                "+pyro_mysql",  # Added for pyro_mysql
-            ]
-        )
+        return exclusions.closed()
 
     @property
     def time_implicit_bound(self):
-        """
-        Target dialect when given a time object will bind it such
-        that the database server knows the object is a time, and not
-        a plain string.
-
-        Skips this test for pyro_mysql and other MySQL drivers that don't support this.
-        """
-        return exclusions.skip_if(
-            [
-                "+mysqldb",
-                "+pymysql",
-                "+asyncmy",
-                "+mysqlconnector",
-                "+mariadbconnector",
-                "+cymysql",
-                "+aiomysql",
-                "+pyro_mysql",  # Added for pyro_mysql
-            ]
-        )
+        return exclusions.closed()
 
     @property
     def datetime_implicit_bound(self):
-        """
-        Target dialect when given a datetime object will bind it such
-        that the database server knows the object is a date, and not
-        a plain string.
-
-        Skips this test for pyro_mysql and other MySQL drivers that don't support this.
-        """
-        return exclusions.skip_if(
-            [
-                "+mysqldb",
-                "+pymysql",
-                "+asyncmy",
-                "+mysqlconnector",
-                "+cymysql",
-                "+aiomysql",
-                "+pymssql",
-                "+pyro_mysql",  # Added for pyro_mysql
-            ]
-        )
+        return exclusions.closed()
 
     @property
     def mysql_for_update(self):
-        """
-        Target dialect supports FOR UPDATE locking operations properly.
+        return exclusions.open()
 
-        Some MySQL drivers have issues with lock-sensitive operations.
-        """
-        return exclusions.skip_if(
-            "+mysqlconnector",
-            "lock-sensitive operations crash on mysqlconnector",
+    @property
+    def async_dialect_with_await_close(self):
+        """dialect's cursor has a close() method called with await"""
+
+        return only_on(
+            [
+                "+pyro_mysql_async",
+            ]
         )

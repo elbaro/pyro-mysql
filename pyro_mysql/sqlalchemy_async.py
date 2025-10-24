@@ -27,8 +27,10 @@ from sqlalchemy.connectors.asyncio import (
 )
 from sqlalchemy.dialects.mysql.base import MySQLDialect, MySQLExecutionContext
 from sqlalchemy.dialects.mysql.mariadb import MariaDBDialect
+from sqlalchemy.engine.interfaces import BindTyping
+from sqlalchemy.sql import sqltypes
 
-from .sqlalchemy_sync import PyroMySQLCompiler
+from .sqlalchemy_sync import PyroMySQLCompiler, PyroMySQLNumeric
 
 
 # Vendor await_ function from sqlalchemy.util.concurrency (internal module)
@@ -191,6 +193,18 @@ class MySQLDialect_async(MySQLDialect):
     is_async: bool = True
     has_terminate: bool = True
 
+    # Enable bind parameter type casting to ensure MySQL treats DECIMAL parameters
+    # correctly and doesn't convert results to DOUBLE
+    bind_typing = BindTyping.RENDER_CASTS
+
+    # Map Numeric type to our custom PyroMySQLNumeric with render_bind_cast support
+    colspecs = util.update_copy(
+        MySQLDialect.colspecs,
+        {
+            sqltypes.Numeric: PyroMySQLNumeric,
+        },
+    )
+
     @override
     @classmethod
     def import_dbapi(cls) -> DBAPIModule:
@@ -314,6 +328,14 @@ class MariaDBDialect_async(MariaDBDialect, MySQLDialect_async):
 
     is_async: bool = True
     has_terminate: bool = True
+
+    # Override colspecs to ensure our PyroMySQLNumeric is used (MariaDBDialect has its own colspecs)
+    colspecs = util.update_copy(
+        MariaDBDialect.colspecs,
+        {
+            sqltypes.Numeric: PyroMySQLNumeric,
+        },
+    )
 
     # MariaDB does not support parameter in 'XA BEGIN ?'
     @override

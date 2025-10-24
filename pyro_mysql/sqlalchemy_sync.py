@@ -5,9 +5,11 @@ Provides both synchronous and asynchronous dialect implementations for
 integrating pyro-mysql with SQLAlchemy.
 """
 
+from types import ModuleType
 from typing import Any, cast, override
 
-from sqlalchemy import sql
+from sqlalchemy import PoolProxiedConnection, sql, util
+from sqlalchemy.dialects.mysql import types as mysql_types
 from sqlalchemy.dialects.mysql.base import (
     MySQLCompiler,
     MySQLDialect,
@@ -17,18 +19,88 @@ from sqlalchemy.dialects.mysql.base import (
 from sqlalchemy.dialects.mysql.mariadb import MariaDBDialect
 from sqlalchemy.engine.base import Connection
 from sqlalchemy.engine.interfaces import (
+    BindTyping,
     ConnectArgsType,
     DBAPIConnection,
-    DBAPIModule,
+    DBAPICursor,
     ExecutionContext,
 )
 from sqlalchemy.engine.url import URL
+from sqlalchemy.sql import sqltypes
 
 from pyro_mysql.dbapi import Error
 
 
+class PyroMySQLNumeric(mysql_types.NUMERIC):
+    """Custom Numeric type for pyro-mysql that enables bind parameter type casting.
+
+    MySQL protocol doesn't support sending Decimal values directly, so parameters
+    are sent as strings. To ensure MySQL treats them as DECIMAL (not DOUBLE),
+    we add explicit CAST expressions in the SQL.
+
+    This is similar to asyncpg's approach with PostgreSQL's ::NUMERIC syntax,
+    but uses MySQL's CAST(? AS DECIMAL) syntax instead.
+
+    Inherits from mysql_types.NUMERIC (not sqltypes.Numeric) to ensure:
+    - Compatibility with MySQL's visit_typeclause which checks for sqltypes.NUMERIC
+    - MySQL-specific attributes like unsigned and zerofill are available
+    - Consistent with other MySQL dialect implementations
+    """
+
+    render_bind_cast = True
+
+
 class PyroMySQLCompiler(MySQLCompiler):
-    """Custom compiler for pyro-mysql that works around VALUES parameter binding issues."""
+    """Custom compiler for pyro-mysql."""
+
+    def visit_frame_clause(self, frameclause, **kw):
+        """Override frame clause rendering to use literal execution.
+
+        MySQL/MariaDB doesn't support bind parameters in window function
+        frame clauses (ROWS BETWEEN / RANGE BETWEEN) when using server-side
+        prepared statements. The numeric values must be rendered as literals.
+
+        This is different from drivers like PyMySQL which use client-side
+        parameter interpolation (pyformat/format paramstyle) where parameters
+        are substituted before sending to the server.
+        """
+        kw["literal_execute"] = True
+        return super().visit_frame_clause(frameclause, **kw)
+
+    def render_bind_cast(self, type_, dbapi_type, sqltext):
+        """Render type cast for bind parameters.
+
+        Adds explicit CAST expressions so MySQL treats parameters as the correct type.
+        For example: CAST(? AS DECIMAL(8,4))
+
+        This ensures that arithmetic operations with DECIMAL columns return DECIMAL
+        results instead of DOUBLE.
+
+        Args:
+            type_: The SQLAlchemy type
+            dbapi_type: The DBAPI type for rendering
+            sqltext: The SQL text (parameter placeholder like '?')
+
+        Returns:
+            String with CAST syntax applied
+        """
+        type_string = self.dialect.type_compiler_instance.process(
+            dbapi_type, identifier_preparer=self.preparer
+        )
+
+        # MySQL uses DECIMAL in CAST expressions, not NUMERIC
+        # Even though NUMERIC is valid for column definitions
+        type_string = type_string.replace("NUMERIC", "DECIMAL")
+
+        # If DECIMAL/NUMERIC has no precision/scale specified, use a reasonable default
+        # to avoid MySQL's DECIMAL(10,0) default which would truncate decimal places
+        if type_string == "DECIMAL" and isinstance(dbapi_type, sqltypes.Numeric):
+            if dbapi_type.precision is None and dbapi_type.scale is None:
+                # Use DECIMAL(65,30) as default - MySQL's max precision is 65
+                # and 30 decimal places should handle most Decimal literals
+                type_string = "DECIMAL(65, 30)"
+
+        return f"CAST({sqltext} AS {type_string})"
 
     def _render_values(self, element, **kw):
         """Override VALUES rendering to use UNION ALL when parameters are present.
@@ -99,13 +171,25 @@ class MySQLDialect_sync(MySQLDialect):
     statement_compiler: type[MySQLCompiler] = PyroMySQLCompiler
     preparer: type[MySQLIdentifierPreparer] = MySQLIdentifierPreparer
 
+    # Enable bind parameter type casting to ensure MySQL treats DECIMAL parameters
+    # correctly and doesn't convert results to DOUBLE
+    bind_typing = BindTyping.RENDER_CASTS
+
+    # Map Numeric type to our custom PyroMySQLNumeric with render_bind_cast support
+    colspecs = util.update_copy(
+        MySQLDialect.colspecs,
+        {
+            sqltypes.Numeric: PyroMySQLNumeric,
+        },
+    )
+
     @override
     @classmethod
-    def import_dbapi(cls) -> DBAPIModule:
+    def import_dbapi(cls) -> ModuleType:
         """Import and return the DBAPI module."""
         from pyro_mysql import dbapi
 
-        return dbapi  # pyright: ignore [reportReturnType]
+        return dbapi
 
     @override
     def create_connect_args(self, url: URL) -> ConnectArgsType:
@@ -178,8 +262,8 @@ class MySQLDialect_sync(MySQLDialect):
     def is_disconnect(
         self,
         e: Exception,
-        connection: DBAPIConnection | None,
-        cursor: Any | None,
+        connection: PoolProxiedConnection | DBAPIConnection | None,
+        cursor: DBAPICursor | None,
     ) -> bool:
         """Check if an exception indicates a disconnect."""
         if super().is_disconnect(e, connection, cursor):
@@ -201,6 +285,14 @@ class MariaDBDialect_sync(MariaDBDialect, MySQLDialect_sync):
     # although parent classes already have this attribute, sqlalchemy test requires this
     supports_statement_cache: bool = True
     supports_native_uuid: bool = True  # mariadb supports native 128-bit UUID data type
+
+    # Override colspecs to ensure our PyroMySQLNumeric is used (MariaDBDialect has its own colspecs)
+    colspecs = util.update_copy(
+        MariaDBDialect.colspecs,
+        {
+            sqltypes.Numeric: PyroMySQLNumeric,
+        },
+    )
 
     # MariaDB does not support parameter in 'XA BEGIN ?'
     @override
@@ -264,7 +356,7 @@ class MariaDBDialect_sync(MariaDBDialect, MySQLDialect_sync):
     def is_disconnect(
         self,
         e: Exception,
-        connection: DBAPIConnection | None,
-        cursor: Any | None,
+        connection: PoolProxiedConnection | DBAPIConnection | None,
+        cursor: DBAPICursor | None,
     ) -> bool:
         return MySQLDialect_sync.is_disconnect(self, e, connection, cursor)

@@ -54,3 +54,10 @@ harness = false
 [[bench]]
 name = "bench_sqlalchemy_async"
 harness = false
+
+[[bench]]
+name = "bench_pyro"
+harness = false
+
+[profile.bench]
+debug = true
