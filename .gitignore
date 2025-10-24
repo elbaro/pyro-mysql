@@ -7,4 +7,6 @@ devenv.lock
 /CLAUDE.md
 /uv.lock
 __pycache__
+/.direnv/
+/.envrc
 *.so
