@@ -120,7 +120,7 @@ impl AsyncDbApiConn {
         Ok(())
     }
 
-    async fn ping<'py>(&self) -> DbApiResult<()> {
+    async fn ping(&self) -> DbApiResult<()> {
         let arc = self.0.clone();
         tokio_spawn_as_abort_on_drop(async move {
             let mut guard = arc.write().await;

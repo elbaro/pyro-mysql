@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use mysql_async::prelude::{Queryable, StatementLike};
+use mysql_async::prelude::Queryable;
 use mysql_async::{BinaryProtocol, QueryResult};
 use pyo3::{
     prelude::*,
