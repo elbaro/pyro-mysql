@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
-use mysql_async::prelude::Queryable;
+use mysql_async::prelude::{Queryable, StatementLike};
+use mysql_async::{BinaryProtocol, QueryResult};
 use pyo3::{
     prelude::*,
     types::{PyList, PyTuple},
@@ -178,8 +179,17 @@ impl AsyncCursor {
             let conn = conn_guard
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?;
-            conn.exec_batch(query, params).await?;
-            PyroResult::Ok(conn.affected_rows())
+
+            let mut affected = 0;
+            let stmt = conn.prep(query).await.map_err(Error::from)?;
+            for params in params {
+                conn.execute_statement(&stmt, params).await?;
+                QueryResult::<BinaryProtocol>::new(&mut *conn)
+                    .drop_result()
+                    .await?;
+                affected += conn.affected_rows();
+            }
+            PyroResult::Ok(affected)
         })
         .await
         .unwrap()?;

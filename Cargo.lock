@@ -929,7 +929,7 @@ dependencies = [
 [[package]]
 name = "mysql_async"
 version = "0.36.1"
-source = "git+https://github.com/elbaro/mysql_async.git?rev=6e15682c8ddaa6f42978032126f239488dfb4801#6e15682c8ddaa6f42978032126f239488dfb4801"
+source = "git+https://github.com/elbaro/mysql_async.git?rev=3811ae03b54872248ed183f1968b2dc033c8dcc4#3811ae03b54872248ed183f1968b2dc033c8dcc4"
 dependencies = [
  "bytes",
  "crossbeam-queue",

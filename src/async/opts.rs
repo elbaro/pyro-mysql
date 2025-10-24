@@ -235,9 +235,6 @@ impl AsyncOptsBuilder {
         Ok(self_)
     }
 
-    // Note: additional_capabilities is not available in mysql_async::OptsBuilder
-    // Removed as it doesn't exist in the upstream crate
-
     fn enable_cleartext_plugin(
         mut self_: PyRefMut<Self>,
         enable: bool,

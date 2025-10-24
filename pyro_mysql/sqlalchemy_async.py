@@ -223,9 +223,8 @@ class MySQLDialect_async(MySQLDialect):
 
         # Extract capabilities from query params
         query_dict = dict(url.query)
-        capabilities = int(
-            query_dict.pop("capabilities", 2)
-        )  # default to 2 for compatibility
+        if "client_found_rows" not in query_dict:
+            query_dict["client_found_rows"] = "true"
 
         # Build MySQL URL with remaining query parameters
         mysql_url_parts = [
