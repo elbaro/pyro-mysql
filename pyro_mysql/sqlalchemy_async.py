@@ -17,7 +17,6 @@ from __future__ import annotations
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, NoReturn, override
 
-import greenlet
 from sqlalchemy import util
 from sqlalchemy.connectors.asyncio import (
     AsyncAdapt_dbapi_connection,
@@ -29,19 +28,11 @@ from sqlalchemy.dialects.mysql.base import MySQLDialect, MySQLExecutionContext
 from sqlalchemy.dialects.mysql.mariadb import MariaDBDialect
 from sqlalchemy.engine.interfaces import BindTyping
 from sqlalchemy.sql import sqltypes
+from sqlalchemy.util import await_only
 
 from .sqlalchemy_sync import PyroMySQLCompiler, PyroMySQLNumeric
 
-
-# Vendor await_ function from sqlalchemy.util.concurrency (internal module)
-def await_(awaitable):
-    """Vendor implementation of SQLAlchemy's await_ function.
-
-    Runs an async coroutine in a greenlet context, switching control
-    back to the parent greenlet while waiting.
-    """
-    return greenlet.getcurrent().parent.switch(awaitable)
-
+await_ = await_only
 
 if TYPE_CHECKING:
     from sqlalchemy.connectors.asyncio import AsyncIODBAPICursor
