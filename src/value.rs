@@ -9,6 +9,7 @@ use pyo3::{
     sync::PyOnceLock,
     types::{PyBytes, PyString},
 };
+use simdutf8::basic::from_utf8;
 
 static DATETIME_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 static DATE_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
@@ -223,8 +224,7 @@ pub fn value_to_python<'py>(
                     get_date_class(py)?.call1((year, month, day))?
                 }
                 MySqlValue::Bytes(b) => {
-                    let date_str =
-                        std::str::from_utf8(b).map_err(|_| Error::decode_error(col_type, b))?;
+                    let date_str = from_utf8(b).map_err(|_| Error::decode_error(col_type, b))?;
 
                     // Parse MySQL date format: YYYY-MM-DD
                     let parts: Vec<&str> = date_str.split('-').collect();
@@ -272,8 +272,7 @@ pub fn value_to_python<'py>(
                     }
                 }
                 MySqlValue::Bytes(b) => {
-                    let time_str =
-                        std::str::from_utf8(b).map_err(|_| Error::decode_error(col_type, b))?;
+                    let time_str = from_utf8(b).map_err(|_| Error::decode_error(col_type, b))?;
 
                     // Parse MySQL time format: HH:MM:SS or HH:MM:SS.ffffff
                     // Can also be negative and exceed 24 hours for TIME type
@@ -352,7 +351,7 @@ pub fn value_to_python<'py>(
                 }
                 MySqlValue::Bytes(b) => {
                     let datetime_str =
-                        std::str::from_utf8(b).map_err(|_| Error::decode_error(col_type, b))?;
+                        from_utf8(b).map_err(|_| Error::decode_error(col_type, b))?;
 
                     // Parse MySQL datetime format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DD HH:MM:SS.ffffff
                     let parts: Vec<&str> = datetime_str.split(' ').collect();
@@ -434,7 +433,7 @@ pub fn value_to_python<'py>(
                 MySqlValue::Int(i) => i.into_bound_py_any(py)?,
                 MySqlValue::UInt(u) => u.into_bound_py_any(py)?,
                 MySqlValue::Bytes(b) => {
-                    match std::str::from_utf8(b) {
+                    match from_utf8(b) {
                         Ok(int_str) => {
                             // Use PyLong::from_str to handle arbitrarily large integers
                             match py.import("builtins")?.getattr("int")?.call1((int_str,)) {
@@ -466,7 +465,7 @@ pub fn value_to_python<'py>(
                         .into_bound_py_any(py)?
                 }
                 MySqlValue::Double(f) => f.into_bound_py_any(py)?,
-                MySqlValue::Bytes(b) => match std::str::from_utf8(b) {
+                MySqlValue::Bytes(b) => match from_utf8(b) {
                     Ok(float_str) => match float_str.parse::<f64>() {
                         Ok(f) => f.into_bound_py_any(py)?,
                         Err(_) => PyBytes::new(py, b).into_any(),
