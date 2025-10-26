@@ -162,3 +162,72 @@ def select_sync(connect_fn, n: int, batch: int):
         cursor.fetchall()
     cursor.close()
     conn.close()
+
+
+# ─── Long Text Select ─────────────────────────────────────────────────────────
+
+
+async def select_long_text_pyro_async(n: int, batch: int):
+    conn = await pyro_mysql.AsyncConn.new(
+        f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
+    )
+    for i in range(0, n * batch, batch):
+        rows = await conn.exec(
+            "SELECT * FROM long_text_test WHERE id >= ? AND id < ?",
+            (i + 1, i + 1 + batch),
+        )
+        for row in rows:
+            row.to_tuple()
+
+
+def select_long_text_pyro_sync(n: int, batch: int):
+    conn = pyro_mysql.SyncConn(f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
+    for i in range(0, n * batch, batch):
+        rows = conn.exec(
+            "SELECT * FROM long_text_test WHERE id >= ? AND id < ?",
+            (i + 1, i + 1 + batch),
+        )
+        for row in rows:
+            row.to_tuple()
+
+
+async def select_long_text_async(connect_fn, n: int, batch: int):
+    conn = await connect_fn(
+        host=HOST,
+        port=PORT,
+        user=USER,
+        password=PASSWORD,
+        db=DATABASE,
+        autocommit=True,
+    )
+
+    async with conn.cursor() as cursor:
+        for i in range(0, n * batch, batch):
+            await cursor.execute(
+                "SELECT * FROM long_text_test WHERE id >= %s AND id < %s",
+                (i + 1, i + 1 + batch),
+            )
+            await cursor.fetchall()
+        await cursor.close()
+    await conn.ensure_closed()
+
+
+def select_long_text_sync(connect_fn, n: int, batch: int):
+    conn = connect_fn(
+        host=HOST,
+        port=PORT,
+        user=USER,
+        password=PASSWORD,
+        database=DATABASE,
+        autocommit=True,
+    )
+
+    cursor = conn.cursor()
+    for i in range(0, n * batch, batch):
+        cursor.execute(
+            "SELECT * FROM long_text_test WHERE id >= %s AND id < %s",
+            (i + 1, i + 1 + batch),
+        )
+        cursor.fetchall()
+    cursor.close()
+    conn.close()

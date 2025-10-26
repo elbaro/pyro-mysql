@@ -8,6 +8,7 @@ pkgs.mkShell {
     (pkgs.python3.withPackages (
       ps: with ps; [
         # Runtime dependencies
+        greenlet
         sqlalchemy
 
         # Development dependencies
@@ -15,8 +16,10 @@ pkgs.mkShell {
         pytest-asyncio
         pytest-benchmark
         rich
+
+        # Comparisons
+        asyncmy
         aiomysql
-        greenlet
         pymysql
         mysqlclient
       ]

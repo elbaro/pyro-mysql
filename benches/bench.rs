@@ -20,6 +20,17 @@ fn setup_db() {
         (),
     )
     .unwrap();
+
+    conn.exec_drop("DROP TABLE IF EXISTS long_text_test", ())
+        .unwrap();
+    conn.exec_drop(
+        "CREATE TABLE long_text_test (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            content VARCHAR(4000)
+        ) ENGINE = MEMORY",
+        (),
+    )
+    .unwrap();
 }
 
 fn clear_table() {
@@ -34,7 +45,7 @@ fn populate_table(n: usize) {
         let mut tx = conn.start_transaction(TxOpts::default()).unwrap();
         for i in 0..n {
             tx.exec_drop(
-                "INSERT INTO benchmark_test (name, age, email, score, description) 
+                "INSERT INTO benchmark_test (name, age, email, score, description)
                        VALUES (?, ?, ?, ?, ?)",
                 (
                     format!("user_{i}"),
@@ -43,6 +54,24 @@ fn populate_table(n: usize) {
                     (i % 100) as f32,
                     format!("User description {i}"),
                 ),
+            )
+            .unwrap();
+        }
+        tx.commit().unwrap();
+    }
+}
+
+fn populate_long_text_table(n: usize) {
+    let mut conn = mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test").unwrap();
+    conn.exec_drop("TRUNCATE TABLE long_text_test", ()).unwrap();
+    {
+        let mut tx = conn.start_transaction(TxOpts::default()).unwrap();
+        // Generate a long text of ~1500 bytes
+        let long_text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ".repeat(30);
+        for i in 0..n {
+            tx.exec_drop(
+                "INSERT INTO long_text_test (content) VALUES (?)",
+                (format!("{} {}", long_text, i),),
             )
             .unwrap();
         }
@@ -134,6 +163,58 @@ pub fn bench(c: &mut Criterion) {
                     |()| {
                         Python::attach(|py| {
                             py.eval(statement, None, None).unwrap();
+                        });
+                    },
+                    BatchSize::SmallInput,
+                )
+            });
+        }
+    }
+
+    for select_size in [1, 10, 100] {
+        let mut group = c.benchmark_group(format!("SELECT Long Text {}", select_size));
+
+        for (name, statement) in [
+            (
+                "mysqlclient",
+                CString::new(format!("select_long_text_sync(MySQLdb.connect, 100, {select_size})")).unwrap(),
+            ),
+            (
+                "pymysql",
+                CString::new(format!("select_long_text_sync(pymysql.connect, 100, {select_size})")).unwrap(),
+            ),
+            (
+                "pyro-sync",
+                CString::new(format!("select_long_text_pyro_sync(100, {select_size})")).unwrap(),
+            ),
+            (
+                "pyro-async",
+                CString::new(format!(
+                    "loop.run_until_complete(select_long_text_pyro_async(100, {select_size}))"
+                ))
+                .unwrap(),
+            ),
+            (
+                "asyncmy",
+                CString::new(format!(
+                    "loop.run_until_complete(select_long_text_async(asyncmy.connect, 100, {select_size}))"
+                ))
+                .unwrap(),
+            ),
+            (
+                "aiomysql",
+                CString::new(format!(
+                    "loop.run_until_complete(select_long_text_async(aiomysql.connect, 100, {select_size}))"
+                ))
+                .unwrap(),
+            ),
+        ] {
+            group.bench_function(name, |b| {
+                b.iter_batched(
+                    || populate_long_text_table(100),
+                    |()| {
+                        Python::attach(|py| {
+                            py.eval(&statement, None, None).unwrap();
                         });
                     },
                     BatchSize::SmallInput,
