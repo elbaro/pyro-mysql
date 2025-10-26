@@ -20,8 +20,8 @@ impl ResultSetIterator {
     fn __iter__(slf: Py<Self>) -> Py<Self> {
         slf
     }
-    fn __next__(slf: Py<Self>) -> PyResult<RowIterator> {
-        Python::attach(|py| match &mut slf.borrow_mut(py).inner {
+    fn __next__(slf: Py<Self>, py: Python) -> PyResult<RowIterator> {
+        match &mut slf.borrow_mut(py).inner {
             Either::Left(text) => text
                 .iter()
                 .map(|x| RowIterator {
@@ -44,7 +44,7 @@ impl ResultSetIterator {
                     }),
                 })
                 .ok_or_else(|| PyStopIteration::new_err("ResultSet exhausted")),
-        })
+        }
     }
 }
 

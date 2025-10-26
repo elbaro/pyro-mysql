@@ -34,26 +34,25 @@ impl SyncConn {
     #[pyo3(signature=(consistent_snapshot=false, isolation_level=None, readonly=None))]
     fn start_transaction(
         slf: Py<Self>,
+        py: Python,
         consistent_snapshot: bool,
         isolation_level: Option<IsolationLevel>,
         readonly: Option<bool>,
     ) -> PyroResult<SyncTransaction> {
-        Python::attach(|py| {
-            let isolation_level: Option<mysql::IsolationLevel> =
-                isolation_level.map(|l| mysql::IsolationLevel::from(&l));
-            let opts = mysql::TxOpts::default()
-                .set_with_consistent_snapshot(consistent_snapshot)
-                .set_isolation_level(isolation_level)
-                .set_access_mode(readonly.map(|flag| {
-                    if flag {
-                        AccessMode::ReadOnly
-                    } else {
-                        AccessMode::ReadWrite
-                    }
-                }));
+        let isolation_level: Option<mysql::IsolationLevel> =
+            isolation_level.map(|l| mysql::IsolationLevel::from(&l));
+        let opts = mysql::TxOpts::default()
+            .set_with_consistent_snapshot(consistent_snapshot)
+            .set_isolation_level(isolation_level)
+            .set_access_mode(readonly.map(|flag| {
+                if flag {
+                    AccessMode::ReadOnly
+                } else {
+                    AccessMode::ReadWrite
+                }
+            }));
 
-            Ok(SyncTransaction::new(Either::Left(slf.clone_ref(py)), opts))
-        })
+        Ok(SyncTransaction::new(Either::Left(slf.clone_ref(py)), opts))
     }
 
     fn id(&self) -> PyroResult<u32> {
@@ -108,22 +107,20 @@ impl SyncConn {
         Ok(conn.query_drop(query)?)
     }
     #[pyo3(signature = (query))]
-    fn query_iter(slf: Py<Self>, query: String) -> PyroResult<ResultSetIterator> {
-        Python::attach(|py| {
-            let slf_ref = slf.borrow(py);
-            let mut guard = slf_ref.inner.write();
-            let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-            let query_result = conn.query_iter(query)?;
+    fn query_iter(slf: Py<Self>, py: Python, query: String) -> PyroResult<ResultSetIterator> {
+        let slf_ref = slf.borrow(py);
+        let mut guard = slf_ref.inner.write();
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let query_result = conn.query_iter(query)?;
 
-            Ok(ResultSetIterator {
-                owner: slf.clone_ref(py).into_any(),
-                inner: Either::Left(unsafe {
-                    std::mem::transmute::<
-                        mysql::QueryResult<'_, '_, '_, mysql::Text>,
-                        mysql::QueryResult<'_, '_, '_, mysql::Text>,
-                    >(query_result)
-                }),
-            })
+        Ok(ResultSetIterator {
+            owner: slf.clone_ref(py).into_any(),
+            inner: Either::Left(unsafe {
+                std::mem::transmute::<
+                    mysql::QueryResult<'_, '_, '_, mysql::Text>,
+                    mysql::QueryResult<'_, '_, '_, mysql::Text>,
+                >(query_result)
+            }),
         })
     }
 
@@ -162,23 +159,21 @@ impl SyncConn {
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_iter(slf: Py<Self>, query: String, params: Params) -> PyroResult<ResultSetIterator> {
-        Python::attach(|py| {
-            let slf_ref = slf.borrow(py);
-            let mut guard = slf_ref.inner.write();
-            let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+    fn exec_iter(slf: Py<Self>, py: Python, query: String, params: Params) -> PyroResult<ResultSetIterator> {
+        let slf_ref = slf.borrow(py);
+        let mut guard = slf_ref.inner.write();
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
-            log::debug!("exec_iter {query}");
-            let query_result = conn.exec_iter(query, params)?;
-            Ok(ResultSetIterator {
-                owner: slf.clone_ref(py).into_any(),
-                inner: Either::Right(unsafe {
-                    std::mem::transmute::<
-                        mysql::QueryResult<'_, '_, '_, mysql::Binary>,
-                        mysql::QueryResult<'_, '_, '_, mysql::Binary>,
-                    >(query_result)
-                }),
-            })
+        log::debug!("exec_iter {query}");
+        let query_result = conn.exec_iter(query, params)?;
+        Ok(ResultSetIterator {
+            owner: slf.clone_ref(py).into_any(),
+            inner: Either::Right(unsafe {
+                std::mem::transmute::<
+                    mysql::QueryResult<'_, '_, '_, mysql::Binary>,
+                    mysql::QueryResult<'_, '_, '_, mysql::Binary>,
+                >(query_result)
+            }),
         })
     }
 

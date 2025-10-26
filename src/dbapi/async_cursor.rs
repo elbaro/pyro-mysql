@@ -64,14 +64,14 @@ impl AsyncCursor {
     }
 
     #[getter]
-    fn description(&self) -> Option<Py<PyList>> {
+    fn description(&self, py: Python) -> Option<Py<PyList>> {
         pyo3_async_runtimes::tokio::get_runtime().block_on(async {
             self.0
                 .read()
                 .await
                 .description
                 .as_ref()
-                .map(|d| Python::attach(|py| d.clone_ref(py)))
+                .map(|d| d.clone_ref(py))
         })
     }
 

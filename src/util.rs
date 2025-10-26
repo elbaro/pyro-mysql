@@ -111,7 +111,7 @@ where
     AbortOnDropHandle::new(pyo3_async_runtimes::tokio::get_runtime().spawn(fut))
 }
 
-/// Convert a Rust future into a Python future wrapped with RaiiFuture for automatic cancellation.
+/// == Coroutine::new(AbortOnDropHandle::new(pyo3_async_runtimes::tokio::get_runtime().spawn(fut)))
 pub fn rust_future_into_py<F, T>(py: Python<'_>, fut: F) -> PyResult<Py<PyroFuture>>
 where
     F: Future<Output = PyroResult<T>> + Send + 'static,

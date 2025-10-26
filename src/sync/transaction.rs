@@ -172,24 +172,22 @@ impl SyncTransaction {
             .query_drop(query)?)
     }
 
-    fn query_iter(slf: Py<Self>, query: String) -> PyroResult<ResultSetIterator> {
-        Python::attach(|py| {
-            let mut slf_ref = slf.borrow_mut(py);
-            let query_result = slf_ref
-                .inner
-                .as_mut()
-                .ok_or_else(|| Error::TransactionClosedError)?
-                .query_iter(query)?;
+    fn query_iter(slf: Py<Self>, py: Python, query: String) -> PyroResult<ResultSetIterator> {
+        let mut slf_ref = slf.borrow_mut(py);
+        let query_result = slf_ref
+            .inner
+            .as_mut()
+            .ok_or_else(|| Error::TransactionClosedError)?
+            .query_iter(query)?;
 
-            Ok(ResultSetIterator {
-                owner: slf.clone_ref(py).into_any(),
-                inner: Either::Left(unsafe {
-                    std::mem::transmute::<
-                        mysql::QueryResult<'_, '_, '_, mysql::Text>,
-                        mysql::QueryResult<'_, '_, '_, mysql::Text>,
-                    >(query_result)
-                }),
-            })
+        Ok(ResultSetIterator {
+            owner: slf.clone_ref(py).into_any(),
+            inner: Either::Left(unsafe {
+                std::mem::transmute::<
+                    mysql::QueryResult<'_, '_, '_, mysql::Text>,
+                    mysql::QueryResult<'_, '_, '_, mysql::Text>,
+                >(query_result)
+            }),
         })
     }
 
@@ -233,25 +231,29 @@ impl SyncTransaction {
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_iter(slf: Py<Self>, query: String, params: Params) -> PyroResult<ResultSetIterator> {
+    fn exec_iter(
+        slf: Py<Self>,
+        py: Python,
+        query: String,
+        params: Params,
+    ) -> PyroResult<ResultSetIterator> {
         log::debug!("exec_iter {query}");
-        Python::attach(|py| {
-            let mut slf_ref = slf.borrow_mut(py);
-            let query_result = slf_ref
-                .inner
-                .as_mut()
-                .ok_or_else(|| Error::TransactionClosedError)?
-                .exec_iter(query, params)?;
 
-            Ok(ResultSetIterator {
-                owner: slf.clone_ref(py).into_any(),
-                inner: Either::Right(unsafe {
-                    std::mem::transmute::<
-                        mysql::QueryResult<'_, '_, '_, mysql::Binary>,
-                        mysql::QueryResult<'_, '_, '_, mysql::Binary>,
-                    >(query_result)
-                }),
-            })
+        let mut slf_ref = slf.borrow_mut(py);
+        let query_result = slf_ref
+            .inner
+            .as_mut()
+            .ok_or_else(|| Error::TransactionClosedError)?
+            .exec_iter(query, params)?;
+
+        Ok(ResultSetIterator {
+            owner: slf.clone_ref(py).into_any(),
+            inner: Either::Right(unsafe {
+                std::mem::transmute::<
+                    mysql::QueryResult<'_, '_, '_, mysql::Binary>,
+                    mysql::QueryResult<'_, '_, '_, mysql::Binary>,
+                >(query_result)
+            }),
         })
     }
 }
