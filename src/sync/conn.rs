@@ -159,7 +159,12 @@ impl SyncConn {
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_iter(slf: Py<Self>, py: Python, query: String, params: Params) -> PyroResult<ResultSetIterator> {
+    fn exec_iter(
+        slf: Py<Self>,
+        py: Python,
+        query: String,
+        params: Params,
+    ) -> PyroResult<ResultSetIterator> {
         let slf_ref = slf.borrow(py);
         let mut guard = slf_ref.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
