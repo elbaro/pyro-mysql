@@ -34,7 +34,7 @@ impl AsyncPoolOpts {
     pub fn with_inactive_connection_ttl(&self, ttl: &Bound<'_, PyAny>) -> PyResult<Self> {
         use pyo3::types::PyDelta;
 
-        let duration = if let Ok(delta) = ttl.downcast::<PyDelta>() {
+        let duration = if let Ok(delta) = ttl.cast::<PyDelta>() {
             // without abi3: delta.get_seconds() as f64 + delta.get_microseconds() as f64 / 1_000_000.0;
             let seconds = delta.getattr("seconds")?.extract::<u64>()?;
             let microseconds = delta.getattr("microseconds")?.extract::<u64>()?;
@@ -54,7 +54,7 @@ impl AsyncPoolOpts {
     pub fn with_ttl_check_interval(&self, interval: &Bound<'_, PyAny>) -> PyResult<Self> {
         use pyo3::types::PyDelta;
 
-        let duration = if let Ok(delta) = interval.downcast::<PyDelta>() {
+        let duration = if let Ok(delta) = interval.cast::<PyDelta>() {
             let seconds = delta.getattr("seconds")?.extract::<u64>()?;
             let microseconds = delta.getattr("microseconds")?.extract::<u64>()?;
             Duration::from_micros(seconds * 1_000_000 + microseconds)

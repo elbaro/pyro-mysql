@@ -34,7 +34,7 @@ impl FromPyObject<'_, '_> for Params {
         }
 
         // Handle tuple case
-        if let Ok(tuple) = ob.downcast::<pyo3::types::PyTuple>() {
+        if let Ok(tuple) = ob.cast::<pyo3::types::PyTuple>() {
             let mut params = Vec::<mysql_async::Value>::with_capacity(tuple.len());
             for item in tuple.iter() {
                 params.push(Value::extract(item.as_borrowed())?.into());
@@ -45,7 +45,7 @@ impl FromPyObject<'_, '_> for Params {
         }
 
         // Handle list case
-        if let Ok(list) = ob.downcast::<pyo3::types::PyList>() {
+        if let Ok(list) = ob.cast::<pyo3::types::PyList>() {
             let mut params = Vec::with_capacity(list.len());
             for item in list.iter() {
                 params.push(Value::extract(item.as_borrowed())?.into());
@@ -56,7 +56,7 @@ impl FromPyObject<'_, '_> for Params {
         }
 
         // Handle dict case
-        if let Ok(dict) = ob.downcast::<pyo3::types::PyDict>() {
+        if let Ok(dict) = ob.cast::<pyo3::types::PyDict>() {
             let mut params = std::collections::HashMap::new();
             for (key, value) in dict.iter() {
                 let key_str = key.extract::<String>()?;

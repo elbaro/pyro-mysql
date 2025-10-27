@@ -118,7 +118,7 @@ impl FromPyObject<'_, '_> for Value {
                 MySqlValue::Bytes(v.to_vec())
             }
             "bytearray" => {
-                let v = ob.downcast::<PyByteArray>()?;
+                let v = ob.cast::<PyByteArray>()?;
                 MySqlValue::Bytes(v.to_vec())
             }
             "tuple" | "list" | "set" | "frozenset" | "dict" => {
