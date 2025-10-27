@@ -1,4 +1,6 @@
 pub mod conn;
+pub mod wtx_types;
+pub mod row;
 
 pub mod opts;
 pub mod pool;

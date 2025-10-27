@@ -70,6 +70,7 @@ impl From<crate::error::Error> for DbApiError {
             crate::error::Error::DecodeError { .. } => Error::new_err(err.to_string()),
             crate::error::Error::PoisonError(s) => Error::new_err(s),
             crate::error::Error::PythonObjectCreationError(e) => Error::new_err(e.to_string()),
+            crate::error::Error::WtxError(error) => Error::new_err(error),
         })
     }
 }

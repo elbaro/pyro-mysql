@@ -1,47 +1,44 @@
 use std::sync::Arc;
 
 use crate::{
-    r#async::{conn::AsyncConn, opts::AsyncOpts},
-    util::{PyroFuture, rust_future_into_py, url_error_to_pyerr},
+    r#async::{conn::AsyncConn, wtx_types::{StatementCache, WtxConn}},
+    error::Error,
+    util::{PyroFuture, rust_future_into_py},
 };
-use either::Either;
-use mysql_async::Opts;
 use pyo3::prelude::*;
 use tokio::sync::RwLock;
 
 #[pyclass(module = "pyro_mysql.async_", name = "Pool")]
 pub struct AsyncPool {
-    pool: mysql_async::Pool, // This is clonable
+    url: String,
 }
 
 #[pymethods]
 impl AsyncPool {
     /// new() won't assert server availability.
-    /// Can accept either a URL string or AsyncOpts object
+    /// Can accept only a URL string (AsyncOpts not yet supported with wtx)
     #[new]
-    pub fn new(url_or_opts: Either<String, PyRef<AsyncOpts>>) -> PyResult<Self> {
-        let opts = match url_or_opts {
-            Either::Left(url) => Opts::from_url(&url).map_err(url_error_to_pyerr)?,
-            Either::Right(opts) => opts.opts.clone(),
-        };
-
-        let pool = mysql_async::Pool::new(opts);
-        Ok(Self { pool })
+    pub fn new(url: String) -> PyResult<Self> {
+        Ok(Self { url })
     }
 
     fn get<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
-        let pool = self.pool.clone();
+        let url = self.url.clone();
         rust_future_into_py(py, async move {
+            let wtx_conn = WtxConn::connect(&url)
+                .await
+                .map_err(|e| Error::WtxError(e.to_string()))?;
+
             Ok(AsyncConn {
-                inner: Arc::new(RwLock::new(Some(pool.get_conn().await?))),
+                inner: wtx_conn.executor,
+                stmt_cache: Arc::new(RwLock::new(StatementCache::new())),
             })
         })
     }
 
     fn close<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
-        let pool = self.pool.clone();
+        // wtx connections are closed when dropped, no explicit close needed
         rust_future_into_py(py, async move {
-            pool.disconnect().await?;
             Ok(())
         })
     }

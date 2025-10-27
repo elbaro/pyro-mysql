@@ -65,11 +65,13 @@ impl RowIterator {
     }
     fn __next__(&mut self) -> PyResult<Row> {
         Ok(Row {
-            inner: self
-                .inner
-                .next()
-                .ok_or_else(|| PyStopIteration::new_err("Row exhausted"))?
-                .map_err(Error::from)?,
+            inner: crate::row::RowInner::MysqlCommon(
+                self
+                    .inner
+                    .next()
+                    .ok_or_else(|| PyStopIteration::new_err("Row exhausted"))?
+                    .map_err(Error::from)?
+            ),
         })
     }
 }

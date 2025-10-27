@@ -17,8 +17,9 @@ use crate::{
 pub struct AsyncDbApiConn(pub Arc<RwLock<Option<AsyncMysqlConn>>>);
 
 impl From<crate::r#async::conn::AsyncConn> for AsyncDbApiConn {
-    fn from(value: crate::r#async::conn::AsyncConn) -> Self {
-        Self(value.inner)
+    fn from(_value: crate::r#async::conn::AsyncConn) -> Self {
+        // TODO: Update dbapi to work with wtx
+        todo!("dbapi async not yet implemented for wtx")
     }
 }
 

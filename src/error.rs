@@ -26,6 +26,8 @@ pub enum Error {
     SyncError(#[from] mysql::Error),
     #[error("{0}")]
     AsyncError(#[from] mysql_async::Error),
+    #[error("{0}")]
+    WtxError(String),
 
     #[error("Connection is already closed")]
     ConnectionClosedError,
@@ -80,6 +82,7 @@ impl From<Error> for pyo3::PyErr {
             Error::AsyncUrlError(url_error) => UrlError::new_err(url_error.to_string()),
             Error::SyncError(error) => MysqlError::new_err(error.to_string()),
             Error::AsyncError(error) => MysqlError::new_err(error.to_string()),
+            Error::WtxError(error) => MysqlError::new_err(error),
             Error::ConnectionClosedError => ConnectionClosedError::new_err(err.to_string()),
             Error::TransactionClosedError => TransactionClosedError::new_err(err.to_string()),
             Error::BuilderConsumedError => BuilderConsumedError::new_err(err.to_string()),
