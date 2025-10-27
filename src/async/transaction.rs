@@ -1,4 +1,4 @@
-use pyo3::prelude::*;
+use pyo3::{prelude::*, pybacked::PyBackedStr};
 use std::sync::Arc;
 use tokio::sync::{RwLock, RwLockWriteGuard};
 
@@ -194,7 +194,7 @@ impl AsyncTransaction {
     fn exec<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Params,
     ) -> PyResult<Py<PyroFuture>> {
         self.inner.exec(py, query, params)
@@ -203,7 +203,7 @@ impl AsyncTransaction {
     fn exec_first<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Params,
     ) -> PyResult<Py<PyroFuture>> {
         self.inner.exec_first(py, query, params)
@@ -212,7 +212,7 @@ impl AsyncTransaction {
     fn exec_drop<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Params,
     ) -> PyResult<Py<PyroFuture>> {
         self.inner.exec_drop(py, query, params)
@@ -221,7 +221,7 @@ impl AsyncTransaction {
     fn exec_batch<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Vec<Params>,
     ) -> PyResult<Py<PyroFuture>> {
         self.inner.exec_batch(py, query, params)

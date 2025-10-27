@@ -1,4 +1,4 @@
-use pyo3::prelude::*;
+use pyo3::{prelude::*, pybacked::PyBackedStr};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -25,24 +25,28 @@ pub trait Queryable {
     fn query_drop<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>>;
 
     // ─── Binary Protocol ─────────────────────────────────────────────────
-    fn exec<'py>(&self, py: Python<'py>, query: String, params: Params)
-    -> PyResult<Py<PyroFuture>>;
+    fn exec<'py>(
+        &self,
+        py: Python<'py>,
+        query: PyBackedStr,
+        params: Params,
+    ) -> PyResult<Py<PyroFuture>>;
     fn exec_first<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Params,
     ) -> PyResult<Py<PyroFuture>>;
     fn exec_drop<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Params,
     ) -> PyResult<Py<PyroFuture>>;
     fn exec_batch<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Vec<Params>,
     ) -> PyResult<Py<PyroFuture>>;
     // fn exec_iter<'py>(&self, py: Python<'py>, query: String, params: Params) -> PyResult<Py<RaiiFuture>>;) -> PyResult<Py<PyroFuture>>;
@@ -120,12 +124,13 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
     fn exec<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Params,
     ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
         rust_future_into_py::<_, Vec<Row>>(py, async move {
             let mut inner = inner.write().await;
+            let query: &str = query.as_ref();
             Ok(inner
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?
@@ -137,12 +142,13 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
     fn exec_first<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Params,
     ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
         rust_future_into_py::<_, Option<Row>>(py, async move {
             let mut inner = inner.write().await;
+            let query: &str = query.as_ref();
             Ok(inner
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?
@@ -154,12 +160,13 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
     fn exec_drop<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Params,
     ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
         rust_future_into_py::<_, ()>(py, async move {
             let mut inner = inner.write().await;
+            let query: &str = query.as_ref();
             Ok(inner
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?
@@ -171,12 +178,13 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
     fn exec_batch<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Vec<Params>,
     ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
         rust_future_into_py::<_, ()>(py, async move {
             let mut inner = inner.write().await;
+            let query: &str = query.as_ref();
             Ok(inner
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?

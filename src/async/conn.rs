@@ -1,5 +1,6 @@
 use either::Either;
 use pyo3::prelude::*;
+use pyo3::pybacked::PyBackedStr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -137,7 +138,7 @@ impl AsyncConn {
     fn exec<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Params,
     ) -> PyResult<Py<PyroFuture>> {
         self.inner.exec(py, query, params)
@@ -146,7 +147,7 @@ impl AsyncConn {
     fn exec_first<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Params,
     ) -> PyResult<Py<PyroFuture>> {
         self.inner.exec_first(py, query, params)
@@ -155,7 +156,7 @@ impl AsyncConn {
     fn exec_drop<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Params,
     ) -> PyResult<Py<PyroFuture>> {
         self.inner.exec_drop(py, query, params)
@@ -164,7 +165,7 @@ impl AsyncConn {
     fn exec_batch<'py>(
         &self,
         py: Python<'py>,
-        query: String,
+        query: PyBackedStr,
         params: Vec<Params>,
     ) -> PyResult<Py<PyroFuture>> {
         self.inner.exec_batch(py, query, params)

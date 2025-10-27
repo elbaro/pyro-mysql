@@ -87,7 +87,7 @@ pub fn bench(c: &mut Criterion) {
     });
 
     for select_size in [1, 10, 100] {
-        let mut group = c.benchmark_group(format!("SELECT {}", select_size));
+        let mut group = c.benchmark_group(format!("SELECT_{}", select_size));
 
         for (name, statement) in [
             (
@@ -172,7 +172,7 @@ pub fn bench(c: &mut Criterion) {
     }
 
     for select_size in [1, 10, 100] {
-        let mut group = c.benchmark_group(format!("SELECT Long Text {}", select_size));
+        let mut group = c.benchmark_group(format!("SELECT_Long_Text_{}", select_size));
 
         for (name, statement) in [
             (
