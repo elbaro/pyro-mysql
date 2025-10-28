@@ -14,3 +14,10 @@ bench:
 
 bench-async:
     PYTHONPATH=. cargo bench --bench bench pyro-async --no-default-features
+
+microbench:
+    cargo build --profile=bench --bin microbench --no-default-features
+    PYTHONPERFSUPPORT=1 PYTHONPATH=. samply record ./target/release/microbench
+
+perf:
+    PYTHONPERFSUPPORT=1 PYTHONPATH=. perf record -g -o perf.data ./target/release/microbench

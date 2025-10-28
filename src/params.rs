@@ -30,11 +30,11 @@ impl FromPyObject<'_, '_> for Params {
         let py_type = ob.get_type();
         let type_name = py_type.fully_qualified_name()?;
 
-        if type_name == "builtins.NoneType" {
+        if type_name == "NoneType" {
             Ok(Params {
                 inner: MySqlParams::Empty,
             })
-        } else if type_name == "builtins.tuple" {
+        } else if type_name == "tuple" {
             let tuple = ob.cast::<pyo3::types::PyTuple>()?;
             let mut params = Vec::<mysql_async::Value>::with_capacity(tuple.len());
             for item in tuple.iter() {
@@ -43,7 +43,7 @@ impl FromPyObject<'_, '_> for Params {
             Ok(Params {
                 inner: MySqlParams::Positional(params),
             })
-        } else if type_name == "builtins.list" {
+        } else if type_name == "list" {
             let list = ob.cast::<pyo3::types::PyList>()?;
             let mut params = Vec::with_capacity(list.len());
             for item in list.iter() {
@@ -52,7 +52,7 @@ impl FromPyObject<'_, '_> for Params {
             Ok(Params {
                 inner: MySqlParams::Positional(params),
             })
-        } else if type_name == "builtins.dict" {
+        } else if type_name == "dict" {
             let dict = ob.cast::<pyo3::types::PyDict>()?;
             let mut params = std::collections::HashMap::new();
             for (key, value) in dict.iter() {
@@ -65,12 +65,10 @@ impl FromPyObject<'_, '_> for Params {
                 inner: MySqlParams::Named(params),
             })
         } else {
-            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                format!(
-                    "Expected None, tuple, list, or dict for Params, got '{}'",
-                    type_name
-                ),
-            ))
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                "Expected None, tuple, list, or dict for Params, got '{}'",
+                type_name
+            )))
         }
     }
 }

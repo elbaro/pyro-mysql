@@ -13,6 +13,7 @@ pkgs.mkShell {
 
         # Development dependencies
         pip
+        pytest
         pytest-asyncio
         pytest-benchmark
         rich
