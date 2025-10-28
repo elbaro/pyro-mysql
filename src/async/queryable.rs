@@ -121,6 +121,7 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
     }
 
     // ─── Binary Protocol ─────────────────────────────────────────────────
+    #[inline]
     fn exec<'py>(
         &self,
         py: Python<'py>,
@@ -139,6 +140,7 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         })
     }
 
+    #[inline]
     fn exec_first<'py>(
         &self,
         py: Python<'py>,
@@ -157,6 +159,7 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         })
     }
 
+    #[inline]
     fn exec_drop<'py>(
         &self,
         py: Python<'py>,
@@ -175,6 +178,7 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         })
     }
 
+    #[inline]
     fn exec_batch<'py>(
         &self,
         py: Python<'py>,

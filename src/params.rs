@@ -26,37 +26,34 @@ impl FromPyObject<'_, '_> for Params {
     type Error = PyErr;
 
     fn extract(ob: Borrowed<PyAny>) -> Result<Self, Self::Error> {
-        // Handle None case
-        if ob.is_none() {
-            return Ok(Params {
-                inner: MySqlParams::Empty,
-            });
-        }
+        // Get the fully qualified type name and match against it
+        let py_type = ob.get_type();
+        let type_name = py_type.fully_qualified_name()?;
 
-        // Handle tuple case
-        if let Ok(tuple) = ob.cast::<pyo3::types::PyTuple>() {
+        if type_name == "builtins.NoneType" {
+            Ok(Params {
+                inner: MySqlParams::Empty,
+            })
+        } else if type_name == "builtins.tuple" {
+            let tuple = ob.cast::<pyo3::types::PyTuple>()?;
             let mut params = Vec::<mysql_async::Value>::with_capacity(tuple.len());
             for item in tuple.iter() {
                 params.push(Value::extract(item.as_borrowed())?.into());
             }
-            return Ok(Params {
+            Ok(Params {
                 inner: MySqlParams::Positional(params),
-            });
-        }
-
-        // Handle list case
-        if let Ok(list) = ob.cast::<pyo3::types::PyList>() {
+            })
+        } else if type_name == "builtins.list" {
+            let list = ob.cast::<pyo3::types::PyList>()?;
             let mut params = Vec::with_capacity(list.len());
             for item in list.iter() {
                 params.push(Value::extract(item.as_borrowed())?.into());
             }
-            return Ok(Params {
+            Ok(Params {
                 inner: MySqlParams::Positional(params),
-            });
-        }
-
-        // Handle dict case
-        if let Ok(dict) = ob.cast::<pyo3::types::PyDict>() {
+            })
+        } else if type_name == "builtins.dict" {
+            let dict = ob.cast::<pyo3::types::PyDict>()?;
             let mut params = std::collections::HashMap::new();
             for (key, value) in dict.iter() {
                 let key_str = key.extract::<String>()?;
@@ -64,15 +61,17 @@ impl FromPyObject<'_, '_> for Params {
                 // Convert String key to Vec<u8> as required by mysql_async
                 params.insert(key_str.into_bytes(), param_value);
             }
-            return Ok(Params {
+            Ok(Params {
                 inner: MySqlParams::Named(params),
-            });
+            })
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                format!(
+                    "Expected None, tuple, list, or dict for Params, got '{}'",
+                    type_name
+                ),
+            ))
         }
-
-        // If we can't handle the type, return an error
-        Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-            "Expected None, tuple, list, or dict for Params",
-        ))
     }
 }
 

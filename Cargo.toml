@@ -19,7 +19,6 @@ mysql_async = "0.36.1"
 mysql_common = "0.35.5"
 parking_lot = { version = "0.12.4", features = ["send_guard"] }
 pyo3 = { version = "0.27.1", features = [
-  # "extension-module",
   "experimental-async",
   "experimental-inspect",
   "either",
@@ -41,8 +40,8 @@ mysql_async = { git = "https://github.com/elbaro/mysql_async.git", rev = "3811ae
 
 
 [features]
-# extension-module = ["pyo3/extension-module"]
-# default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
+default = ["extension-module"]
 
 [[bench]]
 name = "bench"
