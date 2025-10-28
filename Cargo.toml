@@ -17,10 +17,16 @@ log = "0.4.28"
 mysql = "26.0.1"
 mysql_async = "0.36.1"
 mysql_common = "0.35.5"
-wtx = { version = "0.38", features = ["database", "mysql", "rand_chacha", "getrandom", "tokio"] }
+wtx = { version = "0.38", features = [
+  "database",
+  "mysql",
+  "rand_chacha",
+  "getrandom",
+  "tokio",
+] }
 parking_lot = { version = "0.12.4", features = ["send_guard"] }
 pyo3 = { version = "0.27.1", features = [
-  # "extension-module",
+  "extension-module",
   "experimental-async",
   "experimental-inspect",
   "either",
@@ -65,11 +71,17 @@ harness = false
 name = "microbench"
 path = "bin/microbench.rs"
 
+
+[profile.release]
+rpath = false
+
 [profile.profiling]
 inherits = "release"
 debug = true
+# rustflags = ["-C", "force-frame-pointers=yes"]
 
 [profile.bench]
 debug = true
+# rustflags = ["-C", "force-frame-pointers=yes"]
 
 [dev-dependencies]

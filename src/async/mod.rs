@@ -13,9 +13,11 @@ use pyo3::prelude::*;
 use crate::{r#async::conn::AsyncConn, util::PyroFuture};
 
 #[pyfunction]
+#[pyo3(signature = (url_or_opts, buffer=None))]
 pub fn connect(
     py: Python,
     url_or_opts: either::Either<String, PyRef<opts::AsyncOpts>>,
+    buffer: Option<PyRef<wtx_types::BufferObj>>,
 ) -> PyResult<Py<PyroFuture>> {
-    AsyncConn::new(py, url_or_opts)
+    AsyncConn::new(py, url_or_opts, buffer)
 }

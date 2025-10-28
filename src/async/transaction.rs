@@ -8,7 +8,6 @@ use crate::{
     r#async::wtx_types::{StatementCache, WtxExecutor},
     error::Error,
     isolation_level::IsolationLevel,
-    params::Params,
     util::{PyroFuture, rust_future_into_py},
 };
 

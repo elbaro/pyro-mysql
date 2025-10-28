@@ -17,6 +17,7 @@ use tokio::runtime::Builder;
 use crate::r#async::opts::AsyncOpts;
 use crate::r#async::opts::AsyncOptsBuilder;
 use crate::r#async::pool_opts::AsyncPoolOpts;
+use crate::r#async::wtx_types::BufferObj;
 use crate::{
     r#async::{conn::AsyncConn, pool::AsyncPool, transaction::AsyncTransaction},
     capability_flags::CapabilityFlags,
@@ -121,6 +122,9 @@ mod pyro_mysql {
 
         #[pymodule_export]
         use crate::r#async::pool_opts::AsyncPoolOpts;
+
+        #[pymodule_export]
+        use crate::r#async::wtx_types::BufferObj;
     }
 
     #[pymodule]
@@ -381,6 +385,7 @@ mod pyro_mysql {
             m.add("AsyncOptsBuilder", py.get_type::<AsyncOptsBuilder>())?;
             m.add("AsyncPoolOpts", py.get_type::<AsyncPoolOpts>())?;
             m.add("AsyncTransaction", py.get_type::<AsyncTransaction>())?;
+            m.add("BufferObj", py.get_type::<BufferObj>())?;
             m.add("SyncConn", py.get_type::<SyncConn>())?;
             m.add("SyncOpts", py.get_type::<SyncOpts>())?;
             m.add("SyncOptsBuilder", py.get_type::<SyncOptsBuilder>())?;

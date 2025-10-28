@@ -32,10 +32,13 @@ DATA = [
 
 pyro_mysql.init(worker_threads=1)
 
+# Create a reusable buffer for better performance
+buffer = pyro_mysql.BufferObj.new()
+
 
 async def insert_pyro_async(n):
     conn = await pyro_mysql.AsyncConn.new(
-        f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
+        f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}", buffer
     )
     for i in range(n):
         await conn.exec_drop(
@@ -100,7 +103,7 @@ def insert_sync(connect_fn, n: int):
 
 async def select_pyro_async(n: int, batch: int):
     conn = await pyro_mysql.AsyncConn.new(
-        f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
+        f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}", buffer
     )
     for i in range(0, n * batch, batch):
         rows = await conn.exec(
@@ -169,7 +172,7 @@ def select_sync(connect_fn, n: int, batch: int):
 
 async def select_long_text_pyro_async(n: int, batch: int):
     conn = await pyro_mysql.AsyncConn.new(
-        f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
+        f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}", buffer
     )
     for i in range(0, n * batch, batch):
         rows = await conn.exec(

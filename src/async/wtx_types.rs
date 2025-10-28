@@ -13,6 +13,8 @@ use wtx::database::client::mysql::{
 use wtx::misc::Lease;
 use wtx::misc::Uri;
 
+use crate::error::Error;
+
 /// Type alias for the WTX MySQL executor we use
 /// - Error type: wtx::Error
 /// - ExecutorBuffer: stores query buffers
@@ -311,6 +313,46 @@ impl WtxConn {
     }
 }
 
+/// Python wrapper for wtx ExecutorBuffer
+/// This allows reusing buffers across connections for better performance
+#[pyclass(module = "pyro_mysql.async_", name = "BufferObj")]
+pub struct BufferObj {
+    pub(crate) inner: Arc<RwLock<Option<ExecutorBuffer>>>,
+}
+
+#[pymethods]
+impl BufferObj {
+    #[new]
+    fn _new() -> crate::error::PyroResult<Self> {
+        Err(Error::IncorrectApiUsageError(
+            "use `BufferObj.new()` instead of BufferObj()",
+        ))
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (max_capacity=usize::MAX))]
+    fn new(max_capacity: usize) -> crate::error::PyroResult<Self> {
+        use wtx::rng::SeedableRng;
+        let mut rng = wtx::rng::ChaCha20::from_os()
+            .map_err(|e| Error::WtxError(e.to_string()))?;
+
+        let buffer = ExecutorBuffer::new(max_capacity, &mut rng);
+
+        Ok(Self {
+            inner: Arc::new(RwLock::new(Some(buffer))),
+        })
+    }
+}
+
+impl BufferObj {
+    /// Extract the buffer for use in connection creation
+    /// Returns None if the buffer has already been taken
+    pub(crate) async fn take(&self) -> Option<ExecutorBuffer> {
+        let mut inner = self.inner.write().await;
+        inner.take()
+    }
+}
+
 /// Wrapper for wtx MysqlRecord that we can convert to our Row type
 pub struct WtxRow<'exec> {
     pub record: MysqlRecord<'exec, wtx::Error>,
@@ -487,7 +529,7 @@ fn encode_py_to_wtx(
         "bytes" => {
             use pyo3::types::PyBytes;
             let py_bytes = value
-                .downcast::<PyBytes>()
+                .cast::<PyBytes>()
                 .map_err(|e| wtx::Error::Generic(Box::new(e.to_string())))?;
             let b: &[u8] = py_bytes.as_bytes();
             <&[u8] as Encode<Mysql<wtx::Error>>>::encode(&b, &mut (), ew)?;

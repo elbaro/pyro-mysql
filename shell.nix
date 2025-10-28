@@ -3,6 +3,8 @@
 }:
 
 pkgs.mkShell {
+  PYO3_PYTHON = "python";
+
   buildInputs = [
     # Python with packages
     (pkgs.python3.withPackages (

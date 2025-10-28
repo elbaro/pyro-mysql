@@ -8,7 +8,7 @@ use wtx::database::Executor;
 use crate::r#async::opts::AsyncOpts;
 use crate::r#async::queryable::Queryable;
 use crate::r#async::transaction::AsyncTransaction;
-use crate::r#async::wtx_types::{StatementCache, WtxConn, WtxExecutor};
+use crate::r#async::wtx_types::{BufferObj, StatementCache, WtxConn, WtxExecutor};
 use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
 use crate::util::{PyroFuture, rust_future_into_py};
@@ -31,9 +31,11 @@ impl AsyncConn {
 
     #[allow(clippy::new_ret_no_self)]
     #[staticmethod]
+    #[pyo3(signature = (url_or_opts, buffer=None))]
     pub fn new<'py>(
         py: Python<'py>,
         url_or_opts: Either<String, PyRef<AsyncOpts>>,
+        buffer: Option<PyRef<BufferObj>>,
     ) -> PyResult<Py<PyroFuture>> {
         // For now, only support URL strings since wtx doesn't have OptsBuilder equivalent
         let url = match url_or_opts {
@@ -45,8 +47,18 @@ impl AsyncConn {
             }
         };
 
+        // Clone the Arc if buffer is provided
+        let buffer_obj = buffer.map(|b| b.inner.clone());
+
         rust_future_into_py(py, async move {
-            let wtx_conn = WtxConn::connect(&url)
+            // Extract buffer if provided
+            let executor_buffer = if let Some(ref buffer_arc) = buffer_obj {
+                BufferObj { inner: buffer_arc.clone() }.take().await
+            } else {
+                None
+            };
+
+            let wtx_conn = WtxConn::connect_with_buffer(&url, executor_buffer)
                 .await
                 .map_err(|e| Error::WtxError(e.to_string()))?;
 

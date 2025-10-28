@@ -13,7 +13,7 @@ pub enum RowInner {
     MysqlCommon(mysql_common::Row),
     Wtx {
         // Store decoded Python objects directly
-        values: Vec<PyObject>,
+        values: Vec<Py<PyAny>>,
         column_names: Vec<String>,
     },
 }
