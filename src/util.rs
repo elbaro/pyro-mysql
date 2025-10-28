@@ -3,12 +3,19 @@ use std::future::Future;
 use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
 use pyo3::sync::PyOnceLock;
+use pyo3::types::PyString;
 use pyo3::types::PyTuple;
 use tokio_util::task::AbortOnDropHandle;
 
 use crate::error::PyroResult;
 
-static CREATE_FUTURE: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+struct Cache {
+    create_future: Py<PyAny>,
+    call_soon_threadsafe: Py<PyAny>,
+    intern_cancelled: Py<PyString>,
+}
+
+static CACHE: PyOnceLock<Cache> = PyOnceLock::new();
 
 pub fn mysql_error_to_pyerr(error: mysql_async::Error) -> PyErr {
     PyErr::new::<pyo3::exceptions::PyException, _>(format!("MySQL Error: {}", error))
@@ -73,62 +80,71 @@ where
     F: Future<Output = PyroResult<T>> + Send + 'static,
     T: for<'py> IntoPyObject<'py>,
 {
-    let event_loop = pyo3_async_runtimes::get_running_loop(py)?;
-    let bound_future = CREATE_FUTURE
-        .get_or_try_init(py, || -> PyResult<Py<PyAny>> {
-            let create_future = event_loop.getattr("create_future")?;
-            Ok(create_future.unbind())
-        })?
-        .bind(py)
-        .call0()?;
-    let py_future = bound_future.clone().unbind();
-    let event_loop = event_loop.unbind();
+    let cache = CACHE.get_or_try_init(py, || {
+        let event_loop = pyo3_async_runtimes::get_running_loop(py)?;
+        let create_future = event_loop.getattr("create_future")?.unbind();
+        let call_soon_threadsafe = event_loop.getattr("call_soon_threadsafe")?.unbind();
+        let intern_cancelled = PyString::intern(py, "cancelled").unbind();
 
-    pyo3_async_runtimes::tokio::get_runtime().spawn(async move {
-        let result = fut.await;
+        PyResult::Ok(Cache {
+            create_future,
+            call_soon_threadsafe,
+            intern_cancelled,
+        })
+    })?;
+    let py_future = cache.create_future.call0(py)?;
 
-        Python::attach(|py| {
-            let bound_future = py_future.bind(py);
+    {
+        let py_future = py_future.clone_ref(py);
+        pyo3_async_runtimes::tokio::get_runtime().spawn(async move {
+            let result = fut.await;
 
-            // Check if user already cancelled the future
-            // TODO: move this check inside call_soon_threadsafe
-            let cancelled = bound_future
-                .call_method0("cancelled")
-                .map(|v| v.is_truthy().unwrap_or(false))
-                .unwrap_or(false);
+            Python::attach(|py| {
+                let bound_future = py_future.bind(py);
 
-            if cancelled {
-                return;
-            }
+                // TODO: move this check inside call_soon_threadsafe
+                let cancelled = bound_future
+                    .call_method0(&cache.intern_cancelled)
+                    .map(|v| v.is_truthy().unwrap_or(false))
+                    .unwrap_or(false);
 
-            match result {
-                Ok(value) => {
-                    event_loop
-                        .call_method1(
-                            py,
-                            "call_soon_threadsafe",
-                            (
-                                bound_future.getattr("set_result").unwrap(),
-                                value.into_py_any(py).unwrap(),
-                            ),
-                        )
-                        .unwrap();
+                if cancelled {
+                    return;
                 }
-                Err(err) => {
-                    event_loop
-                        .call_method1(
-                            py,
-                            "call_soon_threadsafe",
-                            (
-                                bound_future.getattr("set_exception").unwrap(),
-                                pyo3::PyErr::from(err).into_bound_py_any(py).unwrap(),
-                            ),
-                        )
-                        .unwrap();
+
+                match result {
+                    Ok(value) => {
+                        cache
+                            .call_soon_threadsafe
+                            .call1(
+                                py,
+                                (
+                                    bound_future
+                                        .getattr(PyString::intern(py, "set_result"))
+                                        .unwrap(),
+                                    value.into_py_any(py).unwrap(),
+                                ),
+                            )
+                            .unwrap();
+                    }
+                    Err(err) => {
+                        cache
+                            .call_soon_threadsafe
+                            .call1(
+                                py,
+                                (
+                                    bound_future
+                                        .getattr(PyString::intern(py, "set_exception"))
+                                        .unwrap(),
+                                    pyo3::PyErr::from(err).into_bound_py_any(py).unwrap(),
+                                ),
+                            )
+                            .unwrap();
+                    }
                 }
-            }
+            });
         });
-    });
+    }
 
-    Ok(bound_future.unbind())
+    Ok(py_future)
 }
