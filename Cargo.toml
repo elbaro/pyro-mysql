@@ -48,20 +48,16 @@ name = "bench"
 harness = false
 
 [[bench]]
+name = "bench_concurrency"
+harness = false
+
+[[bench]]
 name = "bench_sqlalchemy"
 harness = false
 
 [[bench]]
 name = "bench_sqlalchemy_async"
 harness = false
-
-[[bench]]
-name = "bench_pyro"
-harness = false
-
-[[bin]]
-name = "microbench"
-path = "bin/microbench.rs"
 
 [profile.profiling]
 inherits = "release"

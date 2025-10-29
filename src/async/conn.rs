@@ -96,7 +96,6 @@ impl AsyncConn {
         }
         Ok(())
     }
-
     async fn reset(&self) -> PyroResult<()> {
         let mut inner = self.inner.write().await;
         inner

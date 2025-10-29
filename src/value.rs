@@ -105,10 +105,7 @@ impl FromPyObject<'_, '_> for Value {
                     MySqlValue::Bytes(int_str)
                 }
             }
-            "float" => {
-                let v = ob.extract::<f64>()?;
-                MySqlValue::Double(v)
-            }
+            "float" => MySqlValue::Double(ob.extract()?),
             "str" => {
                 let v = ob.extract::<String>()?;
                 MySqlValue::Bytes(v.into_bytes())

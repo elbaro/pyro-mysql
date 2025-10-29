@@ -9,19 +9,27 @@ release:
     mv target/release/libpyro_mysql.so pyro_mysql/pyro_mysql.abi3.so
     patchelf --remove-rpath pyro_mysql/pyro_mysql.abi3.so
 
-bench:
+bench: release
     PYTHONPATH=. cargo bench --bench bench --no-default-features
 
-bench-async:
-    PYTHONPATH=. cargo bench --bench bench pyro-async --no-default-features
+bench-concurrency: release
+    PYTHONPATH=. cargo bench --bench bench_concurrency --no-default-features
+
+bench-sqlalchemy: release
+    PYTHONPATH=. cargo bench --bench bench_sqlalchemy --no-default-features
+    PYTHONPATH=. cargo bench --bench bench_sqlalchemy_async --no-default-features
 
 microbench:
-    RUSTFLAGS="-Cforce-frame-pointers=yes" cargo build --profile=profiling --bin microbench --no-default-features
+    cargo build --profile=profiling --lib --no-default-features
+    mv target/profiling/libpyro_mysql.so pyro_mysql/pyro_mysql.abi3.so
+    cargo build --profile=profiling --bin microbench  --no-default-features
     PYTHONPERFSUPPORT=1 PYTHONPATH=. samply record ./target/profiling/microbench
 
-microbench2:
-    RUSTFLAGS="-Cforce-frame-pointers=yes" cargo build --profile=profiling --bin microbench --no-default-features
-    PYTHONPERFSUPPORT=1 PYTHONPATH=. perf record -g ./target/profiling/microbench
+microbench-sync:
+    cargo build --profile=profiling --lib --no-default-features
+    mv target/profiling/libpyro_mysql.so pyro_mysql/pyro_mysql.abi3.so
+    cargo build --profile=profiling --bin microbench_sync  --no-default-features
+    PYTHONPERFSUPPORT=1 PYTHONPATH=. samply record ./target/profiling/microbench_sync
 
-perf:
-    PYTHONPERFSUPPORT=1 PYTHONPATH=. perf record -g --call-graph dwarf -o perf.data ./target/profiling/microbench
+callgrind:
+    PYTHONPATH=. valgrind --tool=callgrind ./target/profiling/microbench 
