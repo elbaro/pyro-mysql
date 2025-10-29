@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MySQL Driver Benchmark</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -65,51 +66,55 @@
         <canvas id="benchmarkChart"></canvas>
     </div>
 
-    <div class="chart-container">
-        <canvas id="comparisonChart"></canvas>
-    </div>
-
     <script>
+        // Register the datalabels plugin
+        Chart.register(ChartDataLabels);
+
         // Benchmark data
         const benchmarkData = {
             "SELECT 1": {
-                "aiomysql (async)": 17.770,
-                "asyncmy (async)": 18.434,
-                "mysqlclient (sync)": 8.040,
-                "pyro-mysql (async)": 12.322,
-                "pyro-mysql (sync)": 4.415
+                "pyro-mysql (sync)": 5.259,
+                "mysqlclient (sync)": 8.540,
+                "pymysql (sync)": 17.095,
+                "pyro-mysql (async)": 13.142,
+                "aiomysql (async)": 18.333,
+                "asyncmy (async)": 20.139
             },
             "SELECT 10": {
-                "aiomysql (async)": 17.057,
-                "asyncmy (async)": 18.087,
-                "mysqlclient (sync)": 7.441,
-                "pyro-mysql (async)": 12.215,
-                "pyro-mysql (sync)": 4.384
+                "pyro-mysql (sync)": 5.338,
+                "mysqlclient (sync)": 8.196,
+                "pymysql (sync)": 16.618,
+                "pyro-mysql (async)": 13.513,
+                "aiomysql (async)": 17.786,
+                "asyncmy (async)": 20.342
             },
             "SELECT 100": {
-                "aiomysql (async)": 17.097,
-                "asyncmy (async)": 17.918,
-                "mysqlclient (sync)": 7.625,
-                "pyro-mysql (async)": 11.980,
-                "pyro-mysql (sync)": 4.268
+                "pyro-mysql (sync)": 4.814,
+                "mysqlclient (sync)": 8.151,
+                "pymysql (sync)": 15.919,
+                "pyro-mysql (async)": 12.105,
+                "aiomysql (async)": 17.284,
+                "asyncmy (async)": 19.384
             },
             "INSERT": {
-                "aiomysql (async)": 8.015,
-                "asyncmy (async)": 9.149,
-                "mysqlclient (sync)": 5.540,
-                "pyro-mysql (async)": 9.590,
-                "pyro-mysql (sync)": 2.905
+                "pyro-mysql (sync)": 3.153,
+                "mysqlclient (sync)": 5.833,
+                "pymysql (sync)": 6.743,
+                "pyro-mysql (async)": 9.674,
+                "aiomysql (async)": 8.291,
+                "asyncmy (async)": 9.424
             }
         };
 
-        const libraries = ["aiomysql (async)", "asyncmy (async)", "mysqlclient (sync)", "pyro-mysql (async)", "pyro-mysql (sync)"];
+        const libraries = ["pyro-mysql (sync)", "mysqlclient (sync)", "pymysql (sync)", "pyro-mysql (async)", "aiomysql (async)", "asyncmy (async)"];
         const benchmarks = Object.keys(benchmarkData);
         const colors = {
-            "aiomysql (async)": "#FF6384",
-            "asyncmy (async)": "#36A2EB",
+            "pyro-mysql (sync)": "#9966FF",
             "mysqlclient (sync)": "#FFCE56",
+            "pymysql (sync)": "#FF9F40",
             "pyro-mysql (async)": "#4BC0C0",
-            "pyro-mysql (sync)": "#9966FF"
+            "aiomysql (async)": "#FF6384",
+            "asyncmy (async)": "#36A2EB"
         };
 
         // Prepare datasets for grouped bar chart
@@ -135,10 +140,13 @@
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Benchmark Comparison by Test Type',
+                        text: 'Latency',
                         font: {
                             size: 16
                         }
+                    },
+                    datalabels: {
+                        display: false
                     },
                     legend: {
                         display: true,
@@ -164,73 +172,6 @@
                         title: {
                             display: true,
                             text: 'Benchmark Type'
-                        }
-                    }
-                }
-            }
-        });
-
-        // Create horizontal bar chart for average performance
-        const avgPerformance = {};
-        libraries.forEach(lib => {
-            let sum = 0;
-            benchmarks.forEach(bench => {
-                sum += benchmarkData[bench][lib];
-            });
-            avgPerformance[lib] = sum / benchmarks.length;
-        });
-
-        const ctx2 = document.getElementById('comparisonChart').getContext('2d');
-        new Chart(ctx2, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(avgPerformance).sort((a, b) => avgPerformance[a] - avgPerformance[b]),
-                datasets: [{
-                    label: 'Average Mean Time',
-                    data: Object.keys(avgPerformance).sort((a, b) => avgPerformance[a] - avgPerformance[b])
-                        .map(lib => avgPerformance[lib]),
-                    backgroundColor: Object.keys(avgPerformance).sort((a, b) => avgPerformance[a] - avgPerformance[b])
-                        .map(lib => colors[lib]),
-                    borderColor: Object.keys(avgPerformance).sort((a, b) => avgPerformance[a] - avgPerformance[b])
-                        .map(lib => colors[lib]),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Average Performance Ranking (Lower is Better)',
-                        font: {
-                            size: 16
-                        }
-                    },
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                return context.parsed.x.toFixed(3) + ' ms';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Average Mean Time (ms)'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Library'
                         }
                     }
                 }

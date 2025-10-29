@@ -1,9 +1,18 @@
 import asyncio
 
 from sqlalchemy import Column, Float, Integer, String
+from sqlalchemy.dialects import registry
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
+# Manually register pyro_mysql async dialects
+registry.register(
+    "mysql.pyro_mysql_async", "pyro_mysql.sqlalchemy_async", "MySQLDialect_async"
+)
+registry.register(
+    "mariadb.pyro_mysql_async", "pyro_mysql.sqlalchemy_async", "MariaDBDialect_async"
+)
 
 HOST = "127.0.0.1"
 PORT = 3306
@@ -12,6 +21,8 @@ PASSWORD = "1234"
 DATABASE = "test"
 
 Base = declarative_base()
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
 
 
 class BenchmarkTest(Base):
@@ -101,16 +112,11 @@ async def update_individual(driver_name, n):
 # Helper function to run async benchmarks from sync context
 def run_async_benchmark(driver_name, benchmark_type, *args):
     """Run async benchmark function synchronously"""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        if benchmark_type == "insert_individual":
-            return loop.run_until_complete(insert_individual(driver_name, *args))
-        elif benchmark_type == "select_query":
-            return loop.run_until_complete(select_query(driver_name, *args))
-        elif benchmark_type == "update_individual":
-            return loop.run_until_complete(update_individual(driver_name, *args))
-        else:
-            raise ValueError(f"Unknown benchmark type: {benchmark_type}")
-    finally:
-        loop.close()
+    if benchmark_type == "insert_individual":
+        return loop.run_until_complete(insert_individual(driver_name, *args))
+    elif benchmark_type == "select_query":
+        return loop.run_until_complete(select_query(driver_name, *args))
+    elif benchmark_type == "update_individual":
+        return loop.run_until_complete(update_individual(driver_name, *args))
+    else:
+        raise ValueError(f"Unknown benchmark type: {benchmark_type}")

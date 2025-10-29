@@ -21,7 +21,7 @@ from sqlalchemy import util
 from sqlalchemy.connectors.asyncio import (
     AsyncAdapt_dbapi_connection,
     AsyncAdapt_dbapi_cursor,
-    AsyncAdapt_dbapi_module,
+    # AsyncAdapt_dbapi_module,
     AsyncAdapt_terminate,
 )
 from sqlalchemy.dialects.mysql.base import MySQLDialect, MySQLExecutionContext
@@ -101,13 +101,15 @@ class AsyncAdapt_pyro_mysql_connection(
         pass
 
 
-class AsyncAdapt_pyro_mysql_dbapi(AsyncAdapt_dbapi_module):
+class AsyncAdapt_pyro_mysql_dbapi:
     """Async adapter for pyro-mysql DBAPI module."""
 
     def __init__(self, pyro_mysql: ModuleType):
         # Initialize parent with driver and dbapi_module
         # pyro_mysql is the driver, and pyro_mysql.dbapi provides the exception hierarchy
-        super().__init__(driver=pyro_mysql, dbapi_module=pyro_mysql.dbapi)
+        # super().__init__(driver=pyro_mysql, dbapi_module=pyro_mysql.dbapi)
+        self.driver = pyro_mysql
+        self.dbapi_module = pyro_mysql.dbapi
         self.pyro_mysql = pyro_mysql
         self.paramstyle = "qmark"
         self._init_dbapi_attributes()
