@@ -37,3 +37,11 @@ callgrind:
 fmt:
     cargo fmt
     black .
+
+publish:
+    rm -rf target/wheels
+    maturin build
+    7z e target/wheels/*.whl pyro_mysql/pyro_mysql.abi3.so -otarget/wheels/pyro_mysql
+    patchelf --remove-rpath target/wheels/pyro_mysql/pyro_mysql.abi3.so
+    cd target/wheels && 7z u *.whl pyro_mysql/pyro_mysql.abi3.so
+    maturin upload target/wheels/*.whl
