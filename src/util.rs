@@ -3,18 +3,10 @@ use std::future::Future;
 use pyo3::IntoPyObjectExt;
 use pyo3::intern;
 use pyo3::prelude::*;
-use pyo3::sync::PyOnceLock;
 use pyo3::types::PyTuple;
 use tokio_util::task::AbortOnDropHandle;
 
 use crate::error::PyroResult;
-
-struct Cache {
-    create_future: Py<PyAny>,
-    call_soon_threadsafe: Py<PyAny>,
-}
-
-static CACHE: PyOnceLock<Cache> = PyOnceLock::new();
 
 pub fn mysql_error_to_pyerr(error: mysql_async::Error) -> PyErr {
     PyErr::new::<pyo3::exceptions::PyException, _>(format!("MySQL Error: {}", error))
@@ -79,17 +71,15 @@ where
     F: Future<Output = PyroResult<T>> + Send + 'static,
     T: for<'py> IntoPyObject<'py> + Send + 'static,
 {
-    let cache = CACHE.get_or_try_init(py, || {
-        let event_loop = pyo3_async_runtimes::get_running_loop(py)?;
-        let create_future = event_loop.getattr("create_future")?.unbind();
-        let call_soon_threadsafe = event_loop.getattr("call_soon_threadsafe")?.unbind();
+    let event_loop = pyo3_async_runtimes::get_running_loop(py)?;
 
-        PyResult::Ok(Cache {
-            create_future,
-            call_soon_threadsafe,
-        })
-    })?;
-    let py_future = cache.create_future.call0(py)?;
+    // Because the event loop can be changed, these attributes are not cached.
+    let create_future = event_loop.getattr(intern!(py, "create_future"))?.unbind();
+    let call_soon_threadsafe = event_loop
+        .getattr(intern!(py, "call_soon_threadsafe"))?
+        .unbind();
+
+    let py_future = create_future.call0(py)?;
     {
         let py_future = py_future.clone_ref(py);
         pyo3_async_runtimes::tokio::get_runtime().spawn(async move {
@@ -107,8 +97,7 @@ where
                 let bound_future = py_future.bind(py);
                 match result {
                     Ok(value) => {
-                        cache
-                            .call_soon_threadsafe
+                        call_soon_threadsafe
                             .call1(
                                 py,
                                 (
@@ -119,8 +108,7 @@ where
                             .unwrap();
                     }
                     Err(err) => {
-                        cache
-                            .call_soon_threadsafe
+                        call_soon_threadsafe
                             .call1(
                                 py,
                                 (
