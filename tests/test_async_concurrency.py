@@ -33,11 +33,15 @@ async def test_concurrent_sleep():
 
         # If concurrent, should take ~1 second. If sequential, would take ~3 seconds.
         # Assert it completes within 4 seconds (with generous buffer for CI)
-        assert elapsed_time < 4, f"Expected concurrent execution in < 4s, took {elapsed_time:.2f}s"
+        assert (
+            elapsed_time < 4
+        ), f"Expected concurrent execution in < 4s, took {elapsed_time:.2f}s"
 
         # Also verify it's actually concurrent (not just fast sequential)
         # Should take at least 1 second (the sleep duration)
-        assert elapsed_time >= 1, f"Expected at least 1s for SLEEP(1), took {elapsed_time:.2f}s"
+        assert (
+            elapsed_time >= 1
+        ), f"Expected at least 1s for SLEEP(1), took {elapsed_time:.2f}s"
 
     finally:
         # Clean up connections

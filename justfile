@@ -33,3 +33,7 @@ microbench-sync:
 
 callgrind:
     PYTHONPATH=. valgrind --tool=callgrind ./target/profiling/microbench 
+
+fmt:
+    cargo fmt
+    black .

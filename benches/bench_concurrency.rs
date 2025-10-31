@@ -133,7 +133,8 @@ pub fn bench(c: &mut Criterion) {
             group.bench_function(name, |b| {
                 b.iter_batched(
                     || {
-                        let mut conn = mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test").unwrap();
+                        let mut conn =
+                            mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test").unwrap();
                         conn.exec_drop("TRUNCATE TABLE benchmark_test", ()).unwrap();
                     },
                     |()| {
