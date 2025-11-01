@@ -15,6 +15,7 @@ use crate::{
     },
     error::{Error, PyroResult},
     params::Params,
+    r#async::conn::MultiAsyncConn,
     row::Row,
     util::tokio_spawn_as_abort_on_drop,
 };
@@ -109,9 +110,15 @@ impl AsyncCursor {
 
         let (description, rowcount, result, lastrowid) = tokio_spawn_as_abort_on_drop(async move {
             let mut conn_guard = conn.write().await;
-            let conn = conn_guard
+            let multi_conn = conn_guard
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?;
+
+            // DBAPI only supports mysql_async backend
+            let conn = match multi_conn {
+                MultiAsyncConn::MysqlAsync(c) => c,
+                MultiAsyncConn::Wtx { .. } => panic!("DBAPI is not supported for wtx connections"),
+            };
 
             let query_result = conn
                 .exec_iter(query, params)
@@ -176,9 +183,15 @@ impl AsyncCursor {
 
         let affected = tokio_spawn_as_abort_on_drop(async move {
             let mut conn_guard = conn.write().await;
-            let conn = conn_guard
+            let multi_conn = conn_guard
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?;
+
+            // DBAPI only supports mysql_async backend
+            let conn = match multi_conn {
+                MultiAsyncConn::MysqlAsync(c) => c,
+                MultiAsyncConn::Wtx { .. } => panic!("DBAPI is not supported for wtx connections"),
+            };
 
             let mut affected = 0;
             let stmt = conn.prep(query).await.map_err(Error::from)?;

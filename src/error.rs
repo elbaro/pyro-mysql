@@ -50,6 +50,12 @@ pub enum Error {
 
     #[error("Failed to create a new Python object: {0}")]
     PythonObjectCreationError(#[from] PyErr),
+
+    #[error("IO Error: {0}")]
+    IoError(String),
+
+    #[error("Wtx Error: {0}")]
+    WtxError(String),
     // #[error("")]
     // NetworkTimeoutError(String),
     // #[error("invalid header (expected {expected:?}, found {found:?})")]
@@ -89,6 +95,8 @@ impl From<Error> for pyo3::PyErr {
             Error::PythonObjectCreationError(e) => {
                 PythonObjectCreationError::new_err(e.to_string())
             }
+            Error::IoError(s) => MysqlError::new_err(format!("IO Error: {}", s)),
+            Error::WtxError(s) => MysqlError::new_err(format!("Wtx Error: {}", s)),
         }
     }
 }

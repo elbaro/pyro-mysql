@@ -9,6 +9,7 @@ pub mod type_object;
 use std::sync::Arc;
 
 use crate::{
+    r#async::conn::MultiAsyncConn,
     r#async::opts::AsyncOpts,
     dbapi::{async_conn::AsyncDbApiConn, conn::DbApiConn, error::DbApiResult},
     error::Error,
@@ -58,7 +59,7 @@ pub fn connect_async(
                 .map_err(Error::from)?;
         }
         Ok(AsyncDbApiConn(Arc::new(tokio::sync::RwLock::new(Some(
-            conn,
+            MultiAsyncConn::MysqlAsync(conn),
         )))))
     })?)
 }

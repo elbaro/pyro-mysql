@@ -316,6 +316,25 @@ class Conn:
         """
         ...
 
+    @staticmethod
+    def new_wtx(
+        url: str,
+        max_statements: int | None = None,
+        buffer_size: tuple[int, int, int, int, int] | None = None,
+    ) -> PyroFuture["Conn"]:
+        """
+        Create a new connection using the wtx backend.
+
+        Args:
+            url: MySQL connection URL (e.g., 'mysql://user:password@host:port/database')
+            max_statements: Maximum number of prepared statements to cache (default: unlimited)
+            buffer_size: Tuple of buffer sizes (default: uses wtx defaults)
+
+        Returns:
+            New Conn instance.
+        """
+        ...
+
     def start_transaction(
         self,
         consistent_snapshot: bool = False,
