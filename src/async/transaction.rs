@@ -3,9 +3,9 @@ use std::sync::Arc;
 use tokio::sync::{RwLock, RwLockWriteGuard};
 
 use crate::{
+    r#async::conn::MultiAsyncConn,
     r#async::queryable::Queryable,
     error::Error,
-    params::Params,
     util::{PyroFuture, rust_future_into_py},
 };
 
@@ -14,20 +14,20 @@ use crate::{
 pub struct AsyncTransaction {
     opts: mysql_async::TxOpts,
 
-    /// Option<Transaction> is initialized in __aenter__.
+    /// `Option<Transaction>` is initialized in __aenter__.
     /// It is reset on commit(), rollback(), or __aexit__.
     inner: Arc<RwLock<Option<mysql_async::Transaction<'static>>>>,
 
     /// Holding this guard prevents other concurrent calls of Conn::some_method(&mut self).
     /// guard is initialized in __aenter__.
     /// It is reset on commit(), rollback(), or __aexit__.
-    guard: Arc<RwLock<Option<tokio::sync::RwLockWriteGuard<'static, Option<mysql_async::Conn>>>>>,
+    guard: Arc<RwLock<Option<tokio::sync::RwLockWriteGuard<'static, Option<MultiAsyncConn>>>>>,
 
-    conn: Arc<RwLock<Option<mysql_async::Conn>>>,
+    conn: Arc<RwLock<Option<MultiAsyncConn>>>,
 }
 
 impl AsyncTransaction {
-    pub fn new(conn: Arc<RwLock<Option<mysql_async::Conn>>>, opts: mysql_async::TxOpts) -> Self {
+    pub fn new(conn: Arc<RwLock<Option<MultiAsyncConn>>>, opts: mysql_async::TxOpts) -> Self {
         AsyncTransaction {
             opts,
             conn,
@@ -57,9 +57,19 @@ impl AsyncTransaction {
                 panic!("panic");
             }
 
-            let tx = conn
-                .as_mut()
-                .unwrap() // Conn is already non-None
+            // Check if connection is wtx and panic
+            let conn_ref = conn.as_mut().unwrap(); // Conn is already non-None
+            if matches!(conn_ref, MultiAsyncConn::Wtx { .. }) {
+                panic!("Transactions are not supported for wtx connections");
+            }
+
+            // Only mysql_async supports transactions
+            let mysql_conn = match conn_ref {
+                MultiAsyncConn::MysqlAsync(c) => c,
+                MultiAsyncConn::Wtx { .. } => unreachable!(),
+            };
+
+            let tx = mysql_conn
                 .start_transaction(opts)
                 .await
                 .map_err(Error::from)?;
@@ -77,7 +87,7 @@ impl AsyncTransaction {
             *guard = Some(unsafe {
                 std::mem::transmute::<
                     RwLockWriteGuard<'_, _>,
-                    RwLockWriteGuard<'static, Option<mysql_async::Conn>>,
+                    RwLockWriteGuard<'static, Option<MultiAsyncConn>>,
                 >(conn)
             });
 
@@ -190,31 +200,34 @@ impl AsyncTransaction {
     }
 
     // ─── Binary Protocol ─────────────────────────────────────────────────
-    #[pyo3(signature = (query, params=Params::default()))]
+    #[pyo3(signature = (query, params=None))]
     fn exec<'py>(
         &self,
         py: Python<'py>,
         query: PyBackedStr,
-        params: Params,
+        params: Option<Py<PyAny>>,
     ) -> PyResult<Py<PyroFuture>> {
+        let params = params.unwrap_or_else(|| py.None());
         self.inner.exec(py, query, params)
     }
-    #[pyo3(signature = (query, params=Params::default()))]
+    #[pyo3(signature = (query, params=None))]
     fn exec_first<'py>(
         &self,
         py: Python<'py>,
         query: PyBackedStr,
-        params: Params,
+        params: Option<Py<PyAny>>,
     ) -> PyResult<Py<PyroFuture>> {
+        let params = params.unwrap_or_else(|| py.None());
         self.inner.exec_first(py, query, params)
     }
-    #[pyo3(signature = (query, params=Params::default()))]
+    #[pyo3(signature = (query, params=None))]
     fn exec_drop<'py>(
         &self,
         py: Python<'py>,
         query: PyBackedStr,
-        params: Params,
+        params: Option<Py<PyAny>>,
     ) -> PyResult<Py<PyroFuture>> {
+        let params = params.unwrap_or_else(|| py.None());
         self.inner.exec_drop(py, query, params)
     }
     #[pyo3(signature = (query, params=vec![]))]
@@ -222,7 +235,7 @@ impl AsyncTransaction {
         &self,
         py: Python<'py>,
         query: PyBackedStr,
-        params: Vec<Params>,
+        params: Vec<Py<PyAny>>,
     ) -> PyResult<Py<PyroFuture>> {
         self.inner.exec_batch(py, query, params)
     }

@@ -1,6 +1,6 @@
 // PEP 249 – Python Database API Specification v2.0 (Async version)
 
-use mysql_async::{Conn as AsyncMysqlConn, prelude::*};
+use mysql_async::prelude::*;
 use pyo3::{prelude::*, types::PyList};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -9,12 +9,13 @@ use crate::{
     dbapi::{async_cursor::AsyncCursor, error::DbApiResult},
     error::{Error, PyroResult},
     params::Params,
+    r#async::conn::MultiAsyncConn,
     row::Row,
     util::tokio_spawn_as_abort_on_drop,
 };
 
 #[pyclass(module = "pyro_mysql.dbapi_async", name = "Connection")]
-pub struct AsyncDbApiConn(pub Arc<RwLock<Option<AsyncMysqlConn>>>);
+pub struct AsyncDbApiConn(pub Arc<RwLock<Option<MultiAsyncConn>>>);
 
 impl From<crate::r#async::conn::AsyncConn> for AsyncDbApiConn {
     fn from(value: crate::r#async::conn::AsyncConn) -> Self {
@@ -45,16 +46,27 @@ impl AsyncDbApiConn {
 
     pub async fn exec_batch(&self, query: &str, params: Vec<Params>) -> DbApiResult<u64> {
         let mut guard = self.0.write().await;
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+
         log::debug!("execute {query}");
 
-        let mut affected = 0;
-        let stmt = conn.prep(query).await.map_err(Error::from)?;
-        for params in params {
-            conn.exec_drop(&stmt, params).await.map_err(Error::from)?;
-            affected += conn.affected_rows();
+        match multi_conn {
+            MultiAsyncConn::MysqlAsync(conn) => {
+                let mut affected = 0;
+                let stmt = conn.prep(query).await.map_err(Error::from)?;
+                for params in params {
+                    conn.exec_drop(&stmt, params).await.map_err(Error::from)?;
+                    affected += conn.affected_rows();
+                }
+                Ok(affected)
+            }
+            MultiAsyncConn::Wtx { .. } => {
+                // wtx is not supported in DB-API, use the async API instead
+                Err(Error::IncorrectApiUsageError(
+                    "wtx connections are not supported with DB-API. Use the async API (pyro_mysql.AsyncConn) instead."
+                ).into())
+            }
         }
-        Ok(affected)
     }
 }
 
@@ -78,7 +90,18 @@ impl AsyncDbApiConn {
         let arc = self.0.clone();
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let mut guard = arc.write().await;
-            let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+            let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+            let conn = match multi_conn {
+                MultiAsyncConn::MysqlAsync(c) => c,
+                MultiAsyncConn::Wtx { executor, .. } => {
+                    use wtx::database::Executor;
+                    executor
+                        .execute("COMMIT", |_: u64| Ok(()))
+                        .await
+                        .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
+                    return Ok(());
+                }
+            };
             conn.exec_drop("COMMIT", Params::default())
                 .await
                 .map_err(Error::from)?;
@@ -90,7 +113,18 @@ impl AsyncDbApiConn {
         let arc = self.0.clone();
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let mut guard = arc.write().await;
-            let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+            let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+            let conn = match multi_conn {
+                MultiAsyncConn::MysqlAsync(c) => c,
+                MultiAsyncConn::Wtx { executor, .. } => {
+                    use wtx::database::Executor;
+                    executor
+                        .execute("ROLLBACK", |_: u64| Ok(()))
+                        .await
+                        .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
+                    return Ok(());
+                }
+            };
             conn.exec_drop("ROLLBACK", Params::default())
                 .await
                 .map_err(Error::from)?;
@@ -108,7 +142,23 @@ impl AsyncDbApiConn {
     pub async fn set_autocommit(&self, on: bool) -> PyroResult<()> {
         let arc = self.0.clone();
         let mut guard = arc.write().await;
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = match multi_conn {
+            MultiAsyncConn::MysqlAsync(c) => c,
+            MultiAsyncConn::Wtx { executor, .. } => {
+                use wtx::database::Executor;
+                let query = if on {
+                    "SET autocommit=1"
+                } else {
+                    "SET autocommit=0"
+                };
+                executor
+                    .execute(query, |_: u64| Ok(()))
+                    .await
+                    .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
+                return Ok(());
+            }
+        };
         let query = if on {
             "SET autocommit=1"
         } else {
@@ -124,7 +174,18 @@ impl AsyncDbApiConn {
         let arc = self.0.clone();
         tokio_spawn_as_abort_on_drop(async move {
             let mut guard = arc.write().await;
-            let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+            let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+            let conn = match multi_conn {
+                MultiAsyncConn::MysqlAsync(c) => c,
+                MultiAsyncConn::Wtx { executor, .. } => {
+                    use wtx::database::Executor;
+                    executor
+                        .execute("SELECT 1", |_: u64| Ok(()))
+                        .await
+                        .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
+                    return Ok(());
+                }
+            };
             conn.ping().await?;
             PyroResult::Ok(())
         })

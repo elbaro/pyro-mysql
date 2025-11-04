@@ -1,6 +1,4 @@
-use std::ffi::CString;
-
-use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use mysql::{TxOpts, prelude::Queryable};
 use pyo3::{ffi::c_str, prelude::*};
 
@@ -16,17 +14,6 @@ fn setup_db() {
             email VARCHAR(100),
             score FLOAT,
             description VARCHAR(100)
-        ) ENGINE = MEMORY",
-        (),
-    )
-    .unwrap();
-
-    conn.exec_drop("DROP TABLE IF EXISTS long_text_test", ())
-        .unwrap();
-    conn.exec_drop(
-        "CREATE TABLE long_text_test (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            content VARCHAR(4000)
         ) ENGINE = MEMORY",
         (),
     )
@@ -61,24 +48,6 @@ fn populate_table(n: usize) {
     }
 }
 
-fn populate_long_text_table(n: usize) {
-    let mut conn = mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test").unwrap();
-    conn.exec_drop("TRUNCATE TABLE long_text_test", ()).unwrap();
-    {
-        let mut tx = conn.start_transaction(TxOpts::default()).unwrap();
-        // Generate a long text of ~1500 bytes
-        let long_text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ".repeat(30);
-        for i in 0..n {
-            tx.exec_drop(
-                "INSERT INTO long_text_test (content) VALUES (?)",
-                (format!("{} {}", long_text, i),),
-            )
-            .unwrap();
-        }
-        tx.commit().unwrap();
-    }
-}
-
 pub fn bench(c: &mut Criterion) {
     setup_db();
 
@@ -86,139 +55,115 @@ pub fn bench(c: &mut Criterion) {
         Python::run(py, c_str!(include_str!("./bench.py")), None, None).unwrap();
     });
 
-    for select_size in [1, 10, 100] {
+    for select_size in [1, 10, 100, 1000] {
         let mut group = c.benchmark_group(format!("SELECT_{}", select_size));
+        populate_table(select_size);
 
-        for (name, statement) in [
+        for (name, setup, statement) in [
             (
                 "mysqlclient",
-                CString::new(format!("select_sync(MySQLdb.connect, 100, {select_size})")).unwrap(),
+                cr"mysqldb_conn = MySQLdb.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
+                c"select_sync(mysqldb_conn)",
             ),
             (
                 "pymysql",
-                CString::new(format!("select_sync(pymysql.connect, 100, {select_size})")).unwrap(),
+                cr"pymysql_conn = pymysql.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
+                c"select_sync(pymysql_conn)",
             ),
             (
                 "pyro-sync",
-                CString::new(format!("select_pyro_sync(100, {select_size})")).unwrap(),
+                cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test')",
+                c"select_pyro_sync(pyro_sync_conn)",
             ),
             (
                 "pyro-async",
-                CString::new(format!(
-                    "loop.run_until_complete(select_pyro_async(100, {select_size}))"
-                ))
-                .unwrap(),
+                cr"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
+                c"loop.run_until_complete(select_pyro_async(pyro_async_conn))",
+            ),
+            (
+                "pyro-wtx",
+                cr"pyro_wtx_conn = loop.run_until_complete(create_pyro_wtx_conn())",
+                c"loop.run_until_complete(select_pyro_wtx(pyro_wtx_conn))",
             ),
             (
                 "asyncmy",
-                CString::new(format!(
-                    "loop.run_until_complete(select_async(asyncmy.connect, 100, {select_size}))"
-                ))
-                .unwrap(),
+                cr"asyncmy_conn = loop.run_until_complete(create_asyncmy_conn())",
+                c"loop.run_until_complete(select_async(asyncmy_conn))",
             ),
             (
                 "aiomysql",
-                CString::new(format!(
-                    "loop.run_until_complete(select_async(aiomysql.connect, 100, {select_size}))"
-                ))
-                .unwrap(),
+                cr"aiomysql_conn = loop.run_until_complete(create_aiomysql_conn())",
+                c"loop.run_until_complete(select_async(aiomysql_conn))",
             ),
         ] {
             group.bench_function(name, |b| {
-                b.iter_batched(
-                    || populate_table(100),
-                    |()| {
-                        Python::attach(|py| {
-                            py.eval(&statement, None, None).unwrap();
-                        });
-                    },
-                    BatchSize::SmallInput,
-                )
+                Python::attach(|py| {
+                    Python::run(py, setup, None, None).unwrap();
+                    b.iter(|| py.run(&statement, None, None).unwrap());
+                });
             });
         }
     }
     {
         let mut group = c.benchmark_group("INSERT");
 
-        for (name, statement) in [
-            ("mysqlclient", c_str!("insert_sync(MySQLdb.connect, 100)")),
-            ("pymysql", c_str!("insert_sync(pymysql.connect, 100)")),
-            ("pyro-sync", c_str!("insert_pyro_sync(100)")),
-            (
-                "pyro-async",
-                c_str!("loop.run_until_complete(insert_pyro_async(100))"),
-            ),
-            (
-                "asyncmy",
-                c_str!("loop.run_until_complete(insert_async(asyncmy.connect, 100))"),
-            ),
-            (
-                "aiomysql",
-                c_str!("loop.run_until_complete(insert_async(aiomysql.connect, 100))"),
-            ),
-        ] {
-            group.bench_function(name, |b| {
-                b.iter_batched(
-                    || clear_table(),
-                    |()| {
-                        Python::attach(|py| {
-                            py.eval(statement, None, None).unwrap();
-                        });
-                    },
-                    BatchSize::SmallInput,
-                )
-            });
-        }
-    }
-
-    for select_size in [1, 10, 100] {
-        let mut group = c.benchmark_group(format!("SELECT_Long_Text_{}", select_size));
-
-        for (name, statement) in [
+        for (name, setup, stmt_template) in [
             (
                 "mysqlclient",
-                CString::new(format!("select_long_text_sync(MySQLdb.connect, 100, {select_size})")).unwrap(),
+                cr"mysqldb_conn = MySQLdb.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
+                "insert_sync(mysqldb_conn, {})",
             ),
             (
                 "pymysql",
-                CString::new(format!("select_long_text_sync(pymysql.connect, 100, {select_size})")).unwrap(),
+                cr"pymysql_conn = pymysql.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
+                "insert_sync(pymysql_conn, {})",
             ),
             (
                 "pyro-sync",
-                CString::new(format!("select_long_text_pyro_sync(100, {select_size})")).unwrap(),
+                cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test')",
+                "insert_pyro_sync(pyro_sync_conn, {})",
             ),
             (
                 "pyro-async",
-                CString::new(format!(
-                    "loop.run_until_complete(select_long_text_pyro_async(100, {select_size}))"
-                ))
-                .unwrap(),
+                cr"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
+                "loop.run_until_complete(insert_pyro_async(pyro_async_conn, {}))",
+            ),
+            (
+                "pyro-wtx",
+                cr"pyro_wtx_conn = loop.run_until_complete(create_pyro_wtx_conn())",
+                "loop.run_until_complete(insert_pyro_wtx(pyro_wtx_conn, {}))",
             ),
             (
                 "asyncmy",
-                CString::new(format!(
-                    "loop.run_until_complete(select_long_text_async(asyncmy.connect, 100, {select_size}))"
-                ))
-                .unwrap(),
+                cr"asyncmy_conn = loop.run_until_complete(create_asyncmy_conn())",
+                "loop.run_until_complete(insert_async(asyncmy_conn, {}))",
             ),
             (
                 "aiomysql",
-                CString::new(format!(
-                    "loop.run_until_complete(select_long_text_async(aiomysql.connect, 100, {select_size}))"
-                ))
-                .unwrap(),
+                cr"aiomysql_conn = loop.run_until_complete(create_aiomysql_conn())",
+                "loop.run_until_complete(insert_async(aiomysql_conn, {}))",
             ),
         ] {
             group.bench_function(name, |b| {
-                b.iter_batched(
-                    || populate_long_text_table(100),
-                    |()| {
-                        Python::attach(|py| {
-                            py.eval(&statement, None, None).unwrap();
-                        });
-                    },
-                    BatchSize::SmallInput,
-                )
+                Python::attach(|py| {
+                    Python::run(py, setup, None, None).unwrap();
+                    b.iter_custom(|iters| {
+                        let mut sum = std::time::Duration::ZERO;
+                        for g in 0..((iters-1)/10000+1) {
+                            clear_table();
+                            let start = g * 10000;
+                            let end = iters.min(start+10000);
+
+                            let statement = stmt_template.replace("{}", &(end-start).to_string());
+                            let c_statement = std::ffi::CString::new(statement).unwrap();
+
+                            let start = std::time::Instant::now();
+                            py.eval(c_statement.as_c_str(), None, None).unwrap();
+                            sum += start.elapsed();
+                        }
+                        sum
+                    });
+                });
             });
         }
     }

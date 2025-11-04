@@ -2,6 +2,7 @@ use either::Either;
 use mysql::{AccessMode, Opts, prelude::*};
 use parking_lot::RwLock;
 use pyo3::prelude::*;
+use pyo3::types::PyList;
 
 use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
@@ -127,18 +128,28 @@ impl SyncConn {
     // ─── Binary Protocol ─────────────────────────────────────────────────
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec(&self, query: String, params: Params) -> PyroResult<Vec<Row>> {
+    fn exec<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        params: Params,
+    ) -> PyroResult<Bound<'py, PyList>> {
         let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        log::debug!("exec {query}");
-        Ok(conn.exec(query, params)?)
+        // log::debug!("exec {query}");
+        Ok(
+            conn.exec_fold(query, params, PyList::empty(py), |acc, row| {
+                acc.append(mysql::from_row::<Row>(row)).unwrap();
+                acc
+            })?,
+        )
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_first(&self, query: String, params: Params) -> PyroResult<Option<Row>> {
         let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        log::debug!("exec_first {query}");
+        // log::debug!("exec_first {query}");
         Ok(conn.exec_first(query, params)?)
     }
 
@@ -146,7 +157,7 @@ impl SyncConn {
     fn exec_drop(&self, query: String, params: Params) -> PyroResult<()> {
         let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        log::debug!("exec_drop {query}");
+        // log::debug!("exec_drop {query}");
         Ok(conn.exec_drop(query, params)?)
     }
 
@@ -154,33 +165,33 @@ impl SyncConn {
     fn exec_batch(&self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
         let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        log::debug!("exec_batch {query}");
+        // log::debug!("exec_batch {query}");
         Ok(conn.exec_batch(query, params_list)?)
     }
 
-    #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_iter(
-        slf: Py<Self>,
-        py: Python,
-        query: String,
-        params: Params,
-    ) -> PyroResult<ResultSetIterator> {
-        let slf_ref = slf.borrow(py);
-        let mut guard = slf_ref.inner.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+    // #[pyo3(signature = (query, params=Params::default()))]
+    // fn exec_iter(
+    //     slf: Py<Self>,
+    //     py: Python,
+    //     query: String,
+    //     params: Params,
+    // ) -> PyroResult<ResultSetIterator> {
+    //     let slf_ref = slf.borrow(py);
+    //     let mut guard = slf_ref.inner.write();
+    //     let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
-        log::debug!("exec_iter {query}");
-        let query_result = conn.exec_iter(query, params)?;
-        Ok(ResultSetIterator {
-            owner: slf.clone_ref(py).into_any(),
-            inner: Either::Right(unsafe {
-                std::mem::transmute::<
-                    mysql::QueryResult<'_, '_, '_, mysql::Binary>,
-                    mysql::QueryResult<'_, '_, '_, mysql::Binary>,
-                >(query_result)
-            }),
-        })
-    }
+    //     log::debug!("exec_iter {query}");
+    //     let query_result = conn.exec_iter(query, params)?;
+    //     Ok(ResultSetIterator {
+    //         owner: slf.clone_ref(py).into_any(),
+    //         inner: Either::Right(unsafe {
+    //             std::mem::transmute::<
+    //                 mysql::QueryResult<'_, '_, '_, mysql::Binary>,
+    //                 mysql::QueryResult<'_, '_, '_, mysql::Binary>,
+    //             >(query_result)
+    //         }),
+    //     })
+    // }
 
     pub fn close(&self) {
         *self.inner.write() = None;

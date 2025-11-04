@@ -33,7 +33,7 @@ class BenchmarkTest(Base):
     age = Column(Integer)
     email = Column(String(100))
     score = Column(Float)
-    description = Column(String(500))
+    description = Column(String(100))
 
 
 # Pre-generated test data
@@ -53,6 +53,9 @@ def create_async_session(driver_name):
     """Create async SQLAlchemy session with specified driver"""
     if driver_name == "pyro_mysql":
         url = f"mariadb+pyro_mysql_async://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
+    elif driver_name == "pyro_wtx":
+        # Pass wtx=true as query parameter to use wtx backend
+        url = f"mariadb+pyro_mysql_async://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}?wtx=true"
     elif driver_name == "aiomysql":
         url = f"mysql+aiomysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
     elif driver_name == "asyncmy":
@@ -66,57 +69,19 @@ def create_async_session(driver_name):
 
 
 # Individual INSERT operations
-async def insert_individual(driver_name, n):
-    session, engine = create_async_session(driver_name)
+async def insert_individual(session, n):
     for i in range(n):
         obj = BenchmarkTest(**DATA[i])
         session.add(obj)
     await session.commit()
-    await session.close()
-    await engine.dispose()
 
 
 # SELECT operations
-async def select_query(driver_name, n, batch):
+async def select_query(session):
     from sqlalchemy import text
 
-    session, engine = create_async_session(driver_name)
-    for i in range(0, n * batch, batch):
-        result = await session.execute(
-            text(
-                f"SELECT * FROM benchmark_test WHERE id >= {i + 1} AND id < {i + 1 + batch}"
-            )
-        )
-        rows = result.fetchall()
-        # Force evaluation
-        for row in rows:
-            _ = tuple(row)
-    await session.close()
-    await engine.dispose()
-
-
-# Individual UPDATE operations
-async def update_individual(driver_name, n):
-    from sqlalchemy import text
-
-    session, engine = create_async_session(driver_name)
-    for i in range(1, n + 1):
-        await session.execute(
-            text(f"UPDATE benchmark_test SET age = {30 + (i % 10)} WHERE id = {i}")
-        )
-    await session.commit()
-    await session.close()
-    await engine.dispose()
-
-
-# Helper function to run async benchmarks from sync context
-def run_async_benchmark(driver_name, benchmark_type, *args):
-    """Run async benchmark function synchronously"""
-    if benchmark_type == "insert_individual":
-        return loop.run_until_complete(insert_individual(driver_name, *args))
-    elif benchmark_type == "select_query":
-        return loop.run_until_complete(select_query(driver_name, *args))
-    elif benchmark_type == "update_individual":
-        return loop.run_until_complete(update_individual(driver_name, *args))
-    else:
-        raise ValueError(f"Unknown benchmark type: {benchmark_type}")
+    result = await session.execute(text("SELECT * FROM benchmark_test"))
+    rows = result.fetchall()
+    # Force evaluation
+    for row in rows:
+        _ = tuple(row)

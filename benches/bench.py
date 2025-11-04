@@ -18,6 +18,7 @@ PASSWORD = "1234"
 DATABASE = "test"
 
 loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
 
 DATA = [
     (
@@ -34,201 +35,122 @@ DATA = [
 pyro_mysql.init(worker_threads=1)
 
 
-async def insert_pyro_async(n):
-    conn = await pyro_mysql.AsyncConn.new(
-        f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
+# ─── Connection Setup Helpers ─────────────────────────────────────────────────
+
+
+async def create_pyro_async_conn():
+    return await pyro_mysql.AsyncConn.new("mysql://test:1234@127.0.0.1:3306/test")
+
+
+async def create_pyro_wtx_conn():
+    return await pyro_mysql.AsyncConn.new_wtx(
+        "mysql://test:1234@127.0.0.1:3306/test",
+        max_statements=32,
+        buffer_size=(512, 512, 8192, 512, 32),
     )
+
+
+async def create_asyncmy_conn():
+    return await asyncmy.connect(
+        host="127.0.0.1",
+        port=3306,
+        user="test",
+        password="1234",
+        db="test",
+        autocommit=True,
+    )
+
+
+async def create_aiomysql_conn():
+    return await aiomysql.connect(
+        host="127.0.0.1",
+        port=3306,
+        user="test",
+        password="1234",
+        db="test",
+        autocommit=True,
+    )
+
+
+# ─── Insert ───────────────────────────────────────────────────────────────────
+
+
+async def insert_pyro_async(conn, n):
     for i in range(n):
         await conn.exec_drop(
             "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
-            DATA[i],
+            DATA[i % 10000],
         )
 
 
-def insert_pyro_sync(n):
-    conn = pyro_mysql.SyncConn(f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
+async def insert_pyro_wtx(conn, n):
+    for i in range(n):
+        await conn.exec_drop(
+            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
+            DATA[i % 10000],
+        )
+
+
+def insert_pyro_sync(conn, n):
     for i in range(n):
         conn.exec_drop(
             "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
-            DATA[i],
+            DATA[i % 10000],
         )
 
 
-async def insert_async(connect_fn, n: int):
-    conn = await connect_fn(
-        host=HOST,
-        port=PORT,
-        user=USER,
-        password=PASSWORD,
-        db=DATABASE,
-        autocommit=True,
-    )
-
+async def insert_async(conn, n: int):
     async with conn.cursor() as cursor:
         for i in range(n):
             await cursor.execute(
-                """INSERT INTO benchmark_test (name, age, email, score, description) 
+                """INSERT INTO benchmark_test (name, age, email, score, description)
                     VALUES (%s, %s, %s, %s, %s)""",
-                DATA[i],
+                DATA[i % 10000],
             )
         await cursor.close()
-    await conn.ensure_closed()
 
 
-def insert_sync(connect_fn, n: int):
-    conn = connect_fn(
-        host=HOST,
-        port=PORT,
-        user=USER,
-        password=PASSWORD,
-        database=DATABASE,
-        autocommit=True,
-    )
-
+def insert_sync(conn, n: int):
     cursor = conn.cursor()
     for i in range(n):
         cursor.execute(
-            """INSERT INTO benchmark_test (name, age, email, score, description) 
+            """INSERT INTO benchmark_test (name, age, email, score, description)
                 VALUES (%s, %s, %s, %s, %s)""",
-            DATA[i],
+            DATA[i % 10000],
         )
     cursor.close()
-    conn.close()
 
 
 # ─── Select ───────────────────────────────────────────────────────────────────
 
 
-async def select_pyro_async(n: int, batch: int):
-    conn = await pyro_mysql.AsyncConn.new(
-        f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
-    )
-    for i in range(0, n * batch, batch):
-        rows = await conn.exec(
-            "SELECT * FROM benchmark_test WHERE id >= ? AND id < ?",
-            (i + 1, i + 1 + batch),
-        )
-        for row in rows:
-            row.to_tuple()
+async def select_pyro_async(conn):
+    rows = await conn.exec("SELECT * FROM benchmark_test")
+    for row in rows:
+        row.to_tuple()
 
 
-def select_pyro_sync(n: int, batch: int):
-    conn = pyro_mysql.SyncConn(f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
-    for i in range(0, n * batch, batch):
-        rows = conn.exec(
-            "SELECT * FROM benchmark_test WHERE id >= ? AND id < ?",
-            (i + 1, i + 1 + batch),
-        )
-        for row in rows:
-            row.to_tuple()
+async def select_pyro_wtx(conn):
+    rows = await conn.exec("SELECT * FROM benchmark_test")
+    for row in rows:
+        row.to_tuple()
 
 
-async def select_async(connect_fn, n: int, batch: int):
-    conn = await connect_fn(
-        host=HOST,
-        port=PORT,
-        user=USER,
-        password=PASSWORD,
-        db=DATABASE,
-        autocommit=True,
-    )
+def select_pyro_sync(conn):
+    rows = conn.exec("SELECT * FROM benchmark_test")
+    for row in rows:
+        row.to_tuple()
 
+
+async def select_async(conn):
     async with conn.cursor() as cursor:
-        for i in range(0, n * batch, batch):
-            await cursor.execute(
-                "SELECT * FROM benchmark_test WHERE id >= %s AND id < %s",
-                (i + 1, i + 1 + batch),
-            )
-            await cursor.fetchall()
+        await cursor.execute("SELECT * FROM benchmark_test")
+        await cursor.fetchall()
         await cursor.close()
-    await conn.ensure_closed()
 
 
-def select_sync(connect_fn, n: int, batch: int):
-    conn = connect_fn(
-        host=HOST,
-        port=PORT,
-        user=USER,
-        password=PASSWORD,
-        database=DATABASE,
-        autocommit=True,
-    )
-
+def select_sync(conn):
     cursor = conn.cursor()
-    for i in range(0, n * batch, batch):
-        cursor.execute(
-            "SELECT * FROM benchmark_test WHERE id >= %s AND id < %s",
-            (i + 1, i + 1 + batch),
-        )
-        cursor.fetchall()
+    cursor.execute("SELECT * FROM benchmark_test")
+    cursor.fetchall()
     cursor.close()
-    conn.close()
-
-
-# ─── Long Text Select ─────────────────────────────────────────────────────────
-
-
-async def select_long_text_pyro_async(n: int, batch: int):
-    conn = await pyro_mysql.AsyncConn.new(
-        f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
-    )
-    for i in range(0, n * batch, batch):
-        rows = await conn.exec(
-            "SELECT * FROM long_text_test WHERE id >= ? AND id < ?",
-            (i + 1, i + 1 + batch),
-        )
-        for row in rows:
-            row.to_tuple()
-
-
-def select_long_text_pyro_sync(n: int, batch: int):
-    conn = pyro_mysql.SyncConn(f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
-    for i in range(0, n * batch, batch):
-        rows = conn.exec(
-            "SELECT * FROM long_text_test WHERE id >= ? AND id < ?",
-            (i + 1, i + 1 + batch),
-        )
-        for row in rows:
-            row.to_tuple()
-
-
-async def select_long_text_async(connect_fn, n: int, batch: int):
-    conn = await connect_fn(
-        host=HOST,
-        port=PORT,
-        user=USER,
-        password=PASSWORD,
-        db=DATABASE,
-        autocommit=True,
-    )
-
-    async with conn.cursor() as cursor:
-        for i in range(0, n * batch, batch):
-            await cursor.execute(
-                "SELECT * FROM long_text_test WHERE id >= %s AND id < %s",
-                (i + 1, i + 1 + batch),
-            )
-            await cursor.fetchall()
-        await cursor.close()
-    await conn.ensure_closed()
-
-
-def select_long_text_sync(connect_fn, n: int, batch: int):
-    conn = connect_fn(
-        host=HOST,
-        port=PORT,
-        user=USER,
-        password=PASSWORD,
-        database=DATABASE,
-        autocommit=True,
-    )
-
-    cursor = conn.cursor()
-    for i in range(0, n * batch, batch):
-        cursor.execute(
-            "SELECT * FROM long_text_test WHERE id >= %s AND id < %s",
-            (i + 1, i + 1 + batch),
-        )
-        cursor.fetchall()
-    cursor.close()
-    conn.close()

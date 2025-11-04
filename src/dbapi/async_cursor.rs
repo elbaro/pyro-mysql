@@ -15,7 +15,7 @@ use crate::{
     },
     error::{Error, PyroResult},
     params::Params,
-    row::Row,
+    r#async::{conn::MultiAsyncConn, row::Row},
     util::tokio_spawn_as_abort_on_drop,
 };
 
@@ -95,8 +95,8 @@ impl AsyncCursor {
         Ok(())
     }
 
-    #[pyo3(signature = (query, params=Params::default()))]
-    async fn execute(&self, query: String, params: Params) -> DbApiResult<()> {
+    #[pyo3(signature = (query, params=None))]
+    async fn execute(&self, query: String, params: Option<Py<PyAny>>) -> DbApiResult<()> {
         let mut cursor = self.0.write().await;
 
         let conn = {
@@ -109,48 +109,136 @@ impl AsyncCursor {
 
         let (description, rowcount, result, lastrowid) = tokio_spawn_as_abort_on_drop(async move {
             let mut conn_guard = conn.write().await;
-            let conn = conn_guard
+            let multi_conn = conn_guard
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?;
 
-            let query_result = conn
-                .exec_iter(query, params)
-                .await?;
+            match multi_conn {
+                MultiAsyncConn::MysqlAsync(conn) => {
+                    // Convert Py<PyAny> to Params for mysql_async
+                    let params = Python::attach(|py| {
+                        if let Some(p) = params {
+                            p.extract::<Params>(py)
+                        } else {
+                            Ok(Params::default())
+                        }
+                    })?;
 
-            let affected_rows = query_result.affected_rows();
-            let last_insert_id = query_result.last_insert_id();
+                    let query_result = conn
+                        .exec_iter(query, params)
+                        .await?;
 
-            if let Some(columns) = query_result.columns().as_ref() && !columns.is_empty(){
-                let description = Python::attach(|py| {
-                    PyList::new(
-                        py,
-                        columns.iter().map(|col|
-                            // tuple of 7 items
-                            (
-                                col.name_str(),          // name
-                                col.column_type() as u8, // type_code
-                                col.column_length(),     // display_size
-                                None::<Option<()>>,      // internal_size
-                                None::<Option<()>>,      // precision
-                                None::<Option<()>>,      // scale
-                                None::<Option<()>>,      // null_ok
+                    let affected_rows = query_result.affected_rows();
+                    let last_insert_id = query_result.last_insert_id();
+
+                    if let Some(columns) = query_result.columns().as_ref() && !columns.is_empty(){
+                        let description = Python::attach(|py| {
+                            PyList::new(
+                                py,
+                                columns.iter().map(|col|
+                                    // tuple of 7 items
+                                    (
+                                        col.name_str(),          // name
+                                        col.column_type() as u8, // type_code
+                                        col.column_length(),     // display_size
+                                        None::<Option<()>>,      // internal_size
+                                        None::<Option<()>>,      // precision
+                                        None::<Option<()>>,      // scale
+                                        None::<Option<()>>,      // null_ok
+                                    )
+                                    .into_pyobject(py).unwrap()),
                             )
-                            .into_pyobject(py).unwrap()),
-                    )
-                    .map(|bound| bound.unbind())
-                })?;
+                            .map(|bound| bound.unbind())
+                        })?;
 
-                let rows = query_result.collect_and_drop().await.map_err(Error::from)?;
+                        let rows = query_result.collect_and_drop().await.map_err(Error::from)?;
 
-                Result::<_, Error>::Ok((
-                    Some(description),
-                    affected_rows as i64,
-                    Some(rows.into()),
-                    None,
-                ))
-            } else {
-                // no result set (different from empty set)
-                Ok((None, affected_rows as i64, None, last_insert_id))
+                        Result::<_, Error>::Ok((
+                            Some(description),
+                            affected_rows as i64,
+                            Some(rows.into()),
+                            None,
+                        ))
+                    } else {
+                        // no result set (different from empty set)
+                        Ok((None, affected_rows as i64, None, last_insert_id))
+                    }
+                }
+                MultiAsyncConn::Wtx { executor, stmt_cache } => {
+                    use wtx::database::{Executor, Records, Record};
+                    use crate::r#async::queryable::{get_or_prepare_stmt, wtx_record_to_row};
+                    use crate::r#async::wtx_param::WtxParams;
+
+                    // Convert Py<PyAny> to WtxParams for wtx
+                    let wtx_params = Python::attach(|py| {
+                        if let Some(p) = params {
+                            WtxParams::from_py(py, &p)
+                        } else {
+                            // Create empty params by calling from_py with None
+                            WtxParams::from_py(py, &py.None())
+                        }
+                    })?;
+
+                    // Get or prepare statement with client-side caching
+                    let stmt_id = get_or_prepare_stmt(executor, stmt_cache, &query).await?;
+
+                    // Fetch all records
+                    let records = executor
+                        .fetch_many_with_stmt(stmt_id, wtx_params, |_| Ok(()))
+                        .await
+                        .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
+
+                    // Check if we got any records (indicating a SELECT query)
+                    // Note: wtx always returns a records object, even for non-SELECT queries
+                    // We detect SELECT queries by checking if we have column metadata
+                    if records.len() > 0 {
+                        // We have a result set - convert records to rows
+                        let mut rows = Vec::with_capacity(records.len());
+                        Python::attach(|py| {
+                            for i in 0..records.len() {
+                                let record = records.get(i).unwrap();
+                                let row = wtx_record_to_row(py, &record)
+                                    .map_err(|e| Error::WtxError(e.to_string()))?;
+                                rows.push(row);
+                            }
+                            Ok::<_, Error>(())
+                        })?;
+
+                        // Build description from first record if available
+                        let description = if let Some(first_record) = records.get(0) {
+                            Python::attach(|py| {
+                                use pyo3::types::PyList;
+                                // Collect values into a Vec first
+                                let items: Vec<_> = first_record.values().flatten().map(|val| {
+                                    // tuple of 7 items matching DB-API spec
+                                    (
+                                        val.name(),                    // name
+                                        val.ty().ty() as u8,          // type_code
+                                        None::<Option<()>>,            // display_size
+                                        None::<Option<()>>,            // internal_size
+                                        None::<Option<()>>,            // precision
+                                        None::<Option<()>>,            // scale
+                                        None::<Option<()>>,            // null_ok
+                                    )
+                                    .into_pyobject(py).unwrap()
+                                }).collect();
+
+                                PyList::new(py, &items).map(|bound| bound.unbind())
+                            })?
+                        } else {
+                            Python::attach(|py| {
+                                use pyo3::types::PyList;
+                                Ok::<_, Error>(PyList::empty(py).unbind())
+                            })?
+                        };
+
+                        Ok((Some(description), rows.len() as i64, Some(VecDeque::from(rows)), None))
+                    } else {
+                        // No result set (e.g., INSERT, UPDATE, DELETE)
+                        // wtx doesn't expose affected_rows easily, return 0
+                        Ok((None, 0, None, None))
+                    }
+                }
             }
         })
         .await
@@ -164,7 +252,7 @@ impl AsyncCursor {
         Ok(())
     }
 
-    async fn executemany(&self, query: String, params: Vec<Params>) -> DbApiResult<()> {
+    async fn executemany(&self, query: String, params: Vec<Py<PyAny>>) -> DbApiResult<()> {
         let mut cursor = self.0.write().await;
         let conn = {
             let conn = cursor
@@ -176,20 +264,48 @@ impl AsyncCursor {
 
         let affected = tokio_spawn_as_abort_on_drop(async move {
             let mut conn_guard = conn.write().await;
-            let conn = conn_guard
+            let multi_conn = conn_guard
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?;
 
-            let mut affected = 0;
-            let stmt = conn.prep(query).await.map_err(Error::from)?;
-            for params in params {
-                conn.execute_statement(&stmt, params).await?;
-                QueryResult::<BinaryProtocol>::new(&mut *conn)
-                    .drop_result()
-                    .await?;
-                affected += conn.affected_rows();
+            match multi_conn {
+                MultiAsyncConn::MysqlAsync(conn) => {
+                    let mut affected = 0;
+                    let stmt = conn.prep(query).await.map_err(Error::from)?;
+                    for params_item in params {
+                        // Convert Py<PyAny> to Params for mysql_async
+                        let params = Python::attach(|py| params_item.extract::<Params>(py))?;
+                        conn.execute_statement(&stmt, params).await?;
+                        QueryResult::<BinaryProtocol>::new(&mut *conn)
+                            .drop_result()
+                            .await?;
+                        affected += conn.affected_rows();
+                    }
+                    PyroResult::Ok(affected)
+                }
+                MultiAsyncConn::Wtx { executor, stmt_cache } => {
+                    use wtx::database::Executor;
+                    use crate::r#async::queryable::get_or_prepare_stmt;
+                    use crate::r#async::wtx_param::WtxParams;
+
+                    // Get or prepare statement with client-side caching
+                    let stmt_id = get_or_prepare_stmt(executor, stmt_cache, &query).await?;
+
+                    // Execute for each set of params
+                    for params_item in params {
+                        // Convert Py<PyAny> to WtxParams for wtx
+                        let wtx_params = Python::attach(|py| WtxParams::from_py(py, &params_item))?;
+
+                        executor
+                            .execute_with_stmt(stmt_id, wtx_params)
+                            .await
+                            .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
+                    }
+
+                    // wtx doesn't expose affected_rows easily, return 0
+                    PyroResult::Ok(0)
+                }
             }
-            PyroResult::Ok(affected)
         })
         .await
         .unwrap()?;
