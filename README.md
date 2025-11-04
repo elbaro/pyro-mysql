@@ -7,7 +7,7 @@ A high-performance MySQL driver for Python, backed by Rust.
 - [DataType Mapping](#datatype-mapping)
 - [Logging](#logging)
 - [PEP-249, sqlalchemy](#pep-249-sqlalchemy)
-- [Benchmark](https://htmlpreview.github.io/?https://github.com/elbaro/pyro-mysql/blob/main/BENCHMARK.md)
+- [Benchmark](https://github.com/elbaro/pyro-mysql/blob/main/BENCHMARK.md)
 
 <img src="https://github.com/elbaro/pyro-mysql/blob/main/report/chart.png?raw=true" width="800px" />
 
