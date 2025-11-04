@@ -58,7 +58,7 @@ pub fn bench_sqlalchemy(c: &mut Criterion) {
 
     // Benchmark SELECT operations
     for select_size in [1, 10, 100, 1000] {
-        let mut group = c.benchmark_group(format!("SQLAlchemy SELECT {}", select_size));
+        let mut group = c.benchmark_group(format!("SQLAlchemy_SELECT_{}", select_size));
         populate_table(select_size);
 
         for name in ["pyro_mysql", "pymysql", "mysqldb"] {
@@ -84,7 +84,7 @@ pub fn bench_sqlalchemy(c: &mut Criterion) {
 
     // Benchmark INSERT operations (individual)
     {
-        let mut group = c.benchmark_group("SQLAlchemy INSERT");
+        let mut group = c.benchmark_group("SQLAlchemy_INSERT");
 
         for (name, stmt_template) in [
             ("pyro_mysql", "insert_query(session, {})"),

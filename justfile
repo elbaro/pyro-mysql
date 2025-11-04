@@ -45,3 +45,20 @@ publish:
     patchelf --remove-rpath target/wheels/pyro_mysql/pyro_mysql.abi3.so
     cd target/wheels && 7z u *.whl pyro_mysql/pyro_mysql.abi3.so
     maturin upload target/wheels/*.whl
+
+update-result:
+    cp 'target/criterion/INSERT/report/violin.svg' 'report/INSERT.svg'
+    cp 'target/criterion/SELECT_1/report/violin.svg' 'report/SELECT_1.svg'
+    cp 'target/criterion/SELECT_10/report/violin.svg' 'report/SELECT_10.svg'
+    cp 'target/criterion/SELECT_100/report/violin.svg' 'report/SELECT_100.svg'
+    cp 'target/criterion/SELECT_1000/report/violin.svg' 'report/SELECT_1000.svg'
+    cp 'target/criterion/SQLAlchemy Async INSERT/report/violin.svg' 'report/SQLAlchemy Async INSERT.svg'
+    cp 'target/criterion/SQLAlchemy Async SELECT 1/report/violin.svg' 'report/SQLAlchemy Async SELECT 1.svg'
+    cp 'target/criterion/SQLAlchemy Async SELECT 10/report/violin.svg' 'report/SQLAlchemy Async SELECT 10.svg'
+    cp 'target/criterion/SQLAlchemy Async SELECT 100/report/violin.svg' 'report/SQLAlchemy Async SELECT 100.svg'
+    cp 'target/criterion/SQLAlchemy Async SELECT 1000/report/violin.svg' 'report/SQLAlchemy Async SELECT 1000.svg'
+    cp 'target/criterion/SQLAlchemy INSERT/report/violin.svg' 'report/SQLAlchemy INSERT.svg'
+    cp 'target/criterion/SQLAlchemy SELECT 1/report/violin.svg' 'report/SQLAlchemy SELECT 1.svg'
+    cp 'target/criterion/SQLAlchemy SELECT 10/report/violin.svg' 'report/SQLAlchemy SELECT 10.svg'
+    cp 'target/criterion/SQLAlchemy SELECT 100/report/violin.svg' 'report/SQLAlchemy SELECT 100.svg'
+    cp 'target/criterion/SQLAlchemy SELECT 1000/report/violin.svg' 'report/SQLAlchemy SELECT 1000.svg'
