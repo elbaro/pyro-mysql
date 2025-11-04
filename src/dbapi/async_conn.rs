@@ -48,21 +48,25 @@ impl AsyncDbApiConn {
         let mut guard = self.0.write().await;
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
-        // DBAPI only supports mysql_async backend
-        let conn = match multi_conn {
-            MultiAsyncConn::MysqlAsync(c) => c,
-            MultiAsyncConn::Wtx { .. } => panic!("DBAPI is not supported for wtx connections"),
-        };
-
         log::debug!("execute {query}");
 
-        let mut affected = 0;
-        let stmt = conn.prep(query).await.map_err(Error::from)?;
-        for params in params {
-            conn.exec_drop(&stmt, params).await.map_err(Error::from)?;
-            affected += conn.affected_rows();
+        match multi_conn {
+            MultiAsyncConn::MysqlAsync(conn) => {
+                let mut affected = 0;
+                let stmt = conn.prep(query).await.map_err(Error::from)?;
+                for params in params {
+                    conn.exec_drop(&stmt, params).await.map_err(Error::from)?;
+                    affected += conn.affected_rows();
+                }
+                Ok(affected)
+            }
+            MultiAsyncConn::Wtx { .. } => {
+                // wtx is not supported in DB-API, use the async API instead
+                Err(Error::IncorrectApiUsageError(
+                    "wtx connections are not supported with DB-API. Use the async API (pyro_mysql.AsyncConn) instead."
+                ).into())
+            }
         }
-        Ok(affected)
     }
 }
 
@@ -89,7 +93,14 @@ impl AsyncDbApiConn {
             let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
             let conn = match multi_conn {
                 MultiAsyncConn::MysqlAsync(c) => c,
-                MultiAsyncConn::Wtx { .. } => panic!("DBAPI is not supported for wtx connections"),
+                MultiAsyncConn::Wtx { executor, .. } => {
+                    use wtx::database::Executor;
+                    executor
+                        .execute("COMMIT", |_: u64| Ok(()))
+                        .await
+                        .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
+                    return Ok(());
+                }
             };
             conn.exec_drop("COMMIT", Params::default())
                 .await
@@ -105,7 +116,14 @@ impl AsyncDbApiConn {
             let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
             let conn = match multi_conn {
                 MultiAsyncConn::MysqlAsync(c) => c,
-                MultiAsyncConn::Wtx { .. } => panic!("DBAPI is not supported for wtx connections"),
+                MultiAsyncConn::Wtx { executor, .. } => {
+                    use wtx::database::Executor;
+                    executor
+                        .execute("ROLLBACK", |_: u64| Ok(()))
+                        .await
+                        .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
+                    return Ok(());
+                }
             };
             conn.exec_drop("ROLLBACK", Params::default())
                 .await
@@ -127,7 +145,19 @@ impl AsyncDbApiConn {
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         let conn = match multi_conn {
             MultiAsyncConn::MysqlAsync(c) => c,
-            MultiAsyncConn::Wtx { .. } => panic!("DBAPI is not supported for wtx connections"),
+            MultiAsyncConn::Wtx { executor, .. } => {
+                use wtx::database::Executor;
+                let query = if on {
+                    "SET autocommit=1"
+                } else {
+                    "SET autocommit=0"
+                };
+                executor
+                    .execute(query, |_: u64| Ok(()))
+                    .await
+                    .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
+                return Ok(());
+            }
         };
         let query = if on {
             "SET autocommit=1"
@@ -147,7 +177,14 @@ impl AsyncDbApiConn {
             let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
             let conn = match multi_conn {
                 MultiAsyncConn::MysqlAsync(c) => c,
-                MultiAsyncConn::Wtx { .. } => panic!("DBAPI is not supported for wtx connections"),
+                MultiAsyncConn::Wtx { executor, .. } => {
+                    use wtx::database::Executor;
+                    executor
+                        .execute("SELECT 1", |_: u64| Ok(()))
+                        .await
+                        .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
+                    return Ok(());
+                }
             };
             conn.ping().await?;
             PyroResult::Ok(())

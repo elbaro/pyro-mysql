@@ -6,10 +6,9 @@ use pyo3::{
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wtx::database::Records;
-use wtx::misc::Lease;
 
 use crate::{
-    r#async::{conn::MultiAsyncConn, row::Row},
+    r#async::{conn::MultiAsyncConn, row::Row, wtx_param::WtxParams},
     error::Error,
     params::Params,
     util::{PyroFuture, rust_future_into_py},
@@ -18,207 +17,10 @@ use crate::{
 // Import the mysql_async Queryable trait for its methods
 use mysql_async::prelude::Queryable as MysqlAsyncQueryable;
 
-// ─── WTX Helper Types and Functions ──────────────────────────────────────────
-
-/// Lightweight parameter wrapper for wtx - holds Python objects directly
-struct WtxParams {
-    values: Vec<Py<PyAny>>,
-}
-
-impl WtxParams {
-    /// Create from Py<PyAny> (Python tuple/list/None)
-    fn from_py(py: Python, params: &Py<PyAny>) -> PyResult<Self> {
-        let params_bound = params.bind(py);
-
-        // Handle None case
-        if params_bound.is_none() {
-            return Ok(Self { values: Vec::new() });
-        }
-
-        // Handle tuple case
-        if let Ok(tuple) = params_bound.cast::<pyo3::types::PyTuple>() {
-            let values: Vec<_> = tuple.iter().map(|b| b.unbind()).collect();
-            return Ok(Self { values });
-        }
-
-        // Handle list case
-        if let Ok(list) = params_bound.cast::<pyo3::types::PyList>() {
-            let values: Vec<_> = list.iter().map(|b| b.unbind()).collect();
-            return Ok(Self { values });
-        }
-
-        Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-            "Expected None, tuple, or list for params (wtx backend doesn't support named params yet)",
-        ))
-    }
-}
-
-// Implement RecordValues for WtxParams - encode Python objects directly
-impl wtx::database::RecordValues<wtx::database::client::mysql::Mysql<wtx::Error>> for WtxParams {
-    fn encode_values<'inner, 'outer, 'rem, A>(
-        &self,
-        aux: &mut A,
-        ew: &mut <wtx::database::client::mysql::Mysql<wtx::Error> as wtx::de::DEController>::EncodeWrapper<'inner, 'outer, 'rem>,
-        mut prefix_cb: impl FnMut(
-            &mut A,
-            &mut <wtx::database::client::mysql::Mysql<wtx::Error> as wtx::de::DEController>::EncodeWrapper<'inner, 'outer, 'rem>,
-        ) -> usize,
-        mut suffix_cb: impl FnMut(
-            &mut A,
-            &mut <wtx::database::client::mysql::Mysql<wtx::Error> as wtx::de::DEController>::EncodeWrapper<'inner, 'outer, 'rem>,
-            bool,
-            usize,
-        ) -> usize,
-    ) -> Result<usize, wtx::Error>
-    where
-        'inner: 'outer,
-    {
-        Python::attach(|py| {
-            let mut n: usize = 0;
-            for value in &self.values {
-                n = n.wrapping_add(prefix_cb(aux, ew));
-                let before_len = ew.lease().len();
-
-                // Encode Python object directly to buffer
-                let is_null = encode_py_to_wtx(&value.bind(py), ew)?;
-
-                let value_len = ew.lease().len().wrapping_sub(before_len);
-                n = n.wrapping_add(value_len);
-                n = n.wrapping_add(suffix_cb(aux, ew, is_null, value_len));
-            }
-            Ok(n)
-        })
-    }
-
-    fn len(&self) -> usize {
-        self.values.len()
-    }
-
-    fn walk(
-        &self,
-        mut cb: impl FnMut(
-            bool,
-            Option<wtx::database::client::mysql::TyParams>,
-        ) -> Result<(), wtx::Error>,
-    ) -> Result<(), wtx::Error> {
-        Python::attach(|py| {
-            for value in &self.values {
-                let (is_null, ty_params) = get_py_type_info(&value.bind(py))?;
-                cb(is_null, ty_params)?;
-            }
-            Ok(())
-        })
-    }
-}
-
-/// Encode a Python object directly to wtx buffer using wtx's primitive encoders
-/// Returns true if the value is NULL
-fn encode_py_to_wtx(
-    value: &Bound<'_, PyAny>,
-    ew: &mut wtx::database::client::mysql::MysqlEncodeWrapper<'_>,
-) -> Result<bool, wtx::Error> {
-    use wtx::de::Encode;
-    type Mysql = wtx::database::client::mysql::Mysql<wtx::Error>;
-
-    // Get type name
-    let type_obj = value.get_type();
-    let type_name = type_obj
-        .name()
-        .map_err(|e| wtx::Error::Generic(Box::new(e.to_string())))?;
-    let type_str = type_name
-        .to_str()
-        .map_err(|e| wtx::Error::Generic(Box::new(e.to_string())))?;
-
-    match type_str {
-        "NoneType" => Ok(true), // NULL
-        "bool" => {
-            let val: bool = value
-                .extract()
-                .map_err(|e: PyErr| wtx::Error::Generic(Box::new(e.to_string())))?;
-            <bool as Encode<Mysql>>::encode(&val, &mut (), ew)?;
-            Ok(false)
-        }
-        "int" => {
-            // Try i64 first
-            if let Ok(val) = value.extract::<i64>() {
-                <i64 as Encode<Mysql>>::encode(&val, &mut (), ew)?;
-            } else {
-                // Too large, encode as string
-                let s = value
-                    .str()
-                    .map_err(|e| wtx::Error::Generic(Box::new(e.to_string())))?;
-                let string = s
-                    .to_str()
-                    .map_err(|e| wtx::Error::Generic(Box::new(e.to_string())))?;
-                <&str as Encode<Mysql>>::encode(&string, &mut (), ew)?;
-            }
-            Ok(false)
-        }
-        "float" => {
-            let val: f64 = value
-                .extract()
-                .map_err(|e: PyErr| wtx::Error::Generic(Box::new(e.to_string())))?;
-            <f64 as Encode<Mysql>>::encode(&val, &mut (), ew)?;
-            Ok(false)
-        }
-        "str" => {
-            let s: &str = value
-                .extract()
-                .map_err(|e: PyErr| wtx::Error::Generic(Box::new(e.to_string())))?;
-            <&str as Encode<Mysql>>::encode(&s, &mut (), ew)?;
-            Ok(false)
-        }
-        "bytes" => {
-            use pyo3::types::PyBytes;
-            let py_bytes = value
-                .cast::<PyBytes>()
-                .map_err(|e| wtx::Error::Generic(Box::new(e.to_string())))?;
-            let b: &[u8] = py_bytes.as_bytes();
-            <&[u8] as Encode<Mysql>>::encode(&b, &mut (), ew)?;
-            Ok(false)
-        }
-        _ => {
-            // Default: convert to string
-            let s = value
-                .str()
-                .map_err(|e| wtx::Error::Generic(Box::new(e.to_string())))?;
-            let string = s
-                .to_str()
-                .map_err(|e| wtx::Error::Generic(Box::new(e.to_string())))?;
-            <&str as Encode<Mysql>>::encode(&string, &mut (), ew)?;
-            Ok(false)
-        }
-    }
-}
-
-/// Get type information for a Python object
-fn get_py_type_info(
-    value: &Bound<'_, PyAny>,
-) -> Result<(bool, Option<wtx::database::client::mysql::TyParams>), wtx::Error> {
-    use wtx::database::client::mysql::{Ty, TyParams};
-    const BINARY: u16 = 128; // Flag::Binary
-
-    let type_obj = value.get_type();
-    let type_name = type_obj
-        .name()
-        .map_err(|e| wtx::Error::Generic(Box::new(e.to_string())))?;
-    let type_str = type_name
-        .to_str()
-        .map_err(|e| wtx::Error::Generic(Box::new(e.to_string())))?;
-
-    match type_str {
-        "NoneType" => Ok((true, None)),
-        "bool" => Ok((false, Some(TyParams::new(BINARY, Ty::Tiny)))),
-        "int" => Ok((false, Some(TyParams::new(BINARY, Ty::LongLong)))),
-        "float" => Ok((false, Some(TyParams::new(BINARY, Ty::Double)))),
-        "str" => Ok((false, Some(TyParams::new(0, Ty::VarString)))),
-        "bytes" => Ok((false, Some(TyParams::new(BINARY, Ty::Blob)))),
-        _ => Ok((false, Some(TyParams::new(0, Ty::VarString)))),
-    }
-}
+// ─── WTX Helper Functions ────────────────────────────────────────────────────
 
 /// Helper function to get or prepare a statement with client-side caching
-async fn get_or_prepare_stmt(
+pub(crate) async fn get_or_prepare_stmt(
     executor: &mut crate::r#async::conn::WtxMysqlExecutor,
     stmt_cache: &mut std::collections::HashMap<String, u64>,
     query: &str,
@@ -241,7 +43,7 @@ async fn get_or_prepare_stmt(
 }
 
 /// Convert wtx MysqlRecord to async Row with Python objects
-fn wtx_record_to_row(
+pub(crate) fn wtx_record_to_row(
     py: Python<'_>,
     record: &wtx::database::client::mysql::MysqlRecord<wtx::Error>,
 ) -> Result<crate::r#async::row::Row, wtx::Error> {
@@ -734,18 +536,7 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                 MultiAsyncConn::MysqlAsync(mysql_conn) => {
                     // Convert to Params for mysql_async
                     let params_mysql = Python::attach(|py| params.extract::<Params>(py))?;
-                    // Ok(mysql_conn.exec(query, params_mysql).await?)
-
-                    let mut query_result = mysql_conn.exec_iter(query, params_mysql).await?;
-                    let rows = query_result
-                        .reduce(Vec::new(), |mut acc, row| {
-                            acc.push(mysql::prelude::FromRow::from_row(row));
-                            acc
-                        })
-                        .await?;
-                    query_result.drop_result().await?;
-
-                    Ok(rows)
+                    Ok(mysql_conn.exec(query, params_mysql).await?)
                 }
                 MultiAsyncConn::Wtx {
                     executor,
@@ -838,6 +629,7 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
         params: Py<PyAny>,
     ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
+        let wtx_params = WtxParams::from_py(py, &params)?;
 
         rust_future_into_py::<_, ()>(py, async move {
             let mut inner = inner.write().await;
@@ -854,8 +646,6 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     stmt_cache,
                 } => {
                     use wtx::database::Executor;
-
-                    let wtx_params = Python::attach(|py| WtxParams::from_py(py, &params))?;
 
                     // Get or prepare statement with client-side caching
                     let stmt_id = get_or_prepare_stmt(executor, stmt_cache, query).await?;

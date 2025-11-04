@@ -39,9 +39,7 @@ pyro_mysql.init(worker_threads=1)
 
 
 async def create_pyro_async_conn():
-    return await pyro_mysql.AsyncConn.new(
-        "mysql://test:1234@127.0.0.1:3306/test"
-    )
+    return await pyro_mysql.AsyncConn.new("mysql://test:1234@127.0.0.1:3306/test")
 
 
 async def create_pyro_wtx_conn():
@@ -54,13 +52,23 @@ async def create_pyro_wtx_conn():
 
 async def create_asyncmy_conn():
     return await asyncmy.connect(
-        host="127.0.0.1", port=3306, user="test", password="1234", db="test", autocommit=True
+        host="127.0.0.1",
+        port=3306,
+        user="test",
+        password="1234",
+        db="test",
+        autocommit=True,
     )
 
 
 async def create_aiomysql_conn():
     return await aiomysql.connect(
-        host="127.0.0.1", port=3306, user="test", password="1234", db="test", autocommit=True
+        host="127.0.0.1",
+        port=3306,
+        user="test",
+        password="1234",
+        db="test",
+        autocommit=True,
     )
 
 
@@ -71,7 +79,7 @@ async def insert_pyro_async(conn, n):
     for i in range(n):
         await conn.exec_drop(
             "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
-            DATA[i],
+            DATA[i % 10000],
         )
 
 
@@ -79,7 +87,7 @@ async def insert_pyro_wtx(conn, n):
     for i in range(n):
         await conn.exec_drop(
             "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
-            DATA[i],
+            DATA[i % 10000],
         )
 
 
@@ -87,7 +95,7 @@ def insert_pyro_sync(conn, n):
     for i in range(n):
         conn.exec_drop(
             "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
-            DATA[i],
+            DATA[i % 10000],
         )
 
 
@@ -97,7 +105,7 @@ async def insert_async(conn, n: int):
             await cursor.execute(
                 """INSERT INTO benchmark_test (name, age, email, score, description)
                     VALUES (%s, %s, %s, %s, %s)""",
-                DATA[i],
+                DATA[i % 10000],
             )
         await cursor.close()
 
@@ -108,7 +116,7 @@ def insert_sync(conn, n: int):
         cursor.execute(
             """INSERT INTO benchmark_test (name, age, email, score, description)
                 VALUES (%s, %s, %s, %s, %s)""",
-            DATA[i],
+            DATA[i % 10000],
         )
     cursor.close()
 
@@ -146,5 +154,3 @@ def select_sync(conn):
     cursor.execute("SELECT * FROM benchmark_test")
     cursor.fetchall()
     cursor.close()
-
-

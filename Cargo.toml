@@ -33,7 +33,12 @@ simdutf8 = "0.1.5"
 thiserror = "2.0.16"
 tokio = "1.47.1"
 tokio-util = { version = "0.7.16", features = ["rt"] }
-wtx = { version = "0.38", features = ["database", "mysql", "getrandom", "tokio"] }
+wtx = { version = "0.38", features = [
+  "database",
+  "mysql",
+  "getrandom",
+  "tokio",
+] }
 
 
 [patch.crates-io]
@@ -49,15 +54,15 @@ name = "bench"
 harness = false
 
 [[bench]]
-name = "bench_concurrency"
+name = "sqlalchemy"
 harness = false
 
 [[bench]]
-name = "bench_sqlalchemy"
+name = "sqlalchemy_async"
 harness = false
 
 [[bench]]
-name = "bench_sqlalchemy_async"
+name = "connect"
 harness = false
 
 [profile.profiling]
@@ -68,3 +73,4 @@ debug = true
 debug = true
 
 [dev-dependencies]
+gungraun = "0.17.0"

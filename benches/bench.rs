@@ -1,4 +1,4 @@
-use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use mysql::{TxOpts, prelude::Queryable};
 use pyo3::{ffi::c_str, prelude::*};
 
@@ -57,6 +57,7 @@ pub fn bench(c: &mut Criterion) {
 
     for select_size in [1, 10, 100, 1000] {
         let mut group = c.benchmark_group(format!("SELECT_{}", select_size));
+        populate_table(select_size);
 
         for (name, setup, statement) in [
             (
@@ -96,78 +97,73 @@ pub fn bench(c: &mut Criterion) {
             ),
         ] {
             group.bench_function(name, |b| {
-                b.iter_batched(
-                    || {
-                        populate_table(select_size);                    
-                        Python::attach(|py| {
-                            Python::run(py, setup, None, None).unwrap();
-                        });
-                    },
-                    |()| {
-                        Python::attach(|py| {
-                            py.run(&statement, None, None).unwrap();
-                        });
-                    },
-                    BatchSize::SmallInput,
-                )
+                Python::attach(|py| {
+                    Python::run(py, setup, None, None).unwrap();
+                    b.iter(|| py.run(&statement, None, None).unwrap());
+                });
             });
         }
     }
     {
         let mut group = c.benchmark_group("INSERT");
 
-        for (name, setup, statement) in [
+        for (name, setup, stmt_template) in [
             (
                 "mysqlclient",
                 cr"mysqldb_conn = MySQLdb.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
-                c"insert_sync(mysqldb_conn, 100)",
+                "insert_sync(mysqldb_conn, {})",
             ),
             (
                 "pymysql",
                 cr"pymysql_conn = pymysql.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
-                c"insert_sync(pymysql_conn, 100)",
+                "insert_sync(pymysql_conn, {})",
             ),
             (
                 "pyro-sync",
                 cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test')",
-                c"insert_pyro_sync(pyro_sync_conn, 100)",
+                "insert_pyro_sync(pyro_sync_conn, {})",
             ),
             (
                 "pyro-async",
                 cr"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
-                c"loop.run_until_complete(insert_pyro_async(pyro_async_conn, 100))",
+                "loop.run_until_complete(insert_pyro_async(pyro_async_conn, {}))",
             ),
             (
                 "pyro-wtx",
                 cr"pyro_wtx_conn = loop.run_until_complete(create_pyro_wtx_conn())",
-                c"loop.run_until_complete(insert_pyro_wtx(pyro_wtx_conn, 100))",
+                "loop.run_until_complete(insert_pyro_wtx(pyro_wtx_conn, {}))",
             ),
             (
                 "asyncmy",
                 cr"asyncmy_conn = loop.run_until_complete(create_asyncmy_conn())",
-                c"loop.run_until_complete(insert_async(asyncmy_conn, 100))",
+                "loop.run_until_complete(insert_async(asyncmy_conn, {}))",
             ),
             (
                 "aiomysql",
                 cr"aiomysql_conn = loop.run_until_complete(create_aiomysql_conn())",
-                c"loop.run_until_complete(insert_async(aiomysql_conn, 100))",
+                "loop.run_until_complete(insert_async(aiomysql_conn, {}))",
             ),
         ] {
             group.bench_function(name, |b| {
-                b.iter_batched(
-                    || {
-                        clear_table();
-                        Python::attach(|py| {
-                            Python::run(py, setup, None, None).unwrap();
-                        });
-                    },
-                    |()| {
-                        Python::attach(|py| {
-                            py.eval(statement, None, None).unwrap();
-                        });
-                    },
-                    BatchSize::SmallInput,
-                )
+                Python::attach(|py| {
+                    Python::run(py, setup, None, None).unwrap();
+                    b.iter_custom(|iters| {
+                        let mut sum = std::time::Duration::ZERO;
+                        for g in 0..((iters-1)/10000+1) {
+                            clear_table();
+                            let start = g * 10000;
+                            let end = iters.min(start+10000);
+
+                            let statement = stmt_template.replace("{}", &(end-start).to_string());
+                            let c_statement = std::ffi::CString::new(statement).unwrap();
+
+                            let start = std::time::Instant::now();
+                            py.eval(c_statement.as_c_str(), None, None).unwrap();
+                            sum += start.elapsed();
+                        }
+                        sum
+                    });
+                });
             });
         }
     }

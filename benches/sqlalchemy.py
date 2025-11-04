@@ -30,7 +30,7 @@ class BenchmarkTest(Base):
     age = Column(Integer)
     email = Column(String(100))
     score = Column(Float)
-    description = Column(String(500))
+    description = Column(String(100))
 
 
 # Pre-generated test data
@@ -62,49 +62,18 @@ def create_session(driver_name):
     return Session(), engine
 
 
-# Individual INSERT operations
-def insert_individual(driver_name, n):
-    session, engine = create_session(driver_name)
+# SELECT operations
+def select_query():
+    global session
+    results = session.query(BenchmarkTest).all()
+    # Force evaluation
+    for row in results:
+        _ = (row.id, row.name, row.age, row.email, row.score, row.description)
+
+
+# INSERT operations with existing session
+def insert_query(session, n):
     for i in range(n):
         obj = BenchmarkTest(**DATA[i])
         session.add(obj)
     session.commit()
-    session.close()
-    engine.dispose()
-
-
-# SELECT operations
-def select_query(driver_name, n, batch):
-    session, engine = create_session(driver_name)
-    for i in range(0, n * batch, batch):
-        results = (
-            session.query(BenchmarkTest)
-            .filter(BenchmarkTest.id >= i + 1, BenchmarkTest.id < i + 1 + batch)
-            .all()
-        )
-        # Force evaluation
-        for row in results:
-            _ = (row.id, row.name, row.age, row.email, row.score, row.description)
-    session.close()
-    engine.dispose()
-
-
-# Individual UPDATE operations
-def update_individual(driver_name, n):
-    session, engine = create_session(driver_name)
-    for i in range(1, n + 1):
-        session.query(BenchmarkTest).filter(BenchmarkTest.id == i).update(
-            {"age": 30 + (i % 10)}
-        )
-    session.commit()
-    session.close()
-    engine.dispose()
-
-
-# Bulk UPDATE operations
-def update_bulk(driver_name, n):
-    session, engine = create_session(driver_name)
-    session.query(BenchmarkTest).filter(BenchmarkTest.id <= n).update({"age": 25})
-    session.commit()
-    session.close()
-    engine.dispose()

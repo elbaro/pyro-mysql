@@ -31,6 +31,59 @@ pub enum MultiAsyncConn {
 }
 
 impl MultiAsyncConn {
+    /// Create a new Wtx connection from a URL
+    pub async fn new_wtx(
+        url: &str,
+        max_statements: Option<usize>,
+        buffer_size: Option<(usize, usize, usize, usize, usize)>,
+    ) -> PyroResult<Self> {
+        use wtx::misc::Uri;
+        use wtx::database::client::mysql::{Config, ExecutorBuffer, MysqlExecutor};
+        use wtx::rng::SeedableRng;
+
+        // Parse URL
+        let uri = Uri::new(url);
+        let config = Config::from_uri(&uri).map_err(|e| Error::WtxError(e.to_string()))?;
+
+        // Create RNG for authentication
+        let mut rng = wtx::rng::ChaCha20::from_os().map_err(|e| Error::WtxError(e.to_string()))?;
+
+        // Create executor buffer with specified size or default to usize::MAX
+        let max_capacity = max_statements.unwrap_or(usize::MAX);
+        let eb = if let Some(buffer_caps) = buffer_size {
+            // Use with_capacity when buffer sizes are specified
+            ExecutorBuffer::with_capacity(
+                buffer_caps,
+                max_capacity,
+                &mut rng,
+            )
+            .map_err(|e| Error::WtxError(e.to_string()))?
+        } else {
+            // Use default constructor
+            ExecutorBuffer::new(max_capacity, &mut rng)
+        };
+
+        // Connect to MySQL server
+        let addr = uri.hostname_with_implied_port();
+        let stream = tokio::net::TcpStream::connect(addr)
+            .await
+            .map_err(|e| Error::IoError(e.to_string()))?;
+
+        // Set TCP_NODELAY for better performance
+        stream.set_nodelay(true)
+            .map_err(|e| Error::IoError(e.to_string()))?;
+
+        // Connect
+        let executor = MysqlExecutor::connect(&config, eb, &mut rng, stream)
+            .await
+            .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
+
+        Ok(MultiAsyncConn::Wtx {
+            executor,
+            stmt_cache: HashMap::new(),
+        })
+    }
+
     /// Get the connection ID
     /// Note: Returns 0 for wtx connections as wtx doesn't expose this information
     pub fn id(&self) -> u32 {
@@ -172,52 +225,9 @@ impl AsyncConn {
     #[pyo3(signature = (url, max_statements=None, buffer_size=None))]
     pub fn new_wtx<'py>(py: Python<'py>, url: String, max_statements: Option<usize>, buffer_size: Option<(usize, usize, usize, usize, usize)>) -> PyResult<Py<PyroFuture>> {
         rust_future_into_py(py, async move {
-            use wtx::misc::Uri;
-            use wtx::database::client::mysql::{Config, ExecutorBuffer, MysqlExecutor};
-            use wtx::rng::SeedableRng;
-
-            // Parse URL
-            let uri = Uri::new(url.as_str());
-            let config = Config::from_uri(&uri).map_err(|e| Error::WtxError(e.to_string()))?;
-
-            // Create RNG for authentication
-            let mut rng = wtx::rng::ChaCha20::from_os().map_err(|e| Error::WtxError(e.to_string()))?;
-
-            // Create executor buffer with specified size or default to usize::MAX
-            let max_capacity = max_statements.unwrap_or(usize::MAX);
-            let eb = if let Some(buffer_caps) = buffer_size {
-                // Use with_capacity when buffer sizes are specified
-                ExecutorBuffer::with_capacity(
-                    buffer_caps,
-                    max_capacity,
-                    &mut rng,
-                )
-                .map_err(|e| Error::WtxError(e.to_string()))?
-            } else {
-                // Use default constructor
-                ExecutorBuffer::new(max_capacity, &mut rng)
-            };
-
-            // Connect to MySQL server
-            let addr = uri.hostname_with_implied_port();
-            let stream = tokio::net::TcpStream::connect(addr)
-                .await
-                .map_err(|e| Error::IoError(e.to_string()))?;
-
-            // Set TCP_NODELAY for better performance
-            stream.set_nodelay(true)
-                .map_err(|e| Error::IoError(e.to_string()))?;
-
-            // Connect
-            let executor = MysqlExecutor::connect(&config, eb, &mut rng, stream)
-                .await
-                .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
-
+            let multi_conn = MultiAsyncConn::new_wtx(&url, max_statements, buffer_size).await?;
             Ok(Self {
-                inner: Arc::new(RwLock::new(Some(MultiAsyncConn::Wtx {
-                    executor,
-                    stmt_cache: HashMap::new(),
-                }))),
+                inner: Arc::new(RwLock::new(Some(multi_conn))),
             })
         })
     }
