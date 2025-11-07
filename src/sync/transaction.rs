@@ -7,6 +7,7 @@ use pyo3::prelude::*;
 
 use crate::error::{Error, PyroResult};
 use crate::sync::iterator::ResultSetIterator;
+use crate::sync::multi_conn::MultiSyncConn;
 use crate::sync::{conn::SyncConn, pooled_conn::SyncPooledConn};
 use crate::{params::Params, row::Row};
 
@@ -43,11 +44,14 @@ impl SyncTransaction {
                 let mut conn = {
                     let conn_mut = py_conn.borrow_mut(py);
                     let inner = &conn_mut.inner;
-                    Box::pin(
-                        py.detach(|| inner.write())
-                            .take()
-                            .ok_or_else(|| Error::ConnectionClosedError)?,
-                    )
+                    let multi_conn = py.detach(|| inner.write())
+                        .take()
+                        .ok_or_else(|| Error::ConnectionClosedError)?;
+                    // Extract inner mysql::Conn from MultiSyncConn
+                    let mysql_conn = match multi_conn {
+                        MultiSyncConn::Mysql(conn) => conn,
+                    };
+                    Box::pin(mysql_conn)
                 };
 
                 let tx = conn.start_transaction(slf_ref.opts)?;
@@ -110,7 +114,8 @@ impl SyncTransaction {
             Either::Left(py_conn) => {
                 let conn_mut = py_conn.borrow_mut(py);
                 let inner = &conn_mut.inner;
-                *py.detach(|| inner.write()) = Some(*Pin::into_inner(conn1.unwrap()));
+                let mysql_conn = *Pin::into_inner(conn1.unwrap());
+                *py.detach(|| inner.write()) = Some(MultiSyncConn::Mysql(mysql_conn));
             }
             Either::Right(py_conn) => {
                 let conn_mut = py_conn.borrow_mut(py);

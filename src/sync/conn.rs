@@ -9,12 +9,13 @@ use crate::isolation_level::IsolationLevel;
 use crate::params::Params;
 use crate::row::Row;
 use crate::sync::iterator::ResultSetIterator;
+use crate::sync::multi_conn::MultiSyncConn;
 use crate::sync::opts::SyncOpts;
 use crate::sync::transaction::SyncTransaction;
 
 #[pyclass(module = "pyro_mysql.sync", name = "Conn")]
 pub struct SyncConn {
-    pub inner: RwLock<Option<mysql::Conn>>,
+    pub inner: RwLock<Option<MultiSyncConn>>,
 }
 
 #[pymethods]
@@ -28,7 +29,7 @@ impl SyncConn {
         let conn = mysql::Conn::new(opts)?;
 
         Ok(Self {
-            inner: RwLock::new(Some(conn)),
+            inner: RwLock::new(Some(MultiSyncConn::Mysql(conn))),
         })
     }
 
@@ -59,7 +60,7 @@ impl SyncConn {
     fn id(&self) -> PyroResult<u32> {
         let guard = self.inner.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
-        Ok(conn.connection_id())
+        Ok(conn.id())
     }
 
     fn affected_rows(&self) -> PyResult<u64> {
@@ -73,16 +74,13 @@ impl SyncConn {
     fn last_insert_id(&self) -> PyroResult<Option<u64>> {
         let guard = self.inner.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
-        match conn.last_insert_id() {
-            0 => Ok(None),
-            x => Ok(Some(x)),
-        }
+        Ok(conn.last_insert_id())
     }
 
     fn ping(&self) -> PyroResult<()> {
         let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        Ok(conn.ping()?)
+        conn.ping()
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
@@ -90,28 +88,40 @@ impl SyncConn {
     #[pyo3(signature = (query))]
     fn query(&self, query: String) -> PyroResult<Vec<Row>> {
         let mut guard = self.inner.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = match multi_conn {
+            MultiSyncConn::Mysql(conn) => conn,
+        };
         Ok(conn.query(query)?)
     }
 
     #[pyo3(signature = (query))]
     fn query_first(&self, query: String) -> PyroResult<Option<Row>> {
         let mut guard = self.inner.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = match multi_conn {
+            MultiSyncConn::Mysql(conn) => conn,
+        };
         Ok(conn.query_first(query)?)
     }
 
     #[pyo3(signature = (query))]
     fn query_drop(&self, query: String) -> PyroResult<()> {
         let mut guard = self.inner.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = match multi_conn {
+            MultiSyncConn::Mysql(conn) => conn,
+        };
         Ok(conn.query_drop(query)?)
     }
     #[pyo3(signature = (query))]
     fn query_iter(slf: Py<Self>, py: Python, query: String) -> PyroResult<ResultSetIterator> {
         let slf_ref = slf.borrow(py);
         let mut guard = slf_ref.inner.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = match multi_conn {
+            MultiSyncConn::Mysql(conn) => conn,
+        };
         let query_result = conn.query_iter(query)?;
 
         Ok(ResultSetIterator {
@@ -135,7 +145,10 @@ impl SyncConn {
         params: Params,
     ) -> PyroResult<Bound<'py, PyList>> {
         let mut guard = self.inner.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = match multi_conn {
+            MultiSyncConn::Mysql(conn) => conn,
+        };
         // log::debug!("exec {query}");
         Ok(
             conn.exec_fold(query, params, PyList::empty(py), |acc, row| {
@@ -148,7 +161,10 @@ impl SyncConn {
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_first(&self, query: String, params: Params) -> PyroResult<Option<Row>> {
         let mut guard = self.inner.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = match multi_conn {
+            MultiSyncConn::Mysql(conn) => conn,
+        };
         // log::debug!("exec_first {query}");
         Ok(conn.exec_first(query, params)?)
     }
@@ -156,7 +172,10 @@ impl SyncConn {
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_drop(&self, query: String, params: Params) -> PyroResult<()> {
         let mut guard = self.inner.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = match multi_conn {
+            MultiSyncConn::Mysql(conn) => conn,
+        };
         // log::debug!("exec_drop {query}");
         Ok(conn.exec_drop(query, params)?)
     }
@@ -164,7 +183,10 @@ impl SyncConn {
     #[pyo3(signature = (query, params_list=vec![]))]
     fn exec_batch(&self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
         let mut guard = self.inner.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = match multi_conn {
+            MultiSyncConn::Mysql(conn) => conn,
+        };
         // log::debug!("exec_batch {query}");
         Ok(conn.exec_batch(query, params_list)?)
     }
@@ -200,7 +222,7 @@ impl SyncConn {
     fn reset(&self) -> PyroResult<()> {
         let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        Ok(conn.reset()?)
+        conn.reset()
     }
 
     fn server_version(&self) -> PyroResult<(u16, u16, u16)> {

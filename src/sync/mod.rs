@@ -1,5 +1,6 @@
 pub mod conn;
 pub mod iterator;
+pub mod multi_conn;
 pub mod opts;
 pub mod pool;
 pub mod pool_opts;
