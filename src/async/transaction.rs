@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::{RwLock, RwLockWriteGuard};
 
 use crate::{
-    r#async::conn::MultiAsyncConn,
+    r#async::multi_conn::MultiAsyncConn,
     r#async::queryable::Queryable,
     error::Error,
     util::{PyroFuture, rust_future_into_py},
@@ -18,7 +18,7 @@ pub struct AsyncTransaction {
     /// It is reset on commit(), rollback(), or __aexit__.
     inner: Arc<RwLock<Option<mysql_async::Transaction<'static>>>>,
 
-    /// Holding this guard prevents other concurrent calls of Conn::some_method(&mut self).
+    /// Holding this guard prevents other concurrent calls of Conn::some_method(&mutable self).
     /// guard is initialized in __aenter__.
     /// It is reset on commit(), rollback(), or __aexit__.
     guard: Arc<RwLock<Option<tokio::sync::RwLockWriteGuard<'static, Option<MultiAsyncConn>>>>>,

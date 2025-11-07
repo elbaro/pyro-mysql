@@ -9,7 +9,7 @@ pub mod type_object;
 use std::sync::Arc;
 
 use crate::{
-    r#async::conn::MultiAsyncConn,
+    r#async::multi_conn::MultiAsyncConn,
     r#async::opts::AsyncOpts,
     dbapi::{async_conn::AsyncDbApiConn, conn::DbApiConn, error::DbApiResult},
     error::Error,

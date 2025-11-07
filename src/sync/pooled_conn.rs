@@ -28,7 +28,7 @@ impl SyncPooledConn {
         slf
     }
     fn __exit__(
-        &mut self,
+        &self,
         _exc_type: Option<&Bound<'_, PyAny>>,
         _exc_value: Option<&Bound<'_, PyAny>>,
         _traceback: Option<&Bound<'_, PyAny>>,
@@ -68,7 +68,7 @@ impl SyncPooledConn {
         Ok(conn.affected_rows())
     }
 
-    fn ping(&mut self) -> PyroResult<()> {
+    fn ping(&self) -> PyroResult<()> {
         Ok(self
             .inner
             .write()
@@ -80,7 +80,7 @@ impl SyncPooledConn {
 
     // ─── Text Protocol ───────────────────────────────────────────────────
 
-    fn query(&mut self, query: String) -> PyroResult<Vec<Row>> {
+    fn query(&self, query: String) -> PyroResult<Vec<Row>> {
         Ok(self
             .inner
             .write()
@@ -89,7 +89,7 @@ impl SyncPooledConn {
             .query(query)?)
     }
 
-    fn query_first(&mut self, query: String) -> PyroResult<Option<Row>> {
+    fn query_first(&self, query: String) -> PyroResult<Option<Row>> {
         Ok(self
             .inner
             .write()
@@ -98,7 +98,7 @@ impl SyncPooledConn {
             .query_first(query)?)
     }
 
-    fn query_drop(&mut self, query: String) -> PyroResult<()> {
+    fn query_drop(&self, query: String) -> PyroResult<()> {
         Ok(self
             .inner
             .write()
@@ -129,7 +129,7 @@ impl SyncPooledConn {
     // ─── Binary Protocol ─────────────────────────────────────────────────
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec(&mut self, query: String, params: Params) -> PyroResult<Vec<Row>> {
+    fn exec(&self, query: String, params: Params) -> PyroResult<Vec<Row>> {
         Ok(self
             .inner
             .write()
@@ -139,7 +139,7 @@ impl SyncPooledConn {
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_first(&mut self, query: String, params: Params) -> PyroResult<Option<Row>> {
+    fn exec_first(&self, query: String, params: Params) -> PyroResult<Option<Row>> {
         Ok(self
             .inner
             .write()
@@ -149,7 +149,7 @@ impl SyncPooledConn {
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
+    fn exec_drop(&self, query: String, params: Params) -> PyroResult<()> {
         Ok(self
             .inner
             .write()
@@ -159,7 +159,7 @@ impl SyncPooledConn {
     }
 
     #[pyo3(signature = (query, params_list=vec![]))]
-    fn exec_batch(&mut self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
+    fn exec_batch(&self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
         Ok(self
             .inner
             .write()
@@ -193,7 +193,7 @@ impl SyncPooledConn {
         })
     }
 
-    fn close(&mut self) {
+    fn close(&self) {
         *self.inner.write() = None;
     }
 }

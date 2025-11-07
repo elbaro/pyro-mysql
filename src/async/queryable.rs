@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 use wtx::database::Records;
 
 use crate::{
-    r#async::{conn::MultiAsyncConn, row::Row, wtx_param::WtxParams},
+    r#async::{multi_conn::MultiAsyncConn, row::Row, wtx_param::WtxParams},
     error::Error,
     params::Params,
     util::{PyroFuture, rust_future_into_py},
@@ -21,7 +21,7 @@ use mysql_async::prelude::Queryable as MysqlAsyncQueryable;
 
 /// Helper function to get or prepare a statement with client-side caching
 pub(crate) async fn get_or_prepare_stmt(
-    executor: &mut crate::r#async::conn::WtxMysqlExecutor,
+    executor: &mut crate::r#async::multi_conn::WtxMysqlExecutor,
     stmt_cache: &mut std::collections::HashMap<String, u64>,
     query: &str,
 ) -> Result<u64, crate::error::Error> {

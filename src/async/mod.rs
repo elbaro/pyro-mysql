@@ -1,4 +1,5 @@
 pub mod conn;
+pub mod multi_conn;
 pub mod opts;
 pub mod pool;
 pub mod pool_opts;

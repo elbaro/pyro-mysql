@@ -9,7 +9,7 @@ use crate::{
     dbapi::{async_cursor::AsyncCursor, error::DbApiResult},
     error::{Error, PyroResult},
     params::Params,
-    r#async::conn::MultiAsyncConn,
+    r#async::multi_conn::MultiAsyncConn,
     row::Row,
     util::tokio_spawn_as_abort_on_drop,
 };

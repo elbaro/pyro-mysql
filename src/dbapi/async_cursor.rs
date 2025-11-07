@@ -15,7 +15,7 @@ use crate::{
     },
     error::{Error, PyroResult},
     params::Params,
-    r#async::{conn::MultiAsyncConn, row::Row},
+    r#async::{multi_conn::MultiAsyncConn, row::Row},
     util::tokio_spawn_as_abort_on_drop,
 };
 

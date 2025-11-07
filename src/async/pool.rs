@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    r#async::{conn::{AsyncConn, MultiAsyncConn}, opts::AsyncOpts},
+    r#async::{conn::AsyncConn, multi_conn::MultiAsyncConn, opts::AsyncOpts},
     util::{PyroFuture, rust_future_into_py, url_error_to_pyerr},
 };
 use either::Either;
