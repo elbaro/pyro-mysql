@@ -48,6 +48,7 @@ pkgs.mkShell {
   ];
 
   shellHook = ''
+    export PYTHONPATH=.
     echo "pyro-mysql development environment"
     echo "Python version: $(python --version)"
   '';

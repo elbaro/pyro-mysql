@@ -45,9 +45,8 @@ fn init(worker_threads: Option<usize>, thread_name: Option<&str>) {
 }
 
 /// A Python module implemented in Rust.
-#[pymodule]
+#[pymodule(gil_used = false)]
 mod pyro_mysql {
-
     use crate::sync::pool::SyncPool;
     use crate::sync::pool_opts::SyncPoolOpts;
     use crate::sync::pooled_conn::SyncPooledConn;
