@@ -6,6 +6,7 @@ use mysql::{Transaction, TxOpts};
 use pyo3::prelude::*;
 
 use crate::error::{Error, PyroResult};
+use crate::sync::backend::MysqlConn;
 use crate::sync::iterator::ResultSetIterator;
 use crate::sync::multi_conn::MultiSyncConn;
 use crate::sync::{conn::SyncConn, pooled_conn::SyncPooledConn};
@@ -19,7 +20,7 @@ pub struct SyncTransaction {
 
     // initialized and reset in __enter__ and __exit__
     inner: Option<mysql::Transaction<'static>>,
-    conn1: Option<Pin<Box<mysql::Conn>>>, // Transaction takes the ownership of the Rust Conn struct from the Python Conn object
+    conn1: Option<Pin<Box<MysqlConn>>>, // Transaction takes the ownership of the Rust Conn struct from the Python Conn object
     conn2: Option<Pin<Box<mysql::PooledConn>>>,
 }
 
@@ -50,11 +51,16 @@ impl SyncTransaction {
                     // Extract inner mysql::Conn from MultiSyncConn
                     let mysql_conn = match multi_conn {
                         MultiSyncConn::Mysql(conn) => conn,
+                        MultiSyncConn::Diesel(_) => {
+                            return Err(Error::IncorrectApiUsageError(
+                                "Transactions are not supported for Diesel backend",
+                            ))
+                        }
                     };
                     Box::pin(mysql_conn)
                 };
 
-                let tx = conn.start_transaction(slf_ref.opts)?;
+                let tx = conn.inner.start_transaction(slf_ref.opts)?;
                 let tx =
                     unsafe { std::mem::transmute::<Transaction<'_>, Transaction<'static>>(tx) };
                 (Some(conn), None, tx)
@@ -70,6 +76,7 @@ impl SyncTransaction {
                     )
                 };
 
+                // PooledConn doesn't have an inner field, it IS the connection
                 let tx = conn.start_transaction(slf_ref.opts)?;
                 let tx =
                     unsafe { std::mem::transmute::<Transaction<'_>, Transaction<'static>>(tx) };

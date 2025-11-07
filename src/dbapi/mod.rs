@@ -68,8 +68,8 @@ pub fn connect_async(
                 };
 
                 match &mut multi_conn {
-                    MultiAsyncConn::Wtx { executor, .. } => {
-                        executor
+                    MultiAsyncConn::Wtx(wtx_conn) => {
+                        wtx_conn.executor
                             .execute(query, |_| Ok(()))
                             .await
                             .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;

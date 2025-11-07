@@ -141,13 +141,13 @@ impl wtx::database::Typed<wtx::database::client::mysql::Mysql<wtx::Error>> for W
 }
 
 /// Lightweight parameter wrapper for wtx - holds WtxParam values
-pub(crate) struct WtxParams {
-    values: Vec<WtxParam>,
+pub struct WtxParams {
+    pub(crate) values: Vec<WtxParam>,
 }
 
 impl WtxParams {
     /// Create from Py<PyAny> (Python tuple/list/None)
-    pub(crate) fn from_py(py: Python, params: &Py<PyAny>) -> PyResult<Self> {
+    pub fn from_py(py: Python, params: &Py<PyAny>) -> PyResult<Self> {
         let params_bound = params.bind(py);
 
         // Handle None case

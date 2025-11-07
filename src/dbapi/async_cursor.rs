@@ -164,10 +164,10 @@ impl AsyncCursor {
                         Ok((None, affected_rows as i64, None, last_insert_id))
                     }
                 }
-                MultiAsyncConn::Wtx { executor, stmt_cache } => {
+                MultiAsyncConn::Wtx(wtx_conn) => {
                     use wtx::database::{Executor, Records, Record};
-                    use crate::r#async::queryable::{get_or_prepare_stmt, wtx_record_to_row};
-                    use crate::r#async::wtx_param::WtxParams;
+                    use crate::r#async::backend::wtx::{queryable::get_or_prepare_stmt, row::wtx_record_to_row};
+                    use crate::r#async::backend::wtx::WtxParams;
 
                     // Convert Py<PyAny> to WtxParams for wtx
                     let wtx_params = Python::attach(|py| {
@@ -180,10 +180,10 @@ impl AsyncCursor {
                     })?;
 
                     // Get or prepare statement with client-side caching
-                    let stmt_id = get_or_prepare_stmt(executor, stmt_cache, &query).await?;
+                    let stmt_id = get_or_prepare_stmt(&mut wtx_conn.executor, &mut wtx_conn.stmt_cache, &query).await?;
 
                     // Fetch all records
-                    let records = executor
+                    let records = wtx_conn.executor
                         .fetch_many_with_stmt(stmt_id, wtx_params, |_| Ok(()))
                         .await
                         .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
@@ -283,20 +283,20 @@ impl AsyncCursor {
                     }
                     PyroResult::Ok(affected)
                 }
-                MultiAsyncConn::Wtx { executor, stmt_cache } => {
+                MultiAsyncConn::Wtx(wtx_conn) => {
                     use wtx::database::Executor;
-                    use crate::r#async::queryable::get_or_prepare_stmt;
-                    use crate::r#async::wtx_param::WtxParams;
+                    use crate::r#async::backend::wtx::queryable::get_or_prepare_stmt;
+                    use crate::r#async::backend::wtx::WtxParams;
 
                     // Get or prepare statement with client-side caching
-                    let stmt_id = get_or_prepare_stmt(executor, stmt_cache, &query).await?;
+                    let stmt_id = get_or_prepare_stmt(&mut wtx_conn.executor, &mut wtx_conn.stmt_cache, &query).await?;
 
                     // Execute for each set of params
                     for params_item in params {
                         // Convert Py<PyAny> to WtxParams for wtx
                         let wtx_params = Python::attach(|py| WtxParams::from_py(py, &params_item))?;
 
-                        executor
+                        wtx_conn.executor
                             .execute_with_stmt(stmt_id, wtx_params)
                             .await
                             .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;

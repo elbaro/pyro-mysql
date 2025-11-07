@@ -1,16 +1,18 @@
 use crate::error::PyroResult;
+use crate::sync::backend::{DieselConn, MysqlConn};
 
 /// Multi-backend sync connection enum
-/// Currently only supports MySQL, but designed to allow future backends
 pub enum MultiSyncConn {
-    Mysql(mysql::Conn),
+    Mysql(MysqlConn),
+    Diesel(DieselConn),
 }
 
 impl MultiSyncConn {
     /// Get the connection ID
     pub fn id(&self) -> u32 {
         match self {
-            MultiSyncConn::Mysql(conn) => conn.connection_id(),
+            MultiSyncConn::Mysql(conn) => conn.id(),
+            MultiSyncConn::Diesel(conn) => conn.id(),
         }
     }
 
@@ -18,20 +20,15 @@ impl MultiSyncConn {
     pub fn affected_rows(&self) -> u64 {
         match self {
             MultiSyncConn::Mysql(conn) => conn.affected_rows(),
+            MultiSyncConn::Diesel(conn) => conn.affected_rows(),
         }
     }
 
     /// Get the last insert ID
     pub fn last_insert_id(&self) -> Option<u64> {
         match self {
-            MultiSyncConn::Mysql(conn) => {
-                let id = conn.last_insert_id();
-                if id == 0 {
-                    None
-                } else {
-                    Some(id)
-                }
-            }
+            MultiSyncConn::Mysql(conn) => conn.last_insert_id(),
+            MultiSyncConn::Diesel(conn) => conn.last_insert_id(),
         }
     }
 
@@ -39,26 +36,23 @@ impl MultiSyncConn {
     pub fn server_version(&self) -> (u16, u16, u16) {
         match self {
             MultiSyncConn::Mysql(conn) => conn.server_version(),
+            MultiSyncConn::Diesel(conn) => conn.server_version(),
         }
     }
 
     /// Ping the server to keep the connection alive
     pub fn ping(&mut self) -> PyroResult<()> {
         match self {
-            MultiSyncConn::Mysql(conn) => {
-                conn.ping()?;
-                Ok(())
-            }
+            MultiSyncConn::Mysql(conn) => conn.ping(),
+            MultiSyncConn::Diesel(conn) => conn.ping(),
         }
     }
 
     /// Reset the connection state
     pub fn reset(&mut self) -> PyroResult<()> {
         match self {
-            MultiSyncConn::Mysql(conn) => {
-                conn.reset()?;
-                Ok(())
-            }
+            MultiSyncConn::Mysql(conn) => conn.reset(),
+            MultiSyncConn::Diesel(conn) => conn.reset(),
         }
     }
 }

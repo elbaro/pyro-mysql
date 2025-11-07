@@ -38,7 +38,7 @@ impl FromPyObject<'_, '_> for Params {
             let tuple = ob.cast::<pyo3::types::PyTuple>()?;
             let mut params = Vec::<mysql_async::Value>::with_capacity(tuple.len());
             for item in tuple.iter() {
-                params.push(Value::extract(item.as_borrowed())?.into());
+                params.push(Value::extract(item.as_borrowed())?.to_mysql_value());
             }
             Ok(Params {
                 inner: MySqlParams::Positional(params),
@@ -47,7 +47,7 @@ impl FromPyObject<'_, '_> for Params {
             let list = ob.cast::<pyo3::types::PyList>()?;
             let mut params = Vec::with_capacity(list.len());
             for item in list.iter() {
-                params.push(Value::extract(item.as_borrowed())?.into());
+                params.push(Value::extract(item.as_borrowed())?.to_mysql_value());
             }
             Ok(Params {
                 inner: MySqlParams::Positional(params),
@@ -57,7 +57,7 @@ impl FromPyObject<'_, '_> for Params {
             let mut params = std::collections::HashMap::new();
             for (key, value) in dict.iter() {
                 let key_str = key.extract::<String>()?;
-                let param_value = Value::extract(value.as_borrowed())?.into();
+                let param_value = Value::extract(value.as_borrowed())?.to_mysql_value();
                 // Convert String key to Vec<u8> as required by mysql_async
                 params.insert(key_str.into_bytes(), param_value);
             }

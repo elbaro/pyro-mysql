@@ -6,6 +6,7 @@ use pyo3::types::PyByteArray;
 use pyo3::{
     IntoPyObjectExt,
     prelude::*,
+    pybacked::{PyBackedBytes, PyBackedStr},
     sync::PyOnceLock,
     types::{PyBytes, PyString},
 };
@@ -71,9 +72,41 @@ fn get_json_module<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyModule>> 
         .bind(py))
 }
 
-#[derive(Clone)]
-pub struct Value {
-    pub inner: MySqlValue,
+/// Zero-copy MySQL value type using PyBackedStr and PyBackedBytes
+///
+/// This enum is similar to mysql_common::Value but uses PyO3's zero-copy types
+/// for string and byte data, avoiding unnecessary allocations when converting
+/// from Python to Rust.
+///
+/// Note: This type does not implement Clone because PyBackedBytes and PyBackedStr
+/// are non-cloneable zero-copy views into Python objects.
+pub enum Value {
+    /// NULL value
+    NULL,
+
+    /// Byte data (zero-copy from Python bytes/bytearray)
+    Bytes(PyBackedBytes),
+
+    /// String data (zero-copy from Python str)
+    Str(PyBackedStr),
+
+    /// Signed 64-bit integer
+    Int(i64),
+
+    /// Unsigned 64-bit integer
+    UInt(u64),
+
+    /// 32-bit floating point
+    Float(f32),
+
+    /// 64-bit floating point
+    Double(f64),
+
+    /// Date/DateTime: year, month, day, hour, minutes, seconds, micro seconds
+    Date(u16, u8, u8, u8, u8, u8, u32),
+
+    /// Time/Duration: is negative, days, hours, minutes, seconds, micro seconds
+    Time(bool, u32, u8, u8, u8, u32),
 }
 
 impl FromPyObject<'_, '_> for Value {
@@ -84,48 +117,66 @@ impl FromPyObject<'_, '_> for Value {
 
         // Get the type object and its name
         let type_obj = ob.get_type();
-        let type_name = type_obj.name()?; // TODO: use qualname() with 'builtins.int' for precise ident
+        let type_name = type_obj.name()?;
 
         // Match on type name
-        let inner = match type_name.to_str()? {
-            "NoneType" => MySqlValue::NULL,
+        match type_name.to_str()? {
+            "NoneType" => Ok(Value::NULL),
+
             "bool" => {
                 let v = ob.extract::<bool>()?;
-                MySqlValue::Int(v as i64)
+                Ok(Value::Int(v as i64))
             }
+
             "int" => {
                 // Try to fit in i64 first, then u64, otherwise convert to string
                 if let Ok(v) = ob.extract::<i64>() {
-                    MySqlValue::Int(v)
+                    Ok(Value::Int(v))
                 } else if let Ok(v) = ob.extract::<u64>() {
-                    MySqlValue::UInt(v)
+                    Ok(Value::UInt(v))
                 } else {
-                    // Integer too large for i64/u64, store as string
-                    let int_str = ob.str()?.to_str()?.as_bytes().to_vec();
-                    MySqlValue::Bytes(int_str)
+                    // Integer too large for i64/u64, store as zero-copy string
+                    let int_str = ob.str()?;
+                    let backed_str = int_str.extract::<PyBackedStr>()?;
+                    Ok(Value::Str(backed_str))
                 }
             }
-            "float" => MySqlValue::Double(ob.extract()?),
+
+            "float" => {
+                let v = ob.extract::<f64>()?;
+                Ok(Value::Double(v))
+            }
+
             "str" => {
-                let v = ob.extract::<String>()?;
-                MySqlValue::Bytes(v.into_bytes())
+                // Zero-copy string extraction
+                let backed_str = ob.extract::<PyBackedStr>()?;
+                Ok(Value::Str(backed_str))
             }
+
             "bytes" => {
-                let v = ob.extract::<&[u8]>()?;
-                MySqlValue::Bytes(v.to_vec())
+                // Zero-copy bytes extraction
+                let backed_bytes = ob.extract::<PyBackedBytes>()?;
+                Ok(Value::Bytes(backed_bytes))
             }
+
             "bytearray" => {
+                // Extract from bytearray (requires a copy since PyBackedBytes doesn't support bytearray)
                 let v = ob.cast::<PyByteArray>()?;
-                MySqlValue::Bytes(v.to_vec())
+                // We need to create bytes from bytearray
+                let bytes_obj = PyBytes::new(py, &v.to_vec());
+                let backed_bytes = bytes_obj.extract::<PyBackedBytes>()?;
+                Ok(Value::Bytes(backed_bytes))
             }
+
             "tuple" | "list" | "set" | "frozenset" | "dict" => {
-                // Serialize collections to JSON
+                // Serialize collections to JSON as zero-copy string
                 let json_module = get_json_module(py)?;
                 let json_str = json_module
                     .call_method1("dumps", (ob,))?
-                    .extract::<String>()?;
-                MySqlValue::Bytes(json_str.into_bytes())
+                    .extract::<PyBackedStr>()?;
+                Ok(Value::Str(json_str))
             }
+
             "datetime" => {
                 // datetime.datetime
                 let year = ob.getattr("year")?.extract::<u16>()?;
@@ -135,23 +186,34 @@ impl FromPyObject<'_, '_> for Value {
                 let minute = ob.getattr("minute")?.extract::<u8>()?;
                 let second = ob.getattr("second")?.extract::<u8>()?;
                 let microsecond = ob.getattr("microsecond")?.extract::<u32>()?;
-                MySqlValue::Date(year, month, day, hour, minute, second, microsecond)
+                Ok(Value::Date(
+                    year,
+                    month,
+                    day,
+                    hour,
+                    minute,
+                    second,
+                    microsecond,
+                ))
             }
+
             "date" => {
                 // datetime.date
                 let year = ob.getattr("year")?.extract::<u16>()?;
                 let month = ob.getattr("month")?.extract::<u8>()?;
                 let day = ob.getattr("day")?.extract::<u8>()?;
-                MySqlValue::Date(year, month, day, 0, 0, 0, 0)
+                Ok(Value::Date(year, month, day, 0, 0, 0, 0))
             }
+
             "time" => {
                 // datetime.time
                 let hour = ob.getattr("hour")?.extract::<u8>()?;
                 let minute = ob.getattr("minute")?.extract::<u8>()?;
                 let second = ob.getattr("second")?.extract::<u8>()?;
                 let microsecond = ob.getattr("microsecond")?.extract::<u32>()?;
-                MySqlValue::Time(false, 0, hour, minute, second, microsecond)
+                Ok(Value::Time(false, 0, hour, minute, second, microsecond))
             }
+
             "timedelta" => {
                 // datetime.timedelta
                 let total_seconds = ob.call_method0("total_seconds")?.extract::<f64>()?;
@@ -166,8 +228,16 @@ impl FromPyObject<'_, '_> for Value {
                 let seconds = (remaining % 60.0) as u8;
                 let microseconds = ((remaining % 1.0) * 1_000_000.0) as u32;
 
-                MySqlValue::Time(is_negative, days, hours, minutes, seconds, microseconds)
+                Ok(Value::Time(
+                    is_negative,
+                    days,
+                    hours,
+                    minutes,
+                    seconds,
+                    microseconds,
+                ))
             }
+
             "struct_time" => {
                 // time.struct_time
                 let year = ob.getattr("tm_year")?.extract::<u16>()?;
@@ -176,27 +246,26 @@ impl FromPyObject<'_, '_> for Value {
                 let hour = ob.getattr("tm_hour")?.extract::<u8>()?;
                 let minute = ob.getattr("tm_min")?.extract::<u8>()?;
                 let second = ob.getattr("tm_sec")?.extract::<u8>()?;
-                MySqlValue::Date(year, month, day, hour, minute, second, 0)
+                Ok(Value::Date(year, month, day, hour, minute, second, 0))
             }
-            "Decimal" => {
-                // decimal.Decimal
-                let decimal_str = ob.str()?.to_str()?.as_bytes().to_vec();
-                MySqlValue::Bytes(decimal_str)
-            }
-            // uuid.UUID
-            "UUID" => {
-                let hex = ob.getattr("hex")?.extract::<String>()?;
-                MySqlValue::Bytes(hex.into_bytes())
-            }
-            _ => {
-                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
-                    "Unsupported value type: {:?}",
-                    type_obj.fully_qualified_name()
-                )));
-            }
-        };
 
-        Ok(Value { inner })
+            "Decimal" => {
+                // decimal.Decimal - convert to zero-copy string
+                let decimal_str = ob.str()?.extract::<PyBackedStr>()?;
+                Ok(Value::Str(decimal_str))
+            }
+
+            "UUID" => {
+                // uuid.UUID - convert hex to zero-copy string
+                let hex = ob.getattr("hex")?.extract::<PyBackedStr>()?;
+                Ok(Value::Str(hex))
+            }
+
+            _ => Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                "Unsupported value type: {:?}",
+                type_obj.fully_qualified_name()
+            ))),
+        }
     }
 }
 
@@ -627,14 +696,64 @@ pub fn value_to_python<'py>(
     Ok(bound)
 }
 
-impl From<Value> for MySqlValue {
-    fn from(value: Value) -> Self {
-        value.inner
+impl Value {
+    /// Convert to mysql_common::Value for compatibility with mysql crate
+    pub fn to_mysql_value(&self) -> MySqlValue {
+        match self {
+            Value::NULL => MySqlValue::NULL,
+            Value::Bytes(b) => {
+                let bytes: &[u8] = b.as_ref();
+                MySqlValue::Bytes(bytes.to_vec())
+            }
+            Value::Str(s) => {
+                let str_ref: &str = s.as_ref();
+                MySqlValue::Bytes(str_ref.as_bytes().to_vec())
+            }
+            Value::Int(v) => MySqlValue::Int(*v),
+            Value::UInt(v) => MySqlValue::UInt(*v),
+            Value::Float(v) => MySqlValue::Float(*v),
+            Value::Double(v) => MySqlValue::Double(*v),
+            Value::Date(year, month, day, hour, minute, second, micro) => {
+                MySqlValue::Date(*year, *month, *day, *hour, *minute, *second, *micro)
+            }
+            Value::Time(neg, days, hours, minutes, seconds, micro) => {
+                MySqlValue::Time(*neg, *days, *hours, *minutes, *seconds, *micro)
+            }
+        }
     }
-}
 
-impl From<MySqlValue> for Value {
-    fn from(value: MySqlValue) -> Self {
-        Value { inner: value }
+    /// Get a reference to the bytes (if this is a Bytes or Str variant)
+    pub fn as_bytes(&self) -> Option<&[u8]> {
+        match self {
+            Value::Bytes(b) => {
+                let bytes_ref: &[u8] = b.as_ref();
+                Some(bytes_ref)
+            }
+            Value::Str(s) => {
+                let str_ref: &str = s.as_ref();
+                Some(str_ref.as_bytes())
+            }
+            _ => None,
+        }
+    }
+
+    /// Get a reference to the string (if this is a Str variant)
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Value::Str(s) => {
+                let str_ref: &str = s.as_ref();
+                Some(str_ref)
+            }
+            Value::Bytes(b) => {
+                let bytes_ref: &[u8] = b.as_ref();
+                std::str::from_utf8(bytes_ref).ok()
+            }
+            _ => None,
+        }
+    }
+
+    /// Check if this value is NULL
+    pub fn is_null(&self) -> bool {
+        matches!(self, Value::NULL)
     }
 }

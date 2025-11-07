@@ -21,16 +21,46 @@ pub struct SyncConn {
 #[pymethods]
 impl SyncConn {
     #[new]
-    pub fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> PyroResult<Self> {
-        let opts = match url_or_opts {
-            Either::Left(url) => Opts::from_url(&url)?,
-            Either::Right(opts) => opts.opts.clone(),
-        };
-        let conn = mysql::Conn::new(opts)?;
+    #[pyo3(signature = (url_or_opts, backend=None))]
+    pub fn new(
+        url_or_opts: Either<String, PyRef<SyncOpts>>,
+        backend: Option<&str>,
+    ) -> PyroResult<Self> {
+        let backend_name = backend.unwrap_or("mysql");
 
-        Ok(Self {
-            inner: RwLock::new(Some(MultiSyncConn::Mysql(conn))),
-        })
+        match backend_name {
+            "mysql" => {
+                let opts = match url_or_opts {
+                    Either::Left(url) => Opts::from_url(&url)?,
+                    Either::Right(opts) => opts.opts.clone(),
+                };
+                let conn = crate::sync::backend::MysqlConn::new(opts)?;
+
+                Ok(Self {
+                    inner: RwLock::new(Some(MultiSyncConn::Mysql(conn))),
+                })
+            }
+            "diesel" => {
+                let url = match url_or_opts {
+                    Either::Left(url) => url,
+                    Either::Right(opts) => {
+                        // For diesel, we need a URL string
+                        // This is a simplified conversion - in production, you'd need proper URL construction
+                        return Err(crate::error::Error::IncorrectApiUsageError(
+                            "Diesel backend requires a URL string, not SyncOpts",
+                        ));
+                    }
+                };
+                let conn = crate::sync::backend::DieselConn::new(&url)?;
+
+                Ok(Self {
+                    inner: RwLock::new(Some(MultiSyncConn::Diesel(conn))),
+                })
+            }
+            _ => Err(crate::error::Error::IncorrectApiUsageError(
+                "Unknown backend. Supported backends: 'mysql', 'diesel'",
+            )),
+        }
     }
 
     #[pyo3(signature=(consistent_snapshot=false, isolation_level=None, readonly=None))]
@@ -90,7 +120,12 @@ impl SyncConn {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => conn,
+            MultiSyncConn::Mysql(conn) => &mut conn.inner,
+            MultiSyncConn::Diesel(_) => {
+                return Err(Error::IncorrectApiUsageError(
+                    "Query operations are not yet supported for Diesel backend",
+                ))
+            }
         };
         Ok(conn.query(query)?)
     }
@@ -100,7 +135,12 @@ impl SyncConn {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => conn,
+            MultiSyncConn::Mysql(conn) => &mut conn.inner,
+            MultiSyncConn::Diesel(_) => {
+                return Err(Error::IncorrectApiUsageError(
+                    "Query operations are not yet supported for Diesel backend",
+                ))
+            }
         };
         Ok(conn.query_first(query)?)
     }
@@ -110,7 +150,12 @@ impl SyncConn {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => conn,
+            MultiSyncConn::Mysql(conn) => &mut conn.inner,
+            MultiSyncConn::Diesel(_) => {
+                return Err(Error::IncorrectApiUsageError(
+                    "Query operations are not yet supported for Diesel backend",
+                ))
+            }
         };
         Ok(conn.query_drop(query)?)
     }
@@ -120,7 +165,12 @@ impl SyncConn {
         let mut guard = slf_ref.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => conn,
+            MultiSyncConn::Mysql(conn) => &mut conn.inner,
+            MultiSyncConn::Diesel(_) => {
+                return Err(Error::IncorrectApiUsageError(
+                    "Query operations are not yet supported for Diesel backend",
+                ))
+            }
         };
         let query_result = conn.query_iter(query)?;
 
@@ -147,7 +197,12 @@ impl SyncConn {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => conn,
+            MultiSyncConn::Mysql(conn) => &mut conn.inner,
+            MultiSyncConn::Diesel(_) => {
+                return Err(Error::IncorrectApiUsageError(
+                    "Exec operations are not yet supported for Diesel backend",
+                ))
+            }
         };
         // log::debug!("exec {query}");
         Ok(
@@ -163,7 +218,12 @@ impl SyncConn {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => conn,
+            MultiSyncConn::Mysql(conn) => &mut conn.inner,
+            MultiSyncConn::Diesel(_) => {
+                return Err(Error::IncorrectApiUsageError(
+                    "Exec operations are not yet supported for Diesel backend",
+                ))
+            }
         };
         // log::debug!("exec_first {query}");
         Ok(conn.exec_first(query, params)?)
@@ -174,7 +234,12 @@ impl SyncConn {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => conn,
+            MultiSyncConn::Mysql(conn) => &mut conn.inner,
+            MultiSyncConn::Diesel(_) => {
+                return Err(Error::IncorrectApiUsageError(
+                    "Exec operations are not yet supported for Diesel backend",
+                ))
+            }
         };
         // log::debug!("exec_drop {query}");
         Ok(conn.exec_drop(query, params)?)
@@ -185,7 +250,12 @@ impl SyncConn {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => conn,
+            MultiSyncConn::Mysql(conn) => &mut conn.inner,
+            MultiSyncConn::Diesel(_) => {
+                return Err(Error::IncorrectApiUsageError(
+                    "Exec operations are not yet supported for Diesel backend",
+                ))
+            }
         };
         // log::debug!("exec_batch {query}");
         Ok(conn.exec_batch(query, params_list)?)

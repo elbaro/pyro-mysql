@@ -59,14 +59,14 @@ impl AsyncTransaction {
 
             // Check if connection is wtx and panic
             let conn_ref = conn.as_mut().unwrap(); // Conn is already non-None
-            if matches!(conn_ref, MultiAsyncConn::Wtx { .. }) {
+            if matches!(conn_ref, MultiAsyncConn::Wtx(_)) {
                 panic!("Transactions are not supported for wtx connections");
             }
 
             // Only mysql_async supports transactions
             let mysql_conn = match conn_ref {
                 MultiAsyncConn::MysqlAsync(c) => c,
-                MultiAsyncConn::Wtx { .. } => unreachable!(),
+                MultiAsyncConn::Wtx(_) => unreachable!(),
             };
 
             let tx = mysql_conn
