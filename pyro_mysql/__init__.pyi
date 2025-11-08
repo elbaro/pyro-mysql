@@ -14,7 +14,10 @@ mysql.init(worker_threads=1)
 async def example_select():
     conn = await mysql.Conn.new("mysql://localhost@127.0.0.1:3306/test")
     rows = await conn.exec("SELECT * from mydb.mytable")
-    print(row[-1].to_dict())
+    print(rows[-1])  # prints tuple by default
+    # or get dict:
+    rows_as_dicts = await conn.exec("SELECT * from mydb.mytable", as_dict=True)
+    print(rows_as_dicts[-1])  # prints dict
 
 
 async def example_transaction():
@@ -133,26 +136,6 @@ Named parameters:
     `await conn.exec("SELECT * FROM users WHERE age > :age AND city = :city", dict(age=18, name="NYC"))`
 """
 type Params = None | tuple[Value, ...] | Sequence[Value] | dict[str, Value]
-
-class Row:
-    """
-    A row returned from a MySQL query.
-    to_tuple() / to_dict() copies the data, and should not be called many times.
-    """
-
-    def to_tuple(self) -> tuple[Value, ...]:
-        """Convert the row to a Python list."""
-        ...
-
-    def to_dict(self) -> dict[str, Value]:
-        f"""
-        Convert the row to a Python dictionary with column names as keys.
-        If there are multiple columns with the same name, a later column wins.
-
-            row = await conn.exec_first("SELECT 1, 2, 2 FROM some_table")
-            assert row.as_dict() == {"1": 1, "2": 2}
-        """
-        ...
 
 T = TypeVar("T")
 

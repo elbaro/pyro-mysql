@@ -6,9 +6,9 @@ from .conftest import get_test_db_url
 
 
 class TestSyncTransaction:
-    def test_start_transaction(self):
+    def test_start_transaction(self, backend):
         """Test run_transaction with a callable"""
-        conn = SyncConn(get_test_db_url())
+        conn = SyncConn(get_test_db_url(), backend=backend)
 
         # First create a test table outside of transaction
         conn.exec("CREATE TEMPORARY TABLE test_tx_rollback (id INT, value VARCHAR(50))")
@@ -16,7 +16,7 @@ class TestSyncTransaction:
         with conn.start_transaction() as tx:
             rows = tx.exec("SELECT 42 as answer")
             tx.commit()
-            result = rows[0].to_dict()["answer"]
+            result = rows[0][0]
         assert result == 42
 
         # Test auto-rollback on exception
@@ -29,9 +29,9 @@ class TestSyncTransaction:
         rows = conn.exec("SELECT * FROM test_tx_rollback")
         assert len(rows) == 0
 
-    def test_transaction_reference_count_warning(self):
+    def test_transaction_reference_count_warning(self, backend):
         """Test that keeping a reference to transaction shows warning"""
-        conn = SyncConn(get_test_db_url())
+        conn = SyncConn(get_test_db_url(), backend=backend)
 
         with pytest.raises(pyro_mysql.error.IncorrectApiUsageError):
             _tx_ref = None
@@ -40,26 +40,26 @@ class TestSyncTransaction:
                 tx.exec("SELECT 1")
                 tx.commit()
 
-    def test_using_conn_while_transaction_active(self):
+    def test_using_conn_while_transaction_active(self, backend):
         """Test that we can use Conn while a Transaction is active"""
-        conn = SyncConn(get_test_db_url())
+        conn = SyncConn(get_test_db_url(), backend=backend)
 
         with conn.start_transaction() as tx:
             tx_rows = tx.exec("SELECT 1 as n")
-            assert tx_rows[0].to_dict()["n"] == 1
+            assert tx_rows[0][0] == 1
             with pytest.raises(pyro_mysql.error.ConnectionClosedError):
                 conn.exec("SELECT 2 as n")
 
             tx.commit()
 
-    def test_pooled_conn_start_transaction(self):
+    def test_pooled_conn_start_transaction(self, backend):
         """Test start_transaction with pooled connections"""
-        pool = SyncPool(get_test_db_url())
+        pool = SyncPool(get_test_db_url(), backend=backend)
 
         with pool.get() as conn:
             with conn.start_transaction() as tx:
                 rows = tx.exec("SELECT 1 as n")
-                assert rows[0].to_dict()["n"] == 1
+                assert rows[0][0] == 1
                 tx.commit()
 
         # Test multiple transactions from pool

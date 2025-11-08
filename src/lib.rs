@@ -21,7 +21,6 @@ use crate::{
     r#async::{conn::AsyncConn, pool::AsyncPool, transaction::AsyncTransaction},
     capability_flags::CapabilityFlags,
     isolation_level::IsolationLevel,
-    row::Row,
     sync::{
         conn::SyncConn,
         opts::{SyncOpts, SyncOptsBuilder},
@@ -56,9 +55,6 @@ mod pyro_mysql {
 
     #[pymodule_export]
     use super::init;
-
-    #[pymodule_export]
-    use super::Row;
 
     #[pymodule_export]
     use super::IsolationLevel;

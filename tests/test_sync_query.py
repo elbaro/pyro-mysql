@@ -7,23 +7,23 @@ from .conftest import (
 )
 
 
-def test_basic_sync_query():
+def test_basic_sync_query(backend):
     """Test basic synchronous query execution."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     result = conn.query("SELECT 1 UNION SELECT 2 UNION SELECT 3")
 
     assert len(result) == 3
-    assert result[0].to_tuple() == (1,)
-    assert result[1].to_tuple() == (2,)
-    assert result[2].to_tuple() == (3,)
+    assert result[0][0] == 1
+    assert result[1][0] == 2
+    assert result[2][0] == 3
 
     conn.close()
 
 
-def test_sync_query_with_params():
+def test_sync_query_with_params(backend):
     """Test sync query execution with parameters."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     setup_test_table_sync(conn)
 
@@ -39,15 +39,15 @@ def test_sync_query_with_params():
     results = conn.exec("SELECT name, age FROM test_table WHERE age = ?", (25,))
 
     assert len(results) == 1
-    assert results[0].to_tuple() == ("Bob", 25)
+    assert (results[0][0], results[0][1]) == ("Bob", 25)
 
     cleanup_test_table_sync(conn)
     conn.close()
 
 
-def test_sync_query_first():
+def test_sync_query_first(backend):
     """Test sync query_first method."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     setup_test_table_sync(conn)
 
@@ -58,7 +58,7 @@ def test_sync_query_first():
 
     result = conn.exec_first("SELECT name, age FROM test_table ORDER BY age DESC", ())
     assert result
-    assert result.to_tuple() == ("Alice", 30)
+    assert (result[0], result[1]) == ("Alice", 30)
 
     result = conn.exec_first("SELECT name, age FROM test_table WHERE age > ?", (100,))
 
@@ -68,9 +68,9 @@ def test_sync_query_first():
     conn.close()
 
 
-def test_sync_query_iter():
+def test_sync_query_iter(backend):
     """Test sync query_iter functionality."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     setup_test_table_sync(conn)
 
@@ -86,7 +86,7 @@ def test_sync_query_iter():
 
     for result_set in result_set_iter:
         for row in result_set:
-            name, age = row.to_tuple()
+            name, age = row[0], row[1]
             assert (name, age) == expected_results[count]
             count += 1
 
@@ -96,9 +96,9 @@ def test_sync_query_iter():
     conn.close()
 
 
-def test_sync_named_params():
+def test_sync_named_params(backend):
     """Test sync named parameter queries."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     setup_test_table_sync(conn)
 
@@ -113,15 +113,15 @@ def test_sync_named_params():
         "SELECT name, age FROM test_table WHERE name = :name", {"name": "Alice"}
     )
     assert result
-    assert result.to_tuple() == ("Alice", 30)
+    assert (result[0], result[1]) == ("Alice", 30)
 
     cleanup_test_table_sync(conn)
     conn.close()
 
 
-def test_sync_batch_exec():
+def test_sync_batch_exec(backend):
     """Test sync batch execution."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     setup_test_table_sync(conn)
 
@@ -137,15 +137,15 @@ def test_sync_batch_exec():
 
     count = conn.query_first("SELECT COUNT(*) FROM test_table")
     assert count
-    assert count.to_tuple() == (5,)
+    assert count[0] == 5
 
     cleanup_test_table_sync(conn)
     conn.close()
 
 
-def test_sync_query_with_nulls():
+def test_sync_query_with_nulls(backend):
     """Test sync handling of NULL values in queries."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     setup_test_table_sync(conn)
 
@@ -157,16 +157,16 @@ def test_sync_query_with_nulls():
     results = conn.query("SELECT name, age FROM test_table ORDER BY name")
 
     assert len(results) == 2
-    assert results[0].to_tuple() == ("Alice", 30)
-    assert results[1].to_tuple() == ("Bob", None)
+    assert (results[0][0], results[0][1]) == ("Alice", 30)
+    assert (results[1][0], results[1][1]) == ("Bob", None)
 
     cleanup_test_table_sync(conn)
     conn.close()
 
 
-def test_sync_multi_statement_query():
+def test_sync_multi_statement_query(backend):
     """Test sync multi-statement query execution."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     setup_test_table_sync(conn)
 
@@ -177,15 +177,15 @@ def test_sync_multi_statement_query():
 
     count = conn.query_first("SELECT COUNT(*) FROM test_table")
     assert count
-    assert count.to_tuple() == (2,)
+    assert count[0] == 2
 
     cleanup_test_table_sync(conn)
     conn.close()
 
 
-def test_sync_last_insert_id():
+def test_sync_last_insert_id(backend):
     """Test sync last_insert_id functionality."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     setup_test_table_sync(conn)
 
@@ -205,9 +205,9 @@ def test_sync_last_insert_id():
     conn.close()
 
 
-def test_sync_affected_rows():
+def test_sync_affected_rows(backend):
     """Test sync affected_rows functionality."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     setup_test_table_sync(conn)
 

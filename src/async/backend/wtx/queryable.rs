@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use pyo3::prelude::*;
 
 use crate::error::Error;
 use super::conn::WtxMysqlExecutor;

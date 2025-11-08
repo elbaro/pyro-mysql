@@ -25,7 +25,7 @@ async def test_invalid_credentials_error():
     """Test invalid credentials error."""
     opts = (
         AsyncOptsBuilder()
-        .ip_or_hostname("localhost")
+        .ip_or_hostname("127.0.0.1")
         .tcp_port(3306)
         .user("nonexistent_user")
         .password("wrong_password")

@@ -189,36 +189,40 @@ impl AsyncTransaction {
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
-    fn query<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
-        self.inner.query(py, query)
+    #[pyo3(signature = (query, *, as_dict=false))]
+    fn query<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
+        self.inner.query(py, query, as_dict)
     }
-    fn query_first<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
-        self.inner.query_first(py, query)
+    #[pyo3(signature = (query, *, as_dict=false))]
+    fn query_first<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
+        self.inner.query_first(py, query, as_dict)
     }
     fn query_drop<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
         self.inner.query_drop(py, query)
     }
 
     // ─── Binary Protocol ─────────────────────────────────────────────────
-    #[pyo3(signature = (query, params=None))]
+    #[pyo3(signature = (query, params=None, *, as_dict=false))]
     fn exec<'py>(
         &self,
         py: Python<'py>,
         query: PyBackedStr,
         params: Option<Py<PyAny>>,
+        as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
         let params = params.unwrap_or_else(|| py.None());
-        self.inner.exec(py, query, params)
+        self.inner.exec(py, query, params, as_dict)
     }
-    #[pyo3(signature = (query, params=None))]
+    #[pyo3(signature = (query, params=None, *, as_dict=false))]
     fn exec_first<'py>(
         &self,
         py: Python<'py>,
         query: PyBackedStr,
         params: Option<Py<PyAny>>,
+        as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
         let params = params.unwrap_or_else(|| py.None());
-        self.inner.exec_first(py, query, params)
+        self.inner.exec_first(py, query, params, as_dict)
     }
     #[pyo3(signature = (query, params=None))]
     fn exec_drop<'py>(

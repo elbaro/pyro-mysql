@@ -2,7 +2,7 @@ import datetime
 from types import TracebackType
 from typing import Any, Self, Sequence
 
-from pyro_mysql import IsolationLevel, Params, PyroFuture, Row
+from pyro_mysql import IsolationLevel, Params, PyroFuture
 
 class PoolOpts:
     """Pool options for async connections."""
@@ -209,27 +209,29 @@ class Transaction:
         """Ping the server to check connection."""
         ...
 
-    def query(self, query: str) -> PyroFuture[list[Row]]:
+    def query(self, query: str, *, as_dict: bool = False) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
         """
         Execute a query using text protocol and return all rows.
 
         Args:
             query: SQL query string.
+            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
 
         Returns:
-            List of Row objects.
+            List of tuples (default) or dictionaries.
         """
         ...
 
-    def query_first(self, query: str) -> PyroFuture[Row | None]:
+    def query_first(self, query: str, *, as_dict: bool = False) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
         """
         Execute a query using text protocol and return the first row.
 
         Args:
             query: SQL query string.
+            as_dict: If True, return row as dictionary. If False (default), return row as tuple.
 
         Returns:
-            First Row or None if no results.
+            First row as tuple (default) or dictionary, or None if no results.
         """
         ...
 
@@ -242,29 +244,31 @@ class Transaction:
         """
         ...
 
-    def exec(self, query: str, params: Params = None) -> PyroFuture[list[Row]]:
+    def exec(self, query: str, params: Params = None, *, as_dict: bool = False) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
         """
         Execute a query and return all rows.
 
         Args:
             query: SQL query string with '?' placeholders.
             params: Query parameters.
+            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
 
         Returns:
-            List of Row objects.
+            List of tuples (default) or dictionaries.
         """
         ...
 
-    def exec_first(self, query: str, params: Params = None) -> PyroFuture[Row | None]:
+    def exec_first(self, query: str, params: Params = None, *, as_dict: bool = False) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
         """
         Execute a query and return the first row.
 
         Args:
             query: SQL query string with '?' placeholders.
             params: Query parameters.
+            as_dict: If True, return row as dictionary. If False (default), return row as tuple.
 
         Returns:
-            First Row or None if no results.
+            First row as tuple (default) or dictionary, or None if no results.
         """
         ...
 
@@ -361,27 +365,29 @@ class Conn:
         """Ping the server to check connection."""
         ...
 
-    def query(self, query: str) -> PyroFuture[list[Row]]:
+    def query(self, query: str, *, as_dict: bool = False) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
         """
         Execute a query using text protocol and return all rows.
 
         Args:
             query: SQL query string.
+            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
 
         Returns:
-            List of Row objects.
+            List of tuples (default) or dictionaries.
         """
         ...
 
-    def query_first(self, query: str) -> PyroFuture[Row | None]:
+    def query_first(self, query: str, *, as_dict: bool = False) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
         """
         Execute a query using text protocol and return the first row.
 
         Args:
             query: SQL query string.
+            as_dict: If True, return row as dictionary. If False (default), return row as tuple.
 
         Returns:
-            First Row or None if no results.
+            First row as tuple (default) or dictionary, or None if no results.
         """
         ...
 
@@ -394,29 +400,31 @@ class Conn:
         """
         ...
 
-    def exec(self, query: str, params: Params = None) -> PyroFuture[list[Row]]:
+    def exec(self, query: str, params: Params = None, *, as_dict: bool = False) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
         """
         Execute a query and return all rows.
 
         Args:
             query: SQL query string with '?' placeholders.
             params: Query parameters.
+            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
 
         Returns:
-            List of Row objects.
+            List of tuples (default) or dictionaries.
         """
         ...
 
-    def exec_first(self, query: str, params: Params = None) -> PyroFuture[Row | None]:
+    def exec_first(self, query: str, params: Params = None, *, as_dict: bool = False) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
         """
         Execute a query and return the first row.
 
         Args:
             query: SQL query string with '?' placeholders.
             params: Query parameters.
+            as_dict: If True, return row as dictionary. If False (default), return row as tuple.
 
         Returns:
-            First Row or None if no results.
+            First row as tuple (default) or dictionary, or None if no results.
         """
         ...
 

@@ -11,7 +11,7 @@ def pytest_configure(config):
 
 def get_test_db_url() -> str:
     """Get the test database URL from environment or default."""
-    return os.environ.get("TEST_DATABASE_URL", "mysql://test:1234@localhost:3306/test")
+    return os.environ.get("TEST_DATABASE_URL", "mysql://test:1234@127.0.0.1:3306/test")
 
 
 def get_async_opts() -> AsyncOpts:
@@ -114,3 +114,9 @@ def sync_conn_with_table():
     setup_test_table_sync(conn)
     yield conn
     cleanup_test_table_sync(conn)
+
+
+@pytest.fixture(params=["mysql", "diesel"])
+def backend(request):
+    """Fixture that provides both mysql and diesel backends for parameterized tests."""
+    return request.param

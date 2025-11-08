@@ -3,11 +3,11 @@
 from types import TracebackType
 from typing import Any, Self, Sequence
 
-from pyro_mysql import IsolationLevel, Params, Row
+from pyro_mysql import IsolationLevel, Params
 
 class RowIterator:
     def __iter__(self) -> "RowIterator": ...
-    def __next__(self) -> Row: ...
+    def __next__(self) -> tuple[Any, ...]: ...
 
 class ResultSetIterator:
     """Iterator over MySQL result sets."""
@@ -42,27 +42,29 @@ class Transaction:
         """Get the number of affected rows from the last operation."""
         ...
 
-    def query(self, query: str) -> list[Row]:
+    def query(self, query: str, *, as_dict: bool = False) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         """
         Execute a query using text protocol and return all rows.
 
         Args:
             query: SQL query string.
+            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
 
         Returns:
-            List of Row objects.
+            List of tuples (default) or dictionaries.
         """
         ...
 
-    def query_first(self, query: str) -> Row | None:
+    def query_first(self, query: str, *, as_dict: bool = False) -> tuple[Any, ...] | dict[str, Any] | None:
         """
         Execute a query using text protocol and return the first row.
 
         Args:
             query: SQL query string.
+            as_dict: If True, return row as dictionary. If False (default), return row as tuple.
 
         Returns:
-            First Row or None if no results.
+            First row as tuple (default) or dictionary, or None if no results.
         """
         ...
 
@@ -87,29 +89,31 @@ class Transaction:
         """
         ...
 
-    def exec(self, query: str, params: Params = None) -> list[Row]:
+    def exec(self, query: str, params: Params = None, *, as_dict: bool = False) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         """
         Execute a query and return all rows.
 
         Args:
             query: SQL query string with '?' placeholders.
             params: Query parameters.
+            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
 
         Returns:
-            List of Row objects.
+            List of tuples (default) or dictionaries.
         """
         ...
 
-    def exec_first(self, query: str, params: Params = None) -> Row | None:
+    def exec_first(self, query: str, params: Params = None, *, as_dict: bool = False) -> tuple[Any, ...] | dict[str, Any] | None:
         """
         Execute a query and return the first row.
 
         Args:
             query: SQL query string with '?' placeholders.
             params: Query parameters.
+            as_dict: If True, return row as dictionary. If False (default), return row as tuple.
 
         Returns:
-            First Row or None if no results.
+            First row as tuple (default) or dictionary, or None if no results.
         """
         ...
 

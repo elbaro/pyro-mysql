@@ -2,7 +2,6 @@ use either::Either;
 use mysql::{AccessMode, Opts, prelude::*};
 use parking_lot::RwLock;
 use pyo3::prelude::*;
-use pyo3::types::PyList;
 
 use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
@@ -21,14 +20,9 @@ pub struct SyncConn {
 #[pymethods]
 impl SyncConn {
     #[new]
-    #[pyo3(signature = (url_or_opts, backend=None))]
-    pub fn new(
-        url_or_opts: Either<String, PyRef<SyncOpts>>,
-        backend: Option<&str>,
-    ) -> PyroResult<Self> {
-        let backend_name = backend.unwrap_or("mysql");
-
-        match backend_name {
+    #[pyo3(signature = (url_or_opts, backend="mysql"))]
+    pub fn new(url_or_opts: Either<String, PyRef<SyncOpts>>, backend: &str) -> PyroResult<Self> {
+        match backend {
             "mysql" => {
                 let opts = match url_or_opts {
                     Either::Left(url) => Opts::from_url(&url)?,
@@ -43,9 +37,8 @@ impl SyncConn {
             "diesel" => {
                 let url = match url_or_opts {
                     Either::Left(url) => url,
-                    Either::Right(opts) => {
+                    Either::Right(_opts) => {
                         // For diesel, we need a URL string
-                        // This is a simplified conversion - in production, you'd need proper URL construction
                         return Err(crate::error::Error::IncorrectApiUsageError(
                             "Diesel backend requires a URL string, not SyncOpts",
                         ));
@@ -115,150 +108,190 @@ impl SyncConn {
 
     // ─── Text Protocol ───────────────────────────────────────────────────
 
-    #[pyo3(signature = (query))]
-    fn query(&self, query: String) -> PyroResult<Vec<Row>> {
+    #[pyo3(signature = (query, *, as_dict=false))]
+    fn query<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyroResult<Vec<Py<PyAny>>> {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => &mut conn.inner,
-            MultiSyncConn::Diesel(_) => {
-                return Err(Error::IncorrectApiUsageError(
-                    "Query operations are not yet supported for Diesel backend",
-                ))
+
+        match multi_conn {
+            MultiSyncConn::Mysql(conn) => {
+                let rows: Vec<Row> = conn.inner.query(query)?;
+                // Convert rows to either tuples or dicts
+                let result: Vec<Py<PyAny>> = if as_dict {
+                    rows.iter()
+                        .map(|row| row.to_dict(py).map(|d| d.into_any().unbind()))
+                        .collect::<PyResult<_>>()?
+                } else {
+                    rows.iter()
+                        .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
+                        .collect::<PyResult<_>>()?
+                };
+                Ok(result)
             }
-        };
-        Ok(conn.query(query)?)
+            MultiSyncConn::Diesel(conn) => {
+                // Diesel handles as_dict internally
+                conn.query(query, as_dict)
+            }
+        }
     }
 
-    #[pyo3(signature = (query))]
-    fn query_first(&self, query: String) -> PyroResult<Option<Row>> {
+    #[pyo3(signature = (query, *, as_dict=false))]
+    fn query_first<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyroResult<Option<Py<PyAny>>> {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => &mut conn.inner,
-            MultiSyncConn::Diesel(_) => {
-                return Err(Error::IncorrectApiUsageError(
-                    "Query operations are not yet supported for Diesel backend",
-                ))
+
+        match multi_conn {
+            MultiSyncConn::Mysql(conn) => {
+                let row: Option<Row> = conn.inner.query_first(query)?;
+                // Convert row to either tuple or dict
+                match row {
+                    Some(r) => {
+                        let result: Py<PyAny> = if as_dict {
+                            r.to_dict(py)?.into_any().unbind()
+                        } else {
+                            r.to_tuple(py)?.into_any().unbind()
+                        };
+                        Ok(Some(result))
+                    }
+                    None => Ok(None)
+                }
             }
-        };
-        Ok(conn.query_first(query)?)
+            MultiSyncConn::Diesel(conn) => {
+                // Diesel handles as_dict internally
+                conn.query_first(query, as_dict)
+            }
+        }
     }
 
     #[pyo3(signature = (query))]
     fn query_drop(&self, query: String) -> PyroResult<()> {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => &mut conn.inner,
-            MultiSyncConn::Diesel(_) => {
-                return Err(Error::IncorrectApiUsageError(
-                    "Query operations are not yet supported for Diesel backend",
-                ))
-            }
-        };
-        Ok(conn.query_drop(query)?)
+        match multi_conn {
+            MultiSyncConn::Mysql(conn) => Ok(conn.inner.query_drop(query)?),
+            MultiSyncConn::Diesel(conn) => conn.query_drop(query),
+        }
     }
     #[pyo3(signature = (query))]
     fn query_iter(slf: Py<Self>, py: Python, query: String) -> PyroResult<ResultSetIterator> {
         let slf_ref = slf.borrow(py);
         let mut guard = slf_ref.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => &mut conn.inner,
-            MultiSyncConn::Diesel(_) => {
-                return Err(Error::IncorrectApiUsageError(
-                    "Query operations are not yet supported for Diesel backend",
-                ))
+        match multi_conn {
+            MultiSyncConn::Mysql(conn) => {
+                let query_result = conn.inner.query_iter(query)?;
+                Ok(ResultSetIterator {
+                    owner: slf.clone_ref(py).into_any(),
+                    inner: Either::Left(unsafe {
+                        std::mem::transmute::<
+                            mysql::QueryResult<'_, '_, '_, mysql::Text>,
+                            mysql::QueryResult<'_, '_, '_, mysql::Text>,
+                        >(query_result)
+                    }),
+                })
             }
-        };
-        let query_result = conn.query_iter(query)?;
-
-        Ok(ResultSetIterator {
-            owner: slf.clone_ref(py).into_any(),
-            inner: Either::Left(unsafe {
-                std::mem::transmute::<
-                    mysql::QueryResult<'_, '_, '_, mysql::Text>,
-                    mysql::QueryResult<'_, '_, '_, mysql::Text>,
-                >(query_result)
-            }),
-        })
+            MultiSyncConn::Diesel(_) => Err(Error::IncorrectApiUsageError(
+                "query_iter is not yet supported for Diesel backend",
+            )),
+        }
     }
 
     // ─── Binary Protocol ─────────────────────────────────────────────────
 
-    #[pyo3(signature = (query, params=Params::default()))]
+    #[pyo3(signature = (query, params=Params::default(), *, as_dict=false))]
     fn exec<'py>(
         &self,
         py: Python<'py>,
         query: String,
         params: Params,
-    ) -> PyroResult<Bound<'py, PyList>> {
+        as_dict: bool,
+    ) -> PyroResult<Vec<Py<PyAny>>> {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => &mut conn.inner,
-            MultiSyncConn::Diesel(_) => {
-                return Err(Error::IncorrectApiUsageError(
-                    "Exec operations are not yet supported for Diesel backend",
-                ))
+
+        match multi_conn {
+            MultiSyncConn::Mysql(conn) => {
+                // log::debug!("exec {query}");
+                let rows: Vec<Row> = conn
+                    .inner
+                    .exec_fold(query, params, Vec::new(), |mut acc, row| {
+                        acc.push(mysql::from_row::<Row>(row));
+                        acc
+                    })?;
+
+                // Convert rows to either tuples or dicts
+                let result: Vec<Py<PyAny>> = if as_dict {
+                    rows.iter()
+                        .map(|row| row.to_dict(py).map(|d| d.into_any().unbind()))
+                        .collect::<PyResult<_>>()?
+                } else {
+                    rows.iter()
+                        .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
+                        .collect::<PyResult<_>>()?
+                };
+                Ok(result)
             }
-        };
-        // log::debug!("exec {query}");
-        Ok(
-            conn.exec_fold(query, params, PyList::empty(py), |acc, row| {
-                acc.append(mysql::from_row::<Row>(row)).unwrap();
-                acc
-            })?,
-        )
+            MultiSyncConn::Diesel(conn) => {
+                // Diesel handles as_dict internally
+                conn.exec(query, params, as_dict)
+            }
+        }
     }
 
-    #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_first(&self, query: String, params: Params) -> PyroResult<Option<Row>> {
+    #[pyo3(signature = (query, params=Params::default(), *, as_dict=false))]
+    fn exec_first<'py>(&self, py: Python<'py>, query: String, params: Params, as_dict: bool) -> PyroResult<Option<Py<PyAny>>> {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => &mut conn.inner,
-            MultiSyncConn::Diesel(_) => {
-                return Err(Error::IncorrectApiUsageError(
-                    "Exec operations are not yet supported for Diesel backend",
-                ))
+
+        match multi_conn {
+            MultiSyncConn::Mysql(conn) => {
+                // log::debug!("exec_first {query}");
+                let row: Option<Row> = conn.inner.exec_first(query, params)?;
+
+                // Convert row to either tuple or dict
+                match row {
+                    Some(r) => {
+                        let result: Py<PyAny> = if as_dict {
+                            r.to_dict(py)?.into_any().unbind()
+                        } else {
+                            r.to_tuple(py)?.into_any().unbind()
+                        };
+                        Ok(Some(result))
+                    }
+                    None => Ok(None)
+                }
             }
-        };
-        // log::debug!("exec_first {query}");
-        Ok(conn.exec_first(query, params)?)
+            MultiSyncConn::Diesel(conn) => {
+                // Diesel handles as_dict internally
+                conn.exec_first(query, params, as_dict)
+            }
+        }
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_drop(&self, query: String, params: Params) -> PyroResult<()> {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => &mut conn.inner,
-            MultiSyncConn::Diesel(_) => {
-                return Err(Error::IncorrectApiUsageError(
-                    "Exec operations are not yet supported for Diesel backend",
-                ))
+        match multi_conn {
+            MultiSyncConn::Mysql(conn) => {
+                // log::debug!("exec_drop {query}");
+                Ok(conn.inner.exec_drop(query, params)?)
             }
-        };
-        // log::debug!("exec_drop {query}");
-        Ok(conn.exec_drop(query, params)?)
+            MultiSyncConn::Diesel(conn) => conn.exec_drop(query, params),
+        }
     }
 
     #[pyo3(signature = (query, params_list=vec![]))]
     fn exec_batch(&self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        let conn = match multi_conn {
-            MultiSyncConn::Mysql(conn) => &mut conn.inner,
-            MultiSyncConn::Diesel(_) => {
-                return Err(Error::IncorrectApiUsageError(
-                    "Exec operations are not yet supported for Diesel backend",
-                ))
+        match multi_conn {
+            MultiSyncConn::Mysql(conn) => {
+                // log::debug!("exec_batch {query}");
+                Ok(conn.inner.exec_batch(query, params_list)?)
             }
-        };
-        // log::debug!("exec_batch {query}");
-        Ok(conn.exec_batch(query, params_list)?)
+            MultiSyncConn::Diesel(conn) => conn.exec_batch(query, params_list),
+        }
     }
 
     // #[pyo3(signature = (query, params=Params::default()))]

@@ -28,8 +28,8 @@ pub trait Queryable {
     ) -> PyResult<Py<PyroFuture>>;
 
     // ─── Text Protocol ───────────────────────────────────────────────────
-    fn query<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>>;
-    fn query_first<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>>;
+    fn query<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>>;
+    fn query_first<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>>;
     fn query_drop<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>>;
 
     // ─── Binary Protocol ─────────────────────────────────────────────────
@@ -38,12 +38,14 @@ pub trait Queryable {
         py: Python<'py>,
         query: PyBackedStr,
         params: Py<PyAny>,
+        as_dict: bool,
     ) -> PyResult<Py<PyroFuture>>;
     fn exec_first<'py>(
         &self,
         py: Python<'py>,
         query: PyBackedStr,
         params: Py<PyAny>,
+        as_dict: bool,
     ) -> PyResult<Py<PyroFuture>>;
     fn exec_drop<'py>(
         &self,
@@ -92,27 +94,56 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
-    fn query<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
+    fn query<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
-        rust_future_into_py::<_, Vec<Row>>(py, async move {
+        rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut inner = inner.write().await;
-            Ok(inner
+            let rows: Vec<Row> = inner
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?
                 .query(query)
-                .await?)
+                .await?;
+
+            // Convert rows to either tuples or dicts
+            Python::attach(|py| {
+                let result: Vec<Py<PyAny>> = if as_dict {
+                    rows.iter()
+                        .map(|row| row.to_dict(py).map(|d| d.into_any().unbind()))
+                        .collect::<PyResult<_>>()?
+                } else {
+                    rows.iter()
+                        .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
+                        .collect::<PyResult<_>>()?
+                };
+                Ok(result)
+            })
         })
     }
 
-    fn query_first<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
+    fn query_first<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
-        rust_future_into_py::<_, Option<Row>>(py, async move {
+        rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut inner = inner.write().await;
-            Ok(inner
+            let row: Option<Row> = inner
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?
                 .query_first(query)
-                .await?)
+                .await?;
+
+            // Convert row to either tuple or dict
+            Python::attach(|py| {
+                match row {
+                    Some(r) => {
+                        let result: Py<PyAny> = if as_dict {
+                            r.to_dict(py)?.into_any().unbind()
+                        } else {
+                            r.to_tuple(py)?.into_any().unbind()
+                        };
+                        Ok(Some(result))
+                    }
+                    None => Ok(None)
+                }
+            })
         })
     }
 
@@ -135,18 +166,33 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         py: Python<'py>,
         query: PyBackedStr,
         params: Py<PyAny>,
+        as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
         // Convert Py<PyAny> to Params for mysql_async
         let params_obj: Params = params.extract(py)?;
-        rust_future_into_py::<_, Vec<Row>>(py, async move {
+        rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut inner = inner.write().await;
             let query: &str = query.as_ref();
-            Ok(inner
+            let rows: Vec<Row> = inner
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?
                 .exec(query, params_obj)
-                .await?)
+                .await?;
+
+            // Convert rows to either tuples or dicts
+            Python::attach(|py| {
+                let result: Vec<Py<PyAny>> = if as_dict {
+                    rows.iter()
+                        .map(|row| row.to_dict(py).map(|d| d.into_any().unbind()))
+                        .collect::<PyResult<_>>()?
+                } else {
+                    rows.iter()
+                        .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
+                        .collect::<PyResult<_>>()?
+                };
+                Ok(result)
+            })
         })
     }
 
@@ -156,17 +202,33 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         py: Python<'py>,
         query: PyBackedStr,
         params: Py<PyAny>,
+        as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
         let params_obj: Params = params.extract(py)?;
-        rust_future_into_py::<_, Option<Row>>(py, async move {
+        rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut inner = inner.write().await;
             let query: &str = query.as_ref();
-            Ok(inner
+            let row: Option<Row> = inner
                 .as_mut()
                 .ok_or_else(|| Error::ConnectionClosedError)?
                 .exec_first(query, params_obj)
-                .await?)
+                .await?;
+
+            // Convert row to either tuple or dict
+            Python::attach(|py| {
+                match row {
+                    Some(r) => {
+                        let result: Py<PyAny> = if as_dict {
+                            r.to_dict(py)?.into_any().unbind()
+                        } else {
+                            r.to_tuple(py)?.into_any().unbind()
+                        };
+                        Ok(Some(result))
+                    }
+                    None => Ok(None)
+                }
+            })
         })
     }
 
@@ -276,13 +338,13 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
-    fn query<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
+    fn query<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
-        rust_future_into_py::<_, Vec<Row>>(py, async move {
+        rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut inner = inner.write().await;
             let conn = inner.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-            match conn {
-                MultiAsyncConn::MysqlAsync(mysql_conn) => Ok(mysql_conn.query(query).await?),
+            let rows = match conn {
+                MultiAsyncConn::MysqlAsync(mysql_conn) => mysql_conn.query(query).await?,
                 MultiAsyncConn::Wtx(wtx_conn) => {
                     use wtx::database::Executor;
 
@@ -308,19 +370,33 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                         Ok::<_, Error>(())
                     })?;
 
-                    Ok(rows)
+                    rows
                 }
-            }
+            };
+
+            // Convert rows to either tuples or dicts
+            Python::attach(|py| {
+                let result: Vec<Py<PyAny>> = if as_dict {
+                    rows.iter()
+                        .map(|row| row.to_dict(py).map(|d| d.into_any().unbind()))
+                        .collect::<PyResult<_>>()?
+                } else {
+                    rows.iter()
+                        .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
+                        .collect::<PyResult<_>>()?
+                };
+                Ok(result)
+            })
         })
     }
 
-    fn query_first<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
+    fn query_first<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
-        rust_future_into_py::<_, Option<Row>>(py, async move {
+        rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut inner = inner.write().await;
             let conn = inner.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-            match conn {
-                MultiAsyncConn::MysqlAsync(mysql_conn) => Ok(mysql_conn.query_first(query).await?),
+            let row = match conn {
+                MultiAsyncConn::MysqlAsync(mysql_conn) => mysql_conn.query_first(query).await?,
                 MultiAsyncConn::Wtx(wtx_conn) => {
                     use wtx::database::Executor;
 
@@ -337,9 +413,24 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                         wtx_record_to_row(py, &record).map_err(|e| Error::WtxError(e.to_string()))
                     })?;
 
-                    Ok(Some(row))
+                    Some(row)
                 }
-            }
+            };
+
+            // Convert row to either tuple or dict
+            Python::attach(|py| {
+                match row {
+                    Some(r) => {
+                        let result: Py<PyAny> = if as_dict {
+                            r.to_dict(py)?.into_any().unbind()
+                        } else {
+                            r.to_tuple(py)?.into_any().unbind()
+                        };
+                        Ok(Some(result))
+                    }
+                    None => Ok(None)
+                }
+            })
         })
     }
 
@@ -377,18 +468,19 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
         py: Python<'py>,
         query: PyBackedStr,
         params: Py<PyAny>,
+        as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
 
-        rust_future_into_py::<_, Vec<Row>>(py, async move {
+        rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut inner = inner.write().await;
             let query: &str = query.as_ref();
             let conn = inner.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-            match conn {
+            let rows = match conn {
                 MultiAsyncConn::MysqlAsync(mysql_conn) => {
                     // Convert to Params for mysql_async
                     let params_mysql = Python::attach(|py| params.extract::<Params>(py))?;
-                    Ok(mysql_conn.exec(query, params_mysql).await?)
+                    mysql_conn.exec(query, params_mysql).await?
                 }
                 MultiAsyncConn::Wtx(wtx_conn) => {
                     use wtx::database::Executor;
@@ -418,9 +510,23 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                         Ok::<_, Error>(())
                     })?;
 
-                    Ok(rows)
+                    rows
                 }
-            }
+            };
+
+            // Convert rows to either tuples or dicts
+            Python::attach(|py| {
+                let result: Vec<Py<PyAny>> = if as_dict {
+                    rows.iter()
+                        .map(|row| row.to_dict(py).map(|d| d.into_any().unbind()))
+                        .collect::<PyResult<_>>()?
+                } else {
+                    rows.iter()
+                        .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
+                        .collect::<PyResult<_>>()?
+                };
+                Ok(result)
+            })
         })
     }
 
@@ -430,17 +536,18 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
         py: Python<'py>,
         query: PyBackedStr,
         params: Py<PyAny>,
+        as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
 
-        rust_future_into_py::<_, Option<Row>>(py, async move {
+        rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut inner = inner.write().await;
             let query: &str = query.as_ref();
             let conn = inner.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-            match conn {
+            let row = match conn {
                 MultiAsyncConn::MysqlAsync(mysql_conn) => {
                     let params_mysql = Python::attach(|py| params.extract::<Params>(py))?;
-                    Ok(mysql_conn.exec_first(query, params_mysql).await?)
+                    mysql_conn.exec_first(query, params_mysql).await?
                 }
                 MultiAsyncConn::Wtx(wtx_conn) => {
                     use wtx::database::Executor;
@@ -461,9 +568,24 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                         wtx_record_to_row(py, &record).map_err(|e| Error::WtxError(e.to_string()))
                     })?;
 
-                    Ok(Some(row))
+                    Some(row)
                 }
-            }
+            };
+
+            // Convert row to either tuple or dict
+            Python::attach(|py| {
+                match row {
+                    Some(r) => {
+                        let result: Py<PyAny> = if as_dict {
+                            r.to_dict(py)?.into_any().unbind()
+                        } else {
+                            r.to_tuple(py)?.into_any().unbind()
+                        };
+                        Ok(Some(result))
+                    }
+                    None => Ok(None)
+                }
+            })
         })
     }
 

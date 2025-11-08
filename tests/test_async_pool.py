@@ -17,7 +17,7 @@ async def test_basic_pool():
 
     result = await conn.query_first("SELECT 1")
     assert result
-    assert result.to_tuple() == (1,)
+    assert result[0] == 1
 
     await conn.close()
     await pool.close()
@@ -43,9 +43,9 @@ async def test_pool_constraints():
     result2 = await conn2.query_first("SELECT 2")
 
     assert result1
-    assert result1.to_tuple() == (1,)
+    assert result1[0] == 1
     assert result2
-    assert result2.to_tuple() == (2,)
+    assert result2[0] == 2
 
     await conn1.close()
     await conn2.close()
@@ -64,13 +64,13 @@ async def test_concurrent_connections():
         result = await conn.query_first(f"SELECT {worker_id}")
         await conn.close()
         assert result
-        return result.to_tuple()
+        return result[0]
 
     # Create multiple concurrent workers
     tasks = [worker(i) for i in range(1, 6)]
     results = await asyncio.gather(*tasks)
 
-    expected = [(i,) for i in range(1, 6)]
+    expected = [i for i in range(1, 6)]
     assert sorted(results) == sorted(expected)
 
     await pool.close()
@@ -92,7 +92,7 @@ async def test_pool_with_transactions():
 
         count = await tx.query_first("SELECT COUNT(*) FROM test_table")
         assert count
-        assert count.to_tuple() == (1,)
+        assert count[0] == 1
 
         await tx.commit()
 
@@ -140,9 +140,9 @@ async def test_pool_max_connections():
     result2 = await conn2.query_first("SELECT 2")
 
     assert result1
-    assert result1.to_tuple() == (1,)
+    assert result1[0] == 1
     assert result2
-    assert result2.to_tuple() == (2,)
+    assert result2[0] == 2
 
     await conn1.close()
     await conn2.close()
@@ -172,7 +172,7 @@ async def test_pool_connection_timeout():
     conn2 = await pool.get()
     result = await conn2.query_first("SELECT 2")
     assert result
-    assert result.to_tuple() == (2,)
+    assert result[0] == 2
 
     await conn2.close()
     await pool.close()

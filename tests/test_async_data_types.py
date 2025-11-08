@@ -33,7 +33,7 @@ async def test_integer_types():
     )
 
     result = await conn.query_first("SELECT * FROM test_int_types")
-    assert result and result.to_tuple() == (
+    assert result and (result[0], result[1], result[2], result[3], result[4], result[5]) == (
         127,
         32767,
         8388607,
@@ -68,7 +68,7 @@ async def test_float_types():
 
     result = await conn.query_first("SELECT * FROM test_float_types")
     assert result
-    float_val, double_val = result.to_tuple()
+    float_val, double_val = result[0], result[1]
     assert isinstance(float_val, float) and abs(float_val - 3.14159) < 0.001
     assert isinstance(double_val, float) and abs(double_val - 2.718281828) < 0.000001
 
@@ -106,7 +106,7 @@ async def test_string_types():
 
     result = await conn.query_first("SELECT * FROM test_string_types")
     assert result
-    assert result.to_tuple() == (
+    assert (result[0], result[1], result[2], result[3]) == (
         "Hello World",
         "Fixed",
         "This is a text field",
@@ -175,7 +175,7 @@ async def test_decimal_types():
 
     result = await conn.query_first("SELECT * FROM test_decimal_types")
     assert result
-    assert result.to_tuple() == (
+    assert (result[0], result[1], result[2]) == (
         Decimal("123456789012345678901234567890"),
         Decimal("123.45"),
         Decimal("12345.6789"),
@@ -240,7 +240,7 @@ async def test_null_values():
 
     result = await conn.query_first("SELECT * FROM test_null_types")
     assert result
-    assert result.to_tuple() == (None, None, None)
+    assert (result[0], result[1], result[2]) == (None, None, None)
 
     await conn.query_drop("DROP TABLE test_null_types")
     await conn.close()
@@ -267,8 +267,8 @@ async def test_boolean_type():
 
     results = await conn.query("SELECT * FROM test_boolean_types ORDER BY bool_val")
     assert len(results) == 2
-    assert results[0].to_tuple() == (0,) or results[0].to_tuple() == (False,)
-    assert results[1].to_tuple() == (1,) or results[1].to_tuple() == (True,)
+    assert results[0][0] == 0 or results[0][0] == False
+    assert results[1][0] == 1 or results[1][0] == True
 
     await conn.query_drop("DROP TABLE test_boolean_types")
     await conn.close()

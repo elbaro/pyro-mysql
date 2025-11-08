@@ -124,8 +124,7 @@ class TestSyncConnThreadSafety:
         # Verify all inserts succeeded
         total_row = sync_conn.exec_first("SELECT COUNT(*) as cnt FROM test_threads")
         if total_row:
-            total_row_dict = total_row.to_dict()
-            assert total_row_dict["cnt"] == num_threads * 5
+            assert total_row[0] == num_threads * 5
 
     def test_read_write_consistency(self, sync_conn):
         """Test that reads and writes are consistent across threads."""
@@ -149,9 +148,8 @@ class TestSyncConnThreadSafety:
                 rows = sync_conn.exec("SELECT MAX(value) as max_val FROM test_threads")
 
                 if rows and len(rows) > 0:
-                    row_dict = rows[0].to_dict()
-                    if row_dict["max_val"] is not None:
-                        max_val = row_dict["max_val"]
+                    max_val = rows[0][0]
+                    if max_val is not None:
                         # The max value should never exceed the counter
                         with counter_lock:
                             assert max_val <= counter["value"]
@@ -175,8 +173,7 @@ class TestSyncConnThreadSafety:
 
         # Final verification
         final_count = sync_conn.exec_first("SELECT COUNT(*) as cnt FROM test_threads")
-        final_count_dict = final_count.to_dict()
-        assert final_count_dict["cnt"] == 30  # 3 writers * 10 inserts each
+        assert final_count[0] == 30  # 3 writers * 10 inserts each
 
 
 # class TestSyncPoolThreadSafety:

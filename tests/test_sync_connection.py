@@ -8,13 +8,13 @@ from .conftest import (
 )
 
 
-def test_basic_sync_connection():
+def test_basic_sync_connection(backend):
     """Test basic synchronous connection."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     result = conn.query_first("SELECT 1")
     assert result
-    assert result.to_tuple() == (1,)
+    assert result[0] == 1
 
     conn.close()
 
@@ -25,40 +25,40 @@ def test_basic_sync_connection():
 #     conn = Conn(get_test_db_url())
 
 #     db_name = conn.query_first("SELECT DATABASE()")
-#     assert db_name.to_tuple() == ("test",)
+#     assert db_name[0] == "test"
 
 #     conn.close()
 
 
-def test_sync_connection_ping():
+def test_sync_connection_ping(backend):
     """Test sync connection ping functionality."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
     conn.ping()
     conn.close()
 
 
-def test_sync_connection_reset():
+def test_sync_connection_reset(backend):
     """Test sync connection reset functionality."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("SET @test_var = 42")
 
     result = conn.query_first("SELECT @test_var")
     assert result
-    assert result.to_tuple() == (42,)
+    assert result[0] == 42
 
     conn.reset()
 
     result = conn.query_first("SELECT @test_var")
     assert result
-    assert result.to_tuple() == (None,)
+    assert result[0] == None
 
     conn.close()
 
 
-def test_sync_connection_server_info():
+def test_sync_connection_server_info(backend):
     """Test retrieving server information."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     server_version = conn.server_version()
     assert server_version[0] >= 5
@@ -69,12 +69,12 @@ def test_sync_connection_server_info():
     conn.close()
 
 
-def test_sync_connection_charset():
+def test_sync_connection_charset(backend):
     """Test sync connection charset handling."""
     url = get_test_db_url()
     opts = OptsBuilder.from_url(url).build()
 
-    conn = Conn(opts)
+    conn = Conn(opts, backend=backend)
 
     charset = conn.query_first("SELECT @@character_set_connection")
     assert charset is not None
@@ -83,14 +83,14 @@ def test_sync_connection_charset():
 
     charset = conn.query_first("SELECT @@character_set_connection")
     assert charset
-    assert charset.to_tuple() == ("utf8mb4",)
+    assert charset[0] == "utf8mb4"
 
     conn.close()
 
 
-def test_sync_connection_autocommit():
+def test_sync_connection_autocommit(backend):
     """Test sync autocommit functionality."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     setup_test_table_sync(conn)
 
@@ -98,7 +98,7 @@ def test_sync_connection_autocommit():
 
     autocommit = conn.query_first("SELECT @@autocommit")
     assert autocommit
-    assert autocommit.to_tuple() == (0,)
+    assert autocommit[0] == 0
 
     conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Test', 25)")
 
@@ -106,7 +106,7 @@ def test_sync_connection_autocommit():
 
     count = conn.query_first("SELECT COUNT(*) FROM test_table")
     assert count
-    assert count.to_tuple() == (0,)
+    assert count[0] == 0
 
     conn.query_drop("SET autocommit = 1")
 
@@ -114,19 +114,19 @@ def test_sync_connection_autocommit():
 
     count = conn.query_first("SELECT COUNT(*) FROM test_table")
     assert count
-    assert count.to_tuple() == (1,)
+    assert count[0] == 1
 
     cleanup_test_table_sync(conn)
     conn.close()
 
 
-def test_sync_connection_ssl():
+def test_sync_connection_ssl(backend):
     """Test SSL connection (if available)."""
     url = get_test_db_url()
     opts = OptsBuilder.from_url(url).prefer_socket(False).build()
 
     try:
-        conn = Conn(opts)
+        conn = Conn(opts, backend=backend)
 
         try:
             _ssl_result = conn.query_first("SHOW STATUS LIKE 'Ssl_cipher'")
@@ -141,16 +141,16 @@ def test_sync_connection_ssl():
         pass
 
 
-def test_sync_connection_init_command():
+def test_sync_connection_init_command(backend):
     """Test sync connection initialization commands."""
     url = get_test_db_url()
     opts = OptsBuilder.from_url(url).init(["SET @init_test = 123"]).build()
 
-    conn = Conn(opts)
+    conn = Conn(opts, backend=backend)
 
     result = conn.query_first("SELECT @init_test")
     assert result
-    assert result.to_tuple() == (123,)
+    assert result[0] == 123
 
     conn.close()
 
@@ -167,27 +167,27 @@ def test_sync_connection_init_command():
 #     conn.exec_drop("INSERT INTO test_table (name) VALUES (?)", (large_string,))
 
 #     result = conn.query_first("SELECT name FROM test_table WHERE id = 1")
-#     assert result.to_tuple() == (large_string,)
+#     assert result[0] == large_string
 
 #     cleanup_test_table_sync(conn)
 #     conn.close()
 
 
-def test_sync_connection_with_wrong_credentials():
+def test_sync_connection_with_wrong_credentials(backend):
     """Test sync connection failure with wrong credentials."""
     opts = (
         OptsBuilder()
-        .ip_or_hostname("localhost")
+        .ip_or_hostname("127.0.0.1")
         .user("nonexistent_user")
         .password("wrong_password")
         .build()
     )
 
     with pytest.raises(Exception):
-        Conn(opts)
+        Conn(opts, backend=backend)
 
 
-def test_sync_connection_to_invalid_host():
+def test_sync_connection_to_invalid_host(backend):
     """Test sync connection failure to invalid host."""
     opts = (
         OptsBuilder()
@@ -197,4 +197,4 @@ def test_sync_connection_to_invalid_host():
     )
 
     with pytest.raises(Exception):
-        Conn(opts)
+        Conn(opts, backend=backend)

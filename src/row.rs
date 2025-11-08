@@ -41,3 +41,6 @@ impl Row {
         Ok(dict)
     }
 }
+
+pub struct RowDict(pub Py<PyDict>);
+pub struct RowTuple(pub Py<PyTuple>);

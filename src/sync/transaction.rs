@@ -160,20 +160,47 @@ impl SyncTransaction {
 
     // ─── Text Protocol ───────────────────────────────────────────────────
 
-    fn query(&mut self, query: String) -> PyroResult<Vec<Row>> {
-        Ok(self
+    #[pyo3(signature = (query, *, as_dict=false))]
+    fn query<'py>(&mut self, py: Python<'py>, query: String, as_dict: bool) -> PyroResult<Vec<Py<PyAny>>> {
+        let rows: Vec<Row> = self
             .inner
             .as_mut()
             .ok_or_else(|| Error::TransactionClosedError)?
-            .query(query)?)
+            .query(query)?;
+
+        // Convert rows to either tuples or dicts
+        let result: Vec<Py<PyAny>> = if as_dict {
+            rows.iter()
+                .map(|row| row.to_dict(py).map(|d| d.into_any().unbind()))
+                .collect::<PyResult<_>>()?
+        } else {
+            rows.iter()
+                .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
+                .collect::<PyResult<_>>()?
+        };
+        Ok(result)
     }
 
-    fn query_first(&mut self, query: String) -> PyroResult<Option<Row>> {
-        Ok(self
+    #[pyo3(signature = (query, *, as_dict=false))]
+    fn query_first<'py>(&mut self, py: Python<'py>, query: String, as_dict: bool) -> PyroResult<Option<Py<PyAny>>> {
+        let row: Option<Row> = self
             .inner
             .as_mut()
             .ok_or_else(|| Error::TransactionClosedError)?
-            .query_first(query)?)
+            .query_first(query)?;
+
+        // Convert row to either tuple or dict
+        match row {
+            Some(r) => {
+                let result: Py<PyAny> = if as_dict {
+                    r.to_dict(py)?.into_any().unbind()
+                } else {
+                    r.to_tuple(py)?.into_any().unbind()
+                };
+                Ok(Some(result))
+            }
+            None => Ok(None)
+        }
     }
 
     fn query_drop(&mut self, query: String) -> PyroResult<()> {
@@ -205,23 +232,48 @@ impl SyncTransaction {
 
     // ─── Binary Protocol ─────────────────────────────────────────────────
 
-    #[pyo3(signature = (query, params=Params::default()))]
-    fn exec(&mut self, query: String, params: Params) -> PyroResult<Vec<Row>> {
+    #[pyo3(signature = (query, params=Params::default(), *, as_dict=false))]
+    fn exec<'py>(&mut self, py: Python<'py>, query: String, params: Params, as_dict: bool) -> PyroResult<Vec<Py<PyAny>>> {
         log::debug!("exec {query}");
-        Ok(self
+        let rows: Vec<Row> = self
             .inner
             .as_mut()
             .ok_or_else(|| Error::TransactionClosedError)?
-            .exec(query, params.inner)?)
+            .exec(query, params.to_mysql_params())?;
+
+        // Convert rows to either tuples or dicts
+        let result: Vec<Py<PyAny>> = if as_dict {
+            rows.iter()
+                .map(|row| row.to_dict(py).map(|d| d.into_any().unbind()))
+                .collect::<PyResult<_>>()?
+        } else {
+            rows.iter()
+                .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
+                .collect::<PyResult<_>>()?
+        };
+        Ok(result)
     }
-    #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_first(&mut self, query: String, params: Params) -> PyroResult<Option<Row>> {
+    #[pyo3(signature = (query, params=Params::default(), *, as_dict=false))]
+    fn exec_first<'py>(&mut self, py: Python<'py>, query: String, params: Params, as_dict: bool) -> PyroResult<Option<Py<PyAny>>> {
         log::debug!("exec_first {query}");
-        Ok(self
+        let row: Option<Row> = self
             .inner
             .as_mut()
             .ok_or_else(|| Error::TransactionClosedError)?
-            .exec_first(query, params.inner)?)
+            .exec_first(query, params.to_mysql_params())?;
+
+        // Convert row to either tuple or dict
+        match row {
+            Some(r) => {
+                let result: Py<PyAny> = if as_dict {
+                    r.to_dict(py)?.into_any().unbind()
+                } else {
+                    r.to_tuple(py)?.into_any().unbind()
+                };
+                Ok(Some(result))
+            }
+            None => Ok(None)
+        }
     }
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
@@ -230,7 +282,7 @@ impl SyncTransaction {
             .inner
             .as_mut()
             .ok_or_else(|| Error::TransactionClosedError)?
-            .exec_drop(query, params.inner)?)
+            .exec_drop(query, params.to_mysql_params())?)
     }
     #[pyo3(signature = (query, params_list=vec![]))]
     fn exec_batch(&mut self, query: String, params_list: Vec<Params>) -> PyroResult<()> {

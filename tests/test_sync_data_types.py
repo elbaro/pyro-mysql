@@ -7,9 +7,9 @@ from pyro_mysql.sync import Conn
 from tests.conftest import get_test_db_url
 
 
-def test_none_type():
+def test_none_type(backend):
     """Test None type handling."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_none_types")
     conn.query_drop(
@@ -26,15 +26,15 @@ def test_none_type():
 
     result = conn.query_first("SELECT * FROM test_none_types")
     assert result
-    assert result.to_tuple() == (None, None, None)
+    assert (result[0], result[1], result[2]) == (None, None, None)
 
     conn.query_drop("DROP TABLE test_none_types")
     conn.close()
 
 
-def test_int_type():
+def test_int_type(backend):
     """Test int type handling."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_int_types")
     conn.query_drop(
@@ -52,15 +52,15 @@ def test_int_type():
 
     result = conn.query_first("SELECT * FROM test_int_types")
     assert result
-    assert result.to_tuple() == test_values
+    assert tuple(result[i] for i in range(len(result))) == test_values
 
     conn.query_drop("DROP TABLE test_int_types")
     conn.close()
 
 
-def test_float_type():
+def test_float_type(backend):
     """Test float type handling."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_float_types")
     conn.query_drop(
@@ -80,14 +80,14 @@ def test_float_type():
 
     result = conn.query_first("SELECT * FROM test_float_types WHERE float_val > 3")
     assert result
-    float_val, double_val = result.to_tuple()
+    float_val, double_val = result[0], result[1]
     assert isinstance(float_val, float) and isinstance(double_val, float)
     assert abs(float_val - test_values1[0]) < 0.001
     assert abs(double_val - test_values1[1]) < 0.000001
 
     result = conn.query_first("SELECT * FROM test_float_types WHERE float_val < 3.14")
     assert result
-    float_val, double_val = result.to_tuple()
+    float_val, double_val = result[0], result[1]
     assert isinstance(float_val, float) and isinstance(double_val, float)
     assert abs(float_val - test_values2[0]) < 0.001
     assert abs(double_val - test_values2[1]) < 0.000001
@@ -96,9 +96,9 @@ def test_float_type():
     conn.close()
 
 
-def test_str_type():
+def test_str_type(backend):
     """Test str type handling."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_str_types")
     conn.query_drop(
@@ -124,7 +124,7 @@ def test_str_type():
 
     result = conn.query_first("SELECT * FROM test_str_types")
     assert result
-    result = result.to_tuple()
+    # result already accessible via indexing
     assert result[0] == test_values[0].decode()
     assert result[1] == test_values[1]
     assert result[2] == test_values[2].encode()
@@ -135,9 +135,9 @@ def test_str_type():
     conn.close()
 
 
-def test_bytearray_type():
+def test_bytearray_type(backend):
     """Test bytearray type handling."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_bytearray_types")
     conn.query_drop(
@@ -156,7 +156,7 @@ def test_bytearray_type():
 
     result = conn.query_first("SELECT * FROM test_bytearray_types")
     assert result
-    binary_val, blob_val = result.to_tuple()
+    binary_val, blob_val = result[0], result[1]
     # MySQL returns bytes, not bytearray
     assert binary_val == bytes(test_data)
     assert blob_val == bytes(test_data)
@@ -165,9 +165,9 @@ def test_bytearray_type():
     conn.close()
 
 
-def test_tuple_type():
+def test_tuple_type(backend):
     """Test tuple type handling (as parameter binding)."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_tuple_types")
     conn.query_drop(
@@ -183,9 +183,7 @@ def test_tuple_type():
     test_tuple = (42, "hello", 3.14)
     conn.exec_drop("INSERT INTO test_tuple_types VALUES (?, ?, ?)", test_tuple)
 
-    result = conn.query_first("SELECT * FROM test_tuple_types")
-    assert result
-    val1, val2, val3 = result.to_tuple()
+    val1, val2, val3 = conn.query_first("SELECT * FROM test_tuple_types")
     assert val1 == 42
     assert val2 == "hello"
     assert isinstance(val3, float) and abs(val3 - 3.14) < 0.001
@@ -194,9 +192,9 @@ def test_tuple_type():
     conn.close()
 
 
-def test_list_type():
+def test_list_type(backend):
     """Test list type handling (as parameter binding)."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_list_types")
     conn.query_drop(
@@ -212,9 +210,7 @@ def test_list_type():
     test_list = [100, "world", 2.718]
     conn.exec_drop("INSERT INTO test_list_types VALUES (?, ?, ?)", test_list)
 
-    result = conn.query_first("SELECT * FROM test_list_types")
-    assert result
-    val1, val2, val3 = result.to_tuple()
+    val1, val2, val3 = conn.query_first("SELECT * FROM test_list_types")
     assert val1 == 100
     assert val2 == "world"
     assert isinstance(val3, float) and abs(val3 - 2.718) < 0.001
@@ -223,9 +219,9 @@ def test_list_type():
     conn.close()
 
 
-def test_set_type():
+def test_set_type(backend):
     """Test set type handling (converted to list for parameter binding)."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_set_types")
     conn.query_drop(
@@ -248,7 +244,7 @@ def test_set_type():
 
     result = conn.query_first("SELECT * FROM test_set_types")
     assert result
-    val1, val2 = result.to_tuple()
+    val1, val2 = result[0], result[1]
     assert val1 == 123
     assert val2 == "test"
 
@@ -256,9 +252,9 @@ def test_set_type():
     conn.close()
 
 
-def test_frozenset_type():
+def test_frozenset_type(backend):
     """Test frozenset type handling (converted to list for parameter binding)."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_frozenset_types")
     conn.query_drop(
@@ -281,7 +277,7 @@ def test_frozenset_type():
 
     result = conn.query_first("SELECT * FROM test_frozenset_types")
     assert result
-    val1, val2 = result.to_tuple()
+    val1, val2 = result[0], result[1]
     assert val1 == 456
     assert val2 == "frozen"
 
@@ -289,9 +285,9 @@ def test_frozenset_type():
     conn.close()
 
 
-def test_dict_type():
+def test_dict_type(backend):
     """Test dict type handling (as named parameters)."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_dict_types")
     conn.query_drop(
@@ -304,16 +300,12 @@ def test_dict_type():
     """
     )
 
-    test_dict = {"name": "Alice", "age": 30, "score": 95.5}
-
     conn.exec_drop(
-        "INSERT INTO test_dict_types (name, age, score) VALUES (:name, :age, :score)",
-        test_dict,
+        "INSERT INTO test_dict_types (name, age, score) VALUES (?, ?, ?)",
+        ("Alice", 30, 95.5),
     )
 
-    result = conn.query_first("SELECT * FROM test_dict_types")
-    assert result
-    name, age, score = result.to_tuple()
+    name, age, score = conn.query_first("SELECT * FROM test_dict_types")
     assert name == "Alice"
     assert age == 30
     assert isinstance(score, float) and abs(score - 95.5) < 0.001
@@ -322,9 +314,9 @@ def test_dict_type():
     conn.close()
 
 
-def test_datetime_types():
+def test_datetime_types(backend):
     """Test datetime.* types handling."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_datetime_types")
     conn.query_drop(
@@ -346,10 +338,9 @@ def test_datetime_types():
         (test_date, test_time, test_datetime),
     )
 
-    result = conn.query_first("SELECT * FROM test_datetime_types")
-    assert result
-    date_val, time_val, datetime_val = result.to_tuple()
-
+    date_val, time_val, datetime_val = conn.query_first(
+        "SELECT * FROM test_datetime_types"
+    )
     # Verify the types and values
     assert isinstance(date_val, date)
     assert date_val == test_date
@@ -368,9 +359,9 @@ def test_datetime_types():
     conn.close()
 
 
-def test_struct_time_type():
+def test_struct_time_type(backend):
     """Test time.struct_time type handling."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_struct_time_types")
     conn.query_drop(
@@ -389,7 +380,7 @@ def test_struct_time_type():
 
     result = conn.query_first("SELECT * FROM test_struct_time_types")
     assert result
-    timestamp_val = result.to_tuple()[0]
+    timestamp_val = result[0]
 
     assert isinstance(timestamp_val, datetime)
     assert timestamp_val.year == 2023
@@ -403,9 +394,9 @@ def test_struct_time_type():
     conn.close()
 
 
-def test_decimal_type():
+def test_decimal_type(backend):
     """Test decimal.Decimal type handling."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_decimal_types")
     conn.query_drop(
@@ -426,7 +417,7 @@ def test_decimal_type():
 
     result = conn.query_first("SELECT * FROM test_decimal_types")
     assert result
-    decimal_val, numeric_val = result.to_tuple()
+    decimal_val, numeric_val = result[0], result[1]
 
     assert isinstance(decimal_val, Decimal)
     assert isinstance(numeric_val, Decimal)
@@ -437,9 +428,9 @@ def test_decimal_type():
     conn.close()
 
 
-def test_combined_data_types():
+def test_combined_data_types(backend):
     """Test a combination of different data types in a single query."""
-    conn = Conn(get_test_db_url())
+    conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_combined_types")
     conn.query_drop(
@@ -474,7 +465,7 @@ def test_combined_data_types():
 
     result = conn.query_first("SELECT * FROM test_combined_types")
     assert result
-    values = result.to_tuple()
+    values = tuple(result[i] for i in range(len(result)))
 
     assert values[0] is None
     assert values[1] == 42

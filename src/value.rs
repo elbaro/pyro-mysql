@@ -18,7 +18,7 @@ static TIMEDELTA_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 static DECIMAL_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 static JSON_MODULE: PyOnceLock<Py<PyModule>> = PyOnceLock::new();
 
-fn get_datetime_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
+pub fn get_datetime_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
     Ok(DATETIME_CLASS
         .get_or_init(py, || {
             PyModule::import(py, "datetime")
@@ -30,7 +30,7 @@ fn get_datetime_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> 
         .bind(py))
 }
 
-fn get_date_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
+pub fn get_date_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
     Ok(DATE_CLASS
         .get_or_init(py, || {
             PyModule::import(py, "datetime")
@@ -42,7 +42,7 @@ fn get_date_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
         .bind(py))
 }
 
-fn get_timedelta_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
+pub fn get_timedelta_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
     Ok(TIMEDELTA_CLASS
         .get_or_init(py, || {
             PyModule::import(py, "datetime")
@@ -54,7 +54,7 @@ fn get_timedelta_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>>
         .bind(py))
 }
 
-fn get_decimal_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
+pub fn get_decimal_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
     Ok(DECIMAL_CLASS
         .get_or_init(py, || {
             PyModule::import(py, "decimal")
@@ -80,6 +80,7 @@ fn get_json_module<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyModule>> 
 ///
 /// Note: This type does not implement Clone because PyBackedBytes and PyBackedStr
 /// are non-cloneable zero-copy views into Python objects.
+#[derive(Debug)]
 pub enum Value {
     /// NULL value
     NULL,
@@ -755,5 +756,89 @@ impl Value {
     /// Check if this value is NULL
     pub fn is_null(&self) -> bool {
         matches!(self, Value::NULL)
+    }
+}
+
+// Implement ToSql for diesel backend using Text SQL type
+use diesel::mysql::Mysql;
+use diesel::serialize::{self, IsNull, Output, ToSql};
+use std::io::Write;
+
+impl ToSql<(), Mysql> for Value {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> serialize::Result {
+        match self {
+            Value::NULL => Ok(IsNull::Yes),
+            Value::Bytes(b) => {
+                let bytes_ref: &[u8] = b.as_ref();
+                out.write_all(bytes_ref)?;
+                Ok(IsNull::No)
+            }
+            Value::Str(s) => {
+                let str_ref: &str = s.as_ref();
+                out.write_all(str_ref.as_bytes())?;
+                Ok(IsNull::No)
+            }
+            Value::Int(v) => {
+                // Diesel encodes integers as strings for MySQL
+                write!(out, "{}", v)?;
+                Ok(IsNull::No)
+            }
+            Value::UInt(v) => {
+                write!(out, "{}", v)?;
+                Ok(IsNull::No)
+            }
+            Value::Float(v) => {
+                write!(out, "{}", v)?;
+                Ok(IsNull::No)
+            }
+            Value::Double(v) => {
+                write!(out, "{}", v)?;
+                Ok(IsNull::No)
+            }
+            Value::Date(year, month, day, hour, minute, second, micro) => {
+                // Format as MySQL DATETIME: YYYY-MM-DD HH:MM:SS.microseconds
+                if *micro > 0 {
+                    write!(
+                        out,
+                        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:06}",
+                        year, month, day, hour, minute, second, micro
+                    )?;
+                } else if *hour == 0 && *minute == 0 && *second == 0 {
+                    write!(out, "{:04}-{:02}-{:02}", year, month, day)?;
+                } else {
+                    write!(
+                        out,
+                        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+                        year, month, day, hour, minute, second
+                    )?;
+                }
+                Ok(IsNull::No)
+            }
+            Value::Time(is_negative, days, hours, minutes, seconds, micro) => {
+                // Format as MySQL TIME: [H]HH:MM:SS[.microseconds]
+                let total_hours = *days as i32 * 24 + *hours as i32;
+                if *micro > 0 {
+                    write!(
+                        out,
+                        "{}{:02}:{:02}:{:02}.{:06}",
+                        if *is_negative { "-" } else { "" },
+                        total_hours,
+                        minutes,
+                        seconds,
+                        micro
+                    )?;
+                } else {
+                    write!(
+                        out,
+                        "{}{:02}:{:02}:{:02}",
+                        if *is_negative { "-" } else { "" },
+                        total_hours,
+                        minutes,
+                        seconds
+                    )?;
+                }
+                Ok(IsNull::No)
+            }
+        }
     }
 }

@@ -13,9 +13,9 @@ async def test_basic_query():
     result = await conn.query("SELECT 1 UNION SELECT 2 UNION SELECT 3")
 
     assert len(result) == 3
-    assert result[0].to_tuple() == (1,)
-    assert result[1].to_tuple() == (2,)
-    assert result[2].to_tuple() == (3,)
+    assert result[0][0] == 1
+    assert result[1][0] == 2
+    assert result[2][0] == 3
 
     await conn.close()
 
@@ -40,7 +40,7 @@ async def test_query_with_params():
     results = await conn.exec("SELECT name, age FROM test_table WHERE age = ?", (25,))
 
     assert len(results) == 1
-    assert results[0].to_tuple() == ("Bob", 25)
+    assert (results[0][0], results[0][1]) == ("Bob", 25)
 
     await cleanup_test_table_async(conn)
     await conn.close()
@@ -63,7 +63,7 @@ async def test_query_first():
         "SELECT name, age FROM test_table ORDER BY age DESC", ()
     )
     assert result
-    assert result.to_tuple() == ("Alice", 30)
+    assert (result[0], result[1]) == ("Alice", 30)
 
     result = await conn.exec_first(
         "SELECT name, age FROM test_table WHERE age > ?", (100,)
@@ -126,7 +126,7 @@ async def test_named_params():
         "SELECT name, age FROM test_table WHERE name = :name", {"name": "Alice"}
     )
     assert result
-    assert result.to_tuple() == ("Alice", 30)
+    assert (result[0], result[1]) == ("Alice", 30)
 
     await cleanup_test_table_async(conn)
     await conn.close()
@@ -152,7 +152,7 @@ async def test_batch_exec():
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
     assert count
-    assert count.to_tuple() == (5,)
+    assert count[0] == 5
 
     await cleanup_test_table_async(conn)
     await conn.close()
@@ -174,8 +174,8 @@ async def test_query_with_nulls():
     results = await conn.query("SELECT name, age FROM test_table ORDER BY name")
 
     assert len(results) == 2
-    assert results[0].to_tuple() == ("Alice", 30)
-    assert results[1].to_tuple() == ("Bob", None)
+    assert (results[0][0], results[0][1]) == ("Alice", 30)
+    assert (results[1][0], results[1][1]) == ("Bob", None)
 
     await cleanup_test_table_async(conn)
     await conn.close()
@@ -196,7 +196,7 @@ async def test_multi_statement_query():
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
     assert count
-    assert count.to_tuple() == (2,)
+    assert count[0] == 2
 
     await cleanup_test_table_async(conn)
     await conn.close()

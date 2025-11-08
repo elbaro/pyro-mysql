@@ -76,6 +76,11 @@ pub fn bench(c: &mut Criterion) {
                 c"select_pyro_sync(pyro_sync_conn)",
             ),
             (
+                "pyro-diesel",
+                cr"pyro_diesel_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='diesel')",
+                c"select_pyro_diesel(pyro_diesel_conn)",
+            ),
+            (
                 "pyro-async",
                 cr"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
                 c"loop.run_until_complete(select_pyro_async(pyro_async_conn))",
@@ -122,6 +127,11 @@ pub fn bench(c: &mut Criterion) {
                 "pyro-sync",
                 cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test')",
                 "insert_pyro_sync(pyro_sync_conn, {})",
+            ),
+            (
+                "pyro-diesel",
+                cr"pyro_diesel_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='diesel')",
+                "insert_pyro_diesel(pyro_diesel_conn, {})",
             ),
             (
                 "pyro-async",

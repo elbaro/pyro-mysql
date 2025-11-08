@@ -99,6 +99,14 @@ def insert_pyro_sync(conn, n):
         )
 
 
+def insert_pyro_diesel(conn, n):
+    for i in range(n):
+        conn.exec_drop(
+            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
+            DATA[i % 10000],
+        )
+
+
 async def insert_async(conn, n: int):
     async with conn.cursor() as cursor:
         for i in range(n):
@@ -127,19 +135,25 @@ def insert_sync(conn, n: int):
 async def select_pyro_async(conn):
     rows = await conn.exec("SELECT * FROM benchmark_test")
     for row in rows:
-        row.to_tuple()
+        tuple(row[i] for i in range(len(row)))
 
 
 async def select_pyro_wtx(conn):
     rows = await conn.exec("SELECT * FROM benchmark_test")
     for row in rows:
-        row.to_tuple()
+        tuple(row[i] for i in range(len(row)))
 
 
 def select_pyro_sync(conn):
     rows = conn.exec("SELECT * FROM benchmark_test")
     for row in rows:
-        row.to_tuple()
+        tuple(row[i] for i in range(len(row)))
+
+
+def select_pyro_diesel(conn):
+    rows = conn.exec("SELECT * FROM benchmark_test")
+    for row in rows:
+        tuple(row[i] for i in range(len(row)))
 
 
 async def select_async(conn):
