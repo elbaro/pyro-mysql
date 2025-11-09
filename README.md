@@ -106,6 +106,30 @@ with conn.start_transaction() as tx:
     tx.rollback()
 ```
 
+### 4. Choosing a backend
+```
+conn = Conn(url, backend="mysql")  # the default backend
+conn = Conn(url, backend="diesel")
+
+conn = await Conn.new(url, backend="mysql")  # the default backend
+conn = await Conn.new(url, backend="wtx")  # wtx is experimental
+```
+
+| feature | `mysql` (sync) | `diesel` (sync) |
+| ------- | ------- | ----------- |
+| zero-copy, allocation| X | X |
+| server_version | O | X |
+| ping | O | X |
+| named parameters (dict) | O | X |
+
+| feature | `mysql` (async) | `wtx` (async) |
+| ------- | ------- | ----------- |
+| zero-copy, allocation| X | O |
+| server_version | O | X |
+| ping | O | X |
+| named parameters (dict) | O | X |
+
+
 ## DataType Mapping
 
 ### Python -> MySQL
