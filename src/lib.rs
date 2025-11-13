@@ -10,6 +10,7 @@ pub mod row;
 pub mod sync;
 pub mod util;
 pub mod value;
+pub mod zero_mysql_util;
 
 use pyo3::prelude::*;
 use tokio::runtime::Builder;

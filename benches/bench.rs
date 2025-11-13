@@ -81,6 +81,11 @@ pub fn bench(c: &mut Criterion) {
                 c"select_pyro_diesel(pyro_diesel_conn)",
             ),
             (
+                "pyro-zero-sync",
+                cr"pyro_zero_mysql_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='zero-mysql')",
+                c"select_pyro_zero_mysql(pyro_zero_mysql_conn)",
+            ),
+            (
                 "pyro-async",
                 cr"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
                 c"loop.run_until_complete(select_pyro_async(pyro_async_conn))",
@@ -89,6 +94,11 @@ pub fn bench(c: &mut Criterion) {
                 "pyro-wtx",
                 cr"pyro_wtx_conn = loop.run_until_complete(create_pyro_wtx_conn())",
                 c"loop.run_until_complete(select_pyro_wtx(pyro_wtx_conn))",
+            ),
+            (
+                "pyro-zero-async",
+                cr"pyro_zero_mysql_async_conn = loop.run_until_complete(create_pyro_zero_mysql_conn())",
+                c"loop.run_until_complete(select_pyro_zero_mysql_async(pyro_zero_mysql_async_conn))",
             ),
             (
                 "asyncmy",
@@ -134,6 +144,11 @@ pub fn bench(c: &mut Criterion) {
                 "insert_pyro_diesel(pyro_diesel_conn, {})",
             ),
             (
+                "pyro-zero-sync",
+                cr"pyro_zero_mysql_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='zero-mysql')",
+                "insert_pyro_zero_mysql(pyro_zero_mysql_conn, {})",
+            ),
+            (
                 "pyro-async",
                 cr"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
                 "loop.run_until_complete(insert_pyro_async(pyro_async_conn, {}))",
@@ -142,6 +157,11 @@ pub fn bench(c: &mut Criterion) {
                 "pyro-wtx",
                 cr"pyro_wtx_conn = loop.run_until_complete(create_pyro_wtx_conn())",
                 "loop.run_until_complete(insert_pyro_wtx(pyro_wtx_conn, {}))",
+            ),
+            (
+                "pyro-zero-async",
+                cr"pyro_zero_mysql_async_conn = loop.run_until_complete(create_pyro_zero_mysql_conn())",
+                "loop.run_until_complete(insert_pyro_zero_mysql_async(pyro_zero_mysql_async_conn, {}))",
             ),
             (
                 "asyncmy",

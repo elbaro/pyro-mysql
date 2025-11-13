@@ -312,6 +312,10 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                         .map_err(|e| Error::WtxError(e.to_string()))?;
                     Ok(())
                 }
+                MultiAsyncConn::ZeroMysql(zero_conn) => {
+                    zero_conn.ping().await?;
+                    Ok(())
+                }
             }
         })
     }
@@ -332,6 +336,9 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                 }
                 MultiAsyncConn::Wtx(_) => {
                     panic!("close_prepared_statement() is not supported for wtx connections")
+                }
+                MultiAsyncConn::ZeroMysql(_) => {
+                    panic!("close_prepared_statement() is not supported for zero_mysql connections")
                 }
             }
         })
@@ -371,6 +378,10 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     })?;
 
                     rows
+                }
+                MultiAsyncConn::ZeroMysql(_) => {
+                    // zero_mysql only supports binary protocol (exec_fold), not text protocol
+                    todo!("zero_mysql does not support text protocol queries")
                 }
             };
 
@@ -415,6 +426,10 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
 
                     Some(row)
                 }
+                MultiAsyncConn::ZeroMysql(_) => {
+                    // zero_mysql only supports binary protocol (exec_fold), not text protocol
+                    todo!("zero_mysql does not support text protocol queries")
+                }
             };
 
             // Convert row to either tuple or dict
@@ -456,6 +471,10 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                         .map_err(|e| Error::WtxError(e.to_string()))?;
 
                     Ok(())
+                }
+                MultiAsyncConn::ZeroMysql(_) => {
+                    // zero_mysql only supports binary protocol (exec_fold), not text protocol
+                    todo!("zero_mysql does not support text protocol queries")
                 }
             }
         })
@@ -511,6 +530,22 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     })?;
 
                     rows
+                }
+                MultiAsyncConn::ZeroMysql(zero_conn) => {
+                    // zero_mysql returns Vec<Py<PyTuple>> directly
+                    let pyro_params = Python::attach(|py| params.extract::<crate::params::Params>(py))?;
+                    let tuples = zero_conn.exec(query.to_string(), pyro_params).await.map_err(Error::from)?;
+
+                    // Return directly - zero_mysql already returns tuples
+                    return Python::attach(|py| {
+                        let result: Vec<Py<PyAny>> = if as_dict {
+                            // TODO: convert tuples to dicts
+                            todo!("as_dict not yet supported for zero_mysql")
+                        } else {
+                            tuples.into_iter().map(|t| t.into_any()).collect()
+                        };
+                        Ok(result)
+                    });
                 }
             };
 
@@ -570,6 +605,10 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
 
                     Some(row)
                 }
+                MultiAsyncConn::ZeroMysql(_) => {
+                    // zero_mysql only supports binary protocol (exec_fold), not text protocol
+                    todo!("zero_mysql does not support text protocol queries")
+                }
             };
 
             // Convert row to either tuple or dict
@@ -621,6 +660,12 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                         .await
                         .map_err(|e| Error::WtxError(e.to_string()))?;
 
+                    Ok(())
+                }
+                MultiAsyncConn::ZeroMysql(zero_conn) => {
+                    // Execute and drop results
+                    let pyro_params = Python::attach(|py| params.extract::<crate::params::Params>(py))?;
+                    zero_conn.exec(query.to_string(), pyro_params).await.map_err(Error::from)?;
                     Ok(())
                 }
             }
@@ -676,6 +721,14 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                             .map_err(|e| Error::WtxError(e.to_string()))?;
                     }
 
+                    Ok(())
+                }
+                MultiAsyncConn::ZeroMysql(zero_conn) => {
+                    // Execute batch with zero_mysql
+                    for params_item in params {
+                        let pyro_params = Python::attach(|py| params_item.extract::<crate::params::Params>(py))?;
+                        zero_conn.exec(query.to_string(), pyro_params).await.map_err(Error::from)?;
+                    }
                     Ok(())
                 }
             }

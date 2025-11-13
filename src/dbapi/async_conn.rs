@@ -66,6 +66,12 @@ impl AsyncDbApiConn {
                     "wtx connections are not supported with DB-API. Use the async API (pyro_mysql.AsyncConn) instead."
                 ).into())
             }
+            MultiAsyncConn::ZeroMysql(_) => {
+                // zero_mysql is not supported in DB-API, use the async API instead
+                Err(Error::IncorrectApiUsageError(
+                    "zero_mysql connections are not supported with DB-API. Use the async API (pyro_mysql.AsyncConn) instead."
+                ).into())
+            }
         }
     }
 }
@@ -101,6 +107,11 @@ impl AsyncDbApiConn {
                         .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
                     return Ok(());
                 }
+                MultiAsyncConn::ZeroMysql(_) => {
+                    return Err(Error::IncorrectApiUsageError(
+                        "zero_mysql connections are not supported with DB-API. Use the async API (pyro_mysql.AsyncConn) instead."
+                    ).into());
+                }
             };
             conn.exec_drop("COMMIT", Params::default())
                 .await
@@ -123,6 +134,11 @@ impl AsyncDbApiConn {
                         .await
                         .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
                     return Ok(());
+                }
+                MultiAsyncConn::ZeroMysql(_) => {
+                    return Err(Error::IncorrectApiUsageError(
+                        "zero_mysql connections are not supported with DB-API. Use the async API (pyro_mysql.AsyncConn) instead."
+                    ).into());
                 }
             };
             conn.exec_drop("ROLLBACK", Params::default())
@@ -158,6 +174,11 @@ impl AsyncDbApiConn {
                     .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
                 return Ok(());
             }
+            MultiAsyncConn::ZeroMysql(_) => {
+                return Err(Error::IncorrectApiUsageError(
+                    "zero_mysql connections are not supported with DB-API. Use the async API (pyro_mysql.AsyncConn) instead."
+                ));
+            }
         };
         let query = if on {
             "SET autocommit=1"
@@ -184,6 +205,11 @@ impl AsyncDbApiConn {
                         .await
                         .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
                     return Ok(());
+                }
+                MultiAsyncConn::ZeroMysql(_) => {
+                    return Err(Error::IncorrectApiUsageError(
+                        "zero_mysql connections are not supported with DB-API. Use the async API (pyro_mysql.AsyncConn) instead."
+                    ));
                 }
             };
             conn.ping().await?;

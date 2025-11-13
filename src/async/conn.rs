@@ -29,32 +29,63 @@ impl AsyncConn {
 
     #[allow(clippy::new_ret_no_self)]
     #[staticmethod]
+    #[pyo3(signature = (url_or_opts, backend="mysql_async"))]
     pub fn new<'py>(
         py: Python<'py>,
         url_or_opts: Either<String, PyRef<AsyncOpts>>,
+        backend: &str,
     ) -> PyResult<Py<PyroFuture>> {
-        let opts = match url_or_opts {
-            Either::Left(url) => mysql_async::Opts::from_url(&url).map_err(url_error_to_pyerr)?,
-            Either::Right(opts) => opts.opts.clone(),
-        };
-        rust_future_into_py(py, async move {
-            let conn = mysql_async::Conn::new(opts).await?;
-            Ok(Self {
-                inner: Arc::new(RwLock::new(Some(MultiAsyncConn::MysqlAsync(conn)))),
-            })
-        })
-    }
-
-    #[allow(clippy::new_ret_no_self)]
-    #[staticmethod]
-    #[pyo3(signature = (url, max_statements=None, buffer_size=None))]
-    pub fn new_wtx<'py>(py: Python<'py>, url: String, max_statements: Option<usize>, buffer_size: Option<(usize, usize, usize, usize, usize)>) -> PyResult<Py<PyroFuture>> {
-        rust_future_into_py(py, async move {
-            let multi_conn = MultiAsyncConn::new_wtx(&url, max_statements, buffer_size).await?;
-            Ok(Self {
-                inner: Arc::new(RwLock::new(Some(multi_conn))),
-            })
-        })
+        match backend {
+            "mysql_async" => {
+                let opts = match url_or_opts {
+                    Either::Left(url) => mysql_async::Opts::from_url(&url).map_err(url_error_to_pyerr)?,
+                    Either::Right(opts) => opts.opts.clone(),
+                };
+                rust_future_into_py(py, async move {
+                    let conn = mysql_async::Conn::new(opts).await?;
+                    Ok(Self {
+                        inner: Arc::new(RwLock::new(Some(MultiAsyncConn::MysqlAsync(conn)))),
+                    })
+                })
+            }
+            "wtx" => {
+                let url = match url_or_opts {
+                    Either::Left(url) => url,
+                    Either::Right(_opts) => {
+                        return Err(Error::IncorrectApiUsageError(
+                            "WTX backend requires a URL string, not AsyncOpts",
+                        ).into());
+                    }
+                };
+                rust_future_into_py(py, async move {
+                    let multi_conn = MultiAsyncConn::new_wtx(&url, None, None).await?;
+                    Ok(Self {
+                        inner: Arc::new(RwLock::new(Some(multi_conn))),
+                    })
+                })
+            }
+            "zero-mysql" => {
+                let url = match url_or_opts {
+                    Either::Left(url) => url,
+                    Either::Right(_opts) => {
+                        return Err(Error::IncorrectApiUsageError(
+                            "Zero-mysql backend requires a URL string, not AsyncOpts",
+                        ).into());
+                    }
+                };
+                rust_future_into_py(py, async move {
+                    println!("pyro creating MultiAsyncConn::new_zero_mysql");
+                    let multi_conn = MultiAsyncConn::new_zero_mysql(&url).await?;
+                    println!("pyro creating MultiAsyncConn::new_zero_mysql - done");
+                    Ok(Self {
+                        inner: Arc::new(RwLock::new(Some(multi_conn))),
+                    })
+                })
+            }
+            _ => Err(Error::IncorrectApiUsageError(
+                "Unknown backend. Supported backends: 'mysql_async', 'wtx', 'zero-mysql'",
+            ).into()),
+        }
     }
 
     #[pyo3(signature = (consistent_snapshot=false, isolation_level=None, readonly=None))]

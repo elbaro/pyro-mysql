@@ -128,3 +128,28 @@ where
 
     Ok(py_future)
 }
+
+pub struct PyTupleBuilder {
+    ptr: *mut pyo3::ffi::PyObject,
+}
+
+impl PyTupleBuilder {
+    pub fn new(_py: Python, len: usize) -> Self {
+        let ptr = unsafe { pyo3::ffi::PyTuple_New(len as isize) };
+        Self { ptr }
+    }
+
+    pub fn set<'py>(&self, index: usize, value: Bound<'py, PyAny>) {
+        // #[cfg(not(any(Py_LIMITED_API, PyPy, GraalPy)))]
+        // pyo3::ffi::PyTuple_SET_ITEM(self.ptr, index, value.into_ptr());
+        // #[cfg(any(Py_LIMITED_API, PyPy, GraalPy))]
+        unsafe {
+            // TODO: raise if returns -1
+            pyo3::ffi::PyTuple_SetItem(self.ptr, index as pyo3::ffi::Py_ssize_t, value.into_ptr());
+        }
+    }
+
+    pub fn build<'py>(self, py: Python<'py>) -> Bound<'py, PyTuple> {
+        unsafe { Bound::from_owned_ptr(py, self.ptr).cast_into_unchecked() }
+    }
+}

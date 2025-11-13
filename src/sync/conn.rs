@@ -2,6 +2,7 @@ use either::Either;
 use mysql::{AccessMode, Opts, prelude::*};
 use parking_lot::RwLock;
 use pyo3::prelude::*;
+use pyo3::types::PyList;
 
 use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
@@ -50,8 +51,24 @@ impl SyncConn {
                     inner: RwLock::new(Some(MultiSyncConn::Diesel(conn))),
                 })
             }
+            "zero-mysql" => {
+                let url = match url_or_opts {
+                    Either::Left(url) => url,
+                    Either::Right(_opts) => {
+                        // For zero-mysql, we need a URL string
+                        return Err(crate::error::Error::IncorrectApiUsageError(
+                            "Zero-mysql backend requires a URL string, not SyncOpts",
+                        ));
+                    }
+                };
+                let conn = crate::sync::backend::ZeroMysqlConn::new(&url)?;
+
+                Ok(Self {
+                    inner: RwLock::new(Some(MultiSyncConn::ZeroMysql(conn))),
+                })
+            }
             _ => Err(crate::error::Error::IncorrectApiUsageError(
-                "Unknown backend. Supported backends: 'mysql', 'diesel'",
+                "Unknown backend. Supported backends: 'mysql', 'diesel', 'zero-mysql'",
             )),
         }
     }
@@ -109,7 +126,12 @@ impl SyncConn {
     // ─── Text Protocol ───────────────────────────────────────────────────
 
     #[pyo3(signature = (query, *, as_dict=false))]
-    fn query<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyroResult<Vec<Py<PyAny>>> {
+    fn query<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        as_dict: bool,
+    ) -> PyroResult<Vec<Py<PyAny>>> {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
@@ -132,11 +154,21 @@ impl SyncConn {
                 // Diesel handles as_dict internally
                 conn.query(query, as_dict)
             }
+            MultiSyncConn::ZeroMysql(conn) => {
+                let tuples = conn.query(py, query)?;
+                // ZeroMysql always returns tuples, convert to dict if needed
+                todo!()
+            }
         }
     }
 
     #[pyo3(signature = (query, *, as_dict=false))]
-    fn query_first<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyroResult<Option<Py<PyAny>>> {
+    fn query_first<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        as_dict: bool,
+    ) -> PyroResult<Option<Py<PyAny>>> {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
@@ -153,12 +185,16 @@ impl SyncConn {
                         };
                         Ok(Some(result))
                     }
-                    None => Ok(None)
+                    None => Ok(None),
                 }
             }
             MultiSyncConn::Diesel(conn) => {
                 // Diesel handles as_dict internally
                 conn.query_first(query, as_dict)
+            }
+            MultiSyncConn::ZeroMysql(conn) => {
+                let tuples = conn.query(py, query)?;
+                todo!()
             }
         }
     }
@@ -170,6 +206,13 @@ impl SyncConn {
         match multi_conn {
             MultiSyncConn::Mysql(conn) => Ok(conn.inner.query_drop(query)?),
             MultiSyncConn::Diesel(conn) => conn.query_drop(query),
+            MultiSyncConn::ZeroMysql(conn) => {
+                // Execute query and discard results
+                Python::attach(|py| {
+                    conn.query(py, query)?;
+                    Ok(())
+                })
+            }
         }
     }
     #[pyo3(signature = (query))]
@@ -193,6 +236,9 @@ impl SyncConn {
             MultiSyncConn::Diesel(_) => Err(Error::IncorrectApiUsageError(
                 "query_iter is not yet supported for Diesel backend",
             )),
+            MultiSyncConn::ZeroMysql(_) => Err(Error::IncorrectApiUsageError(
+                "query_iter is not yet supported for Zero-MySQL backend",
+            )),
         }
     }
 
@@ -205,19 +251,19 @@ impl SyncConn {
         query: String,
         params: Params,
         as_dict: bool,
-    ) -> PyroResult<Vec<Py<PyAny>>> {
+    ) -> PyroResult<Py<PyList>> {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
         match multi_conn {
             MultiSyncConn::Mysql(conn) => {
                 // log::debug!("exec {query}");
-                let rows: Vec<Row> = conn
-                    .inner
-                    .exec_fold(query, params, Vec::new(), |mut acc, row| {
-                        acc.push(mysql::from_row::<Row>(row));
-                        acc
-                    })?;
+                let rows: Vec<Row> =
+                    conn.inner
+                        .exec_fold(query, params, Vec::new(), |mut acc, row| {
+                            acc.push(mysql::from_row::<Row>(row));
+                            acc
+                        })?;
 
                 // Convert rows to either tuples or dicts
                 let result: Vec<Py<PyAny>> = if as_dict {
@@ -229,17 +275,30 @@ impl SyncConn {
                         .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
                         .collect::<PyResult<_>>()?
                 };
-                Ok(result)
+                Ok(PyList::new(py, result).unwrap().unbind())
             }
             MultiSyncConn::Diesel(conn) => {
                 // Diesel handles as_dict internally
-                conn.exec(query, params, as_dict)
+                Ok(PyList::new(py, conn.exec(query, params, as_dict)?)
+                    .unwrap()
+                    .unbind())
+            }
+            MultiSyncConn::ZeroMysql(conn) => {
+                let tuples = conn.exec(py, query, params)?;
+                // TODO: Convert to dict if as_dict is true
+                Ok(tuples)
             }
         }
     }
 
     #[pyo3(signature = (query, params=Params::default(), *, as_dict=false))]
-    fn exec_first<'py>(&self, py: Python<'py>, query: String, params: Params, as_dict: bool) -> PyroResult<Option<Py<PyAny>>> {
+    fn exec_first<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        params: Params,
+        as_dict: bool,
+    ) -> PyroResult<Option<Py<PyAny>>> {
         let mut guard = self.inner.write();
         let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
@@ -258,12 +317,16 @@ impl SyncConn {
                         };
                         Ok(Some(result))
                     }
-                    None => Ok(None)
+                    None => Ok(None),
                 }
             }
             MultiSyncConn::Diesel(conn) => {
                 // Diesel handles as_dict internally
                 conn.exec_first(query, params, as_dict)
+            }
+            MultiSyncConn::ZeroMysql(conn) => {
+                let tuples = conn.exec(py, query, params)?;
+                todo!()
             }
         }
     }
@@ -278,6 +341,13 @@ impl SyncConn {
                 Ok(conn.inner.exec_drop(query, params)?)
             }
             MultiSyncConn::Diesel(conn) => conn.exec_drop(query, params),
+            MultiSyncConn::ZeroMysql(conn) => {
+                // Execute and discard results
+                Python::attach(|py| {
+                    conn.exec(py, query, params)?;
+                    Ok(())
+                })
+            }
         }
     }
 
@@ -291,6 +361,15 @@ impl SyncConn {
                 Ok(conn.inner.exec_batch(query, params_list)?)
             }
             MultiSyncConn::Diesel(conn) => conn.exec_batch(query, params_list),
+            MultiSyncConn::ZeroMysql(conn) => {
+                // Execute each params set
+                Python::attach(|py| {
+                    for params in params_list {
+                        conn.exec(py, query.clone(), params)?;
+                    }
+                    Ok(())
+                })
+            }
         }
     }
 

@@ -67,6 +67,7 @@ impl AsyncTransaction {
             let mysql_conn = match conn_ref {
                 MultiAsyncConn::MysqlAsync(c) => c,
                 MultiAsyncConn::Wtx(_) => unreachable!(),
+                MultiAsyncConn::ZeroMysql(_) => todo!("zero_mysql does not support transactions yet"),
             };
 
             let tx = mysql_conn

@@ -56,6 +56,11 @@ impl SyncTransaction {
                                 "Transactions are not supported for Diesel backend",
                             ))
                         }
+                        MultiSyncConn::ZeroMysql(_) => {
+                            return Err(Error::IncorrectApiUsageError(
+                                "Transactions are not supported for Zero-MySQL backend",
+                            ))
+                        }
                     };
                     Box::pin(mysql_conn)
                 };

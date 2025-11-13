@@ -1,12 +1,13 @@
 use mysql_async::prelude::Queryable;
 
 use crate::error::PyroResult;
-use crate::r#async::backend::WtxConn;
+use crate::r#async::backend::{WtxConn, ZeroMysqlConn};
 
 /// Multi-backend async connection enum
 pub enum MultiAsyncConn {
     MysqlAsync(mysql_async::Conn),
     Wtx(WtxConn),
+    ZeroMysql(ZeroMysqlConn),
 }
 
 impl MultiAsyncConn {
@@ -20,30 +21,39 @@ impl MultiAsyncConn {
         Ok(MultiAsyncConn::Wtx(wtx_conn))
     }
 
+    /// Create a new ZeroMysql connection from a URL
+    pub async fn new_zero_mysql(url: &str) -> PyroResult<Self> {
+        let zero_conn = ZeroMysqlConn::new(url).await?;
+        Ok(MultiAsyncConn::ZeroMysql(zero_conn))
+    }
+
     /// Get the connection ID
-    /// Note: Returns 0 for wtx connections as wtx doesn't expose this information
+    /// Note: Returns 0 for wtx and zero_mysql connections as they don't expose this information
     pub fn id(&self) -> u32 {
         match self {
             MultiAsyncConn::MysqlAsync(conn) => conn.id(),
             MultiAsyncConn::Wtx(wtx_conn) => wtx_conn.id(),
+            MultiAsyncConn::ZeroMysql(zero_conn) => zero_conn.id(),
         }
     }
 
     /// Get the number of affected rows from the last query
-    /// Note: Returns 0 for wtx connections as wtx returns this per-query, not as connection state
+    /// Note: Returns 0 for wtx and zero_mysql connections as they return this per-query, not as connection state
     pub fn affected_rows(&self) -> u64 {
         match self {
             MultiAsyncConn::MysqlAsync(conn) => conn.affected_rows(),
             MultiAsyncConn::Wtx(wtx_conn) => wtx_conn.affected_rows(),
+            MultiAsyncConn::ZeroMysql(zero_conn) => zero_conn.affected_rows(),
         }
     }
 
     /// Get the last insert ID
-    /// Note: Returns None for wtx connections as wtx doesn't expose this as connection state
+    /// Note: Returns None for wtx and zero_mysql connections as they don't expose this as connection state
     pub fn last_insert_id(&self) -> Option<u64> {
         match self {
             MultiAsyncConn::MysqlAsync(conn) => conn.last_insert_id(),
             MultiAsyncConn::Wtx(wtx_conn) => wtx_conn.last_insert_id(),
+            MultiAsyncConn::ZeroMysql(zero_conn) => zero_conn.last_insert_id(),
         }
     }
 
@@ -53,6 +63,7 @@ impl MultiAsyncConn {
         match self {
             MultiAsyncConn::MysqlAsync(conn) => conn.server_version(),
             MultiAsyncConn::Wtx(wtx_conn) => wtx_conn.server_version(),
+            MultiAsyncConn::ZeroMysql(zero_conn) => zero_conn.server_version(),
         }
     }
 
@@ -64,6 +75,7 @@ impl MultiAsyncConn {
                 Ok(())
             }
             MultiAsyncConn::Wtx(wtx_conn) => wtx_conn.disconnect().await,
+            MultiAsyncConn::ZeroMysql(zero_conn) => zero_conn.disconnect().await,
         }
     }
 
@@ -76,6 +88,7 @@ impl MultiAsyncConn {
                 Ok(())
             }
             MultiAsyncConn::Wtx(wtx_conn) => wtx_conn.reset().await,
+            MultiAsyncConn::ZeroMysql(zero_conn) => zero_conn.reset().await,
         }
     }
 
@@ -87,6 +100,7 @@ impl MultiAsyncConn {
                 Ok(())
             }
             MultiAsyncConn::Wtx(wtx_conn) => wtx_conn.ping().await,
+            MultiAsyncConn::ZeroMysql(zero_conn) => zero_conn.ping().await,
         }
     }
 }

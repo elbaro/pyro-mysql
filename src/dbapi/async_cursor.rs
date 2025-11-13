@@ -239,6 +239,11 @@ impl AsyncCursor {
                         Ok((None, 0, None, None))
                     }
                 }
+                MultiAsyncConn::ZeroMysql(_) => {
+                    Err(Error::IncorrectApiUsageError(
+                        "zero_mysql connections are not supported with DB-API. Use the async API (pyro_mysql.AsyncConn) instead."
+                    ))
+                }
             }
         })
         .await
@@ -304,6 +309,11 @@ impl AsyncCursor {
 
                     // wtx doesn't expose affected_rows easily, return 0
                     PyroResult::Ok(0)
+                }
+                MultiAsyncConn::ZeroMysql(_) => {
+                    Err(Error::IncorrectApiUsageError(
+                        "zero_mysql connections are not supported with DB-API. Use the async API (pyro_mysql.AsyncConn) instead."
+                    ))
                 }
             }
         })

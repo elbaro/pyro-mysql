@@ -1,10 +1,11 @@
 use crate::error::PyroResult;
-use crate::sync::backend::{DieselConn, MysqlConn};
+use crate::sync::backend::{DieselConn, MysqlConn, ZeroMysqlConn};
 
 /// Multi-backend sync connection enum
 pub enum MultiSyncConn {
     Mysql(MysqlConn),
     Diesel(DieselConn),
+    ZeroMysql(ZeroMysqlConn),
 }
 
 impl MultiSyncConn {
@@ -13,6 +14,7 @@ impl MultiSyncConn {
         match self {
             MultiSyncConn::Mysql(conn) => conn.id(),
             MultiSyncConn::Diesel(conn) => conn.id(),
+            MultiSyncConn::ZeroMysql(conn) => conn.id(),
         }
     }
 
@@ -21,6 +23,7 @@ impl MultiSyncConn {
         match self {
             MultiSyncConn::Mysql(conn) => conn.affected_rows(),
             MultiSyncConn::Diesel(conn) => conn.affected_rows(),
+            MultiSyncConn::ZeroMysql(conn) => conn.affected_rows(),
         }
     }
 
@@ -29,6 +32,7 @@ impl MultiSyncConn {
         match self {
             MultiSyncConn::Mysql(conn) => conn.last_insert_id(),
             MultiSyncConn::Diesel(conn) => conn.last_insert_id(),
+            MultiSyncConn::ZeroMysql(conn) => conn.last_insert_id(),
         }
     }
 
@@ -37,6 +41,7 @@ impl MultiSyncConn {
         match self {
             MultiSyncConn::Mysql(conn) => conn.server_version(),
             MultiSyncConn::Diesel(conn) => conn.server_version(),
+            MultiSyncConn::ZeroMysql(conn) => conn.server_version(),
         }
     }
 
@@ -45,6 +50,7 @@ impl MultiSyncConn {
         match self {
             MultiSyncConn::Mysql(conn) => conn.ping(),
             MultiSyncConn::Diesel(conn) => conn.ping(),
+            MultiSyncConn::ZeroMysql(conn) => conn.ping(),
         }
     }
 
@@ -53,6 +59,7 @@ impl MultiSyncConn {
         match self {
             MultiSyncConn::Mysql(conn) => conn.reset(),
             MultiSyncConn::Diesel(conn) => conn.reset(),
+            MultiSyncConn::ZeroMysql(conn) => conn.reset(),
         }
     }
 }

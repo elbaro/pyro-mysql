@@ -50,6 +50,12 @@ async def create_pyro_wtx_conn():
     )
 
 
+async def create_pyro_zero_mysql_conn():
+    return await pyro_mysql.AsyncConn.new_zero_mysql(
+        "mysql://test:1234@127.0.0.1:3306/test"
+    )
+
+
 async def create_asyncmy_conn():
     return await asyncmy.connect(
         host="127.0.0.1",
@@ -91,6 +97,14 @@ async def insert_pyro_wtx(conn, n):
         )
 
 
+async def insert_pyro_zero_mysql_async(conn, n):
+    for i in range(n):
+        await conn.exec_drop(
+            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
+            DATA[i % 10000],
+        )
+
+
 def insert_pyro_sync(conn, n):
     for i in range(n):
         conn.exec_drop(
@@ -100,6 +114,14 @@ def insert_pyro_sync(conn, n):
 
 
 def insert_pyro_diesel(conn, n):
+    for i in range(n):
+        conn.exec_drop(
+            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
+            DATA[i % 10000],
+        )
+
+
+def insert_pyro_zero_mysql(conn, n):
     for i in range(n):
         conn.exec_drop(
             "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
@@ -144,6 +166,12 @@ async def select_pyro_wtx(conn):
         tuple(row[i] for i in range(len(row)))
 
 
+async def select_pyro_zero_mysql_async(conn):
+    rows = await conn.exec("SELECT * FROM benchmark_test")
+    for row in rows:
+        tuple(row[i] for i in range(len(row)))
+
+
 def select_pyro_sync(conn):
     rows = conn.exec("SELECT * FROM benchmark_test")
     for row in rows:
@@ -151,6 +179,12 @@ def select_pyro_sync(conn):
 
 
 def select_pyro_diesel(conn):
+    rows = conn.exec("SELECT * FROM benchmark_test")
+    for row in rows:
+        tuple(row[i] for i in range(len(row)))
+
+
+def select_pyro_zero_mysql(conn):
     rows = conn.exec("SELECT * FROM benchmark_test")
     for row in rows:
         tuple(row[i] for i in range(len(row)))

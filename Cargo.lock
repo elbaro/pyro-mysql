@@ -1574,6 +1574,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "wtx",
+ "zero-mysql",
 ]
 
 [[package]]
@@ -2530,6 +2531,21 @@ dependencies = [
  "quote",
  "syn",
  "synstructure",
+]
+
+[[package]]
+name = "zero-mysql"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "bytes",
+ "sha1 0.10.6",
+ "sha2 0.10.9",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "url",
+ "zerocopy",
 ]
 
 [[package]]
