@@ -8,8 +8,9 @@ from .conftest import cleanup_test_table_async, get_async_opts, setup_test_table
 
 
 @pytest.mark.asyncio
-async def test_basic_pool():
-    """Test basic pool functionality."""
+@pytest.mark.parametrize("async_backend", ["mysql_async"], indirect=True)
+async def test_basic_pool(async_backend):
+    """Test basic pool functionality (mysql_async only)."""
     opts = get_async_opts()
     pool = Pool(opts)
 
@@ -24,8 +25,9 @@ async def test_basic_pool():
 
 
 @pytest.mark.asyncio
-async def test_pool_constraints():
-    """Test pool with constraints."""
+@pytest.mark.parametrize("async_backend", ["mysql_async"], indirect=True)
+async def test_pool_constraints(async_backend):
+    """Test pool with constraints (mysql_async only)."""
     opts = get_async_opts()
     pool_opts = (
         PoolOpts()
@@ -53,8 +55,9 @@ async def test_pool_constraints():
 
 
 @pytest.mark.asyncio
-async def test_concurrent_connections():
-    """Test multiple concurrent connections from pool."""
+@pytest.mark.parametrize("async_backend", ["mysql_async"], indirect=True)
+async def test_concurrent_connections(async_backend):
+    """Test multiple concurrent connections from pool (mysql_async only)."""
     opts = get_async_opts()
     pool_opts = PoolOpts().with_constraints((2, 5))
     pool = Pool(opts.pool_opts(pool_opts))
@@ -77,8 +80,9 @@ async def test_concurrent_connections():
 
 
 @pytest.mark.asyncio
-async def test_pool_with_transactions():
-    """Test pool connections with transactions."""
+@pytest.mark.parametrize("async_backend", ["mysql_async"], indirect=True)
+async def test_pool_with_transactions(async_backend):
+    """Test pool connections with transactions (mysql_async only)."""
     opts = get_async_opts()
     pool = Pool(opts)
 
@@ -126,8 +130,9 @@ async def test_pool_with_transactions():
 
 
 @pytest.mark.asyncio
-async def test_pool_max_connections():
-    """Test pool respects maximum connection limits."""
+@pytest.mark.parametrize("async_backend", ["mysql_async"], indirect=True)
+async def test_pool_max_connections(async_backend):
+    """Test pool respects maximum connection limits (mysql_async only)."""
     opts = get_async_opts()
     pool_opts = PoolOpts().with_constraints((1, 2))
     pool = Pool(opts.pool_opts(pool_opts))
@@ -150,8 +155,9 @@ async def test_pool_max_connections():
 
 
 @pytest.mark.asyncio
-async def test_pool_connection_timeout():
-    """Test pool connection timeout behavior."""
+@pytest.mark.parametrize("async_backend", ["mysql_async"], indirect=True)
+async def test_pool_connection_timeout(async_backend):
+    """Test pool connection timeout behavior (mysql_async only)."""
     opts = get_async_opts()
     pool_opts = (
         PoolOpts()

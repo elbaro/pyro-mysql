@@ -43,16 +43,14 @@ async def create_pyro_async_conn():
 
 
 async def create_pyro_wtx_conn():
-    return await pyro_mysql.AsyncConn.new_wtx(
-        "mysql://test:1234@127.0.0.1:3306/test",
-        max_statements=32,
-        buffer_size=(512, 512, 8192, 512, 32),
+    return await pyro_mysql.AsyncConn.new(
+        "mysql://test:1234@127.0.0.1:3306/test", backend="wtx"
     )
 
 
 async def create_pyro_zero_mysql_conn():
-    return await pyro_mysql.AsyncConn.new_zero_mysql(
-        "mysql://test:1234@127.0.0.1:3306/test"
+    return await pyro_mysql.AsyncConn.new(
+        "mysql://test:1234@127.0.0.1:3306/test", backend="zero-mysql"
     )
 
 

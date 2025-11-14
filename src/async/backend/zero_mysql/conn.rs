@@ -11,20 +11,21 @@ pub struct ZeroMysqlConn {
     /// Cache to store statement IDs for prepared statements
     /// In production, this should use LRU cache or similar
     stmt_cache: std::collections::HashMap<String, u32>,
+    /// Reusable handler for collecting query results
+    handler: TupleHandler,
 }
 
 impl ZeroMysqlConn {
     /// Create a new Zero-MySQL connection from URL
     pub async fn new(url: &str) -> PyroResult<Self> {
-        println!("pyro-mysql creating zero conn");
         let conn = Conn::new(url)
             .await
             .map_err(|_e| Error::IncorrectApiUsageError("Failed to connect with zero-mysql"))?;
-        println!("pyro-mysql creating zero conn - done");
 
         Ok(ZeroMysqlConn {
             inner: conn,
             stmt_cache: std::collections::HashMap::new(),
+            handler: TupleHandler::new(),
         })
     }
 
@@ -107,13 +108,12 @@ impl ZeroMysqlConn {
             stmt_id
         };
 
-        // Create handler and buffer without Python GIL
-        let mut handler = TupleHandler::new();
-        let mut buffer = Vec::new();
+        // Clear handler state for reuse
+        self.handler.clear();
 
         // Execute with empty params (for text protocol queries)
         self.inner
-            .exec_fold(stmt_id, &(), &mut handler, &mut buffer)
+            .exec(stmt_id, &(), &mut self.handler)
             .await
             .map_err(|e| {
                 println!("error in query: {:?}", e);
@@ -122,7 +122,7 @@ impl ZeroMysqlConn {
 
         // Convert raw rows to Python objects with the GIL
         Python::attach(|py| {
-            handler.into_py_rows(py).map_err(|_e| {
+            self.handler.rows_to_python(py).map_err(|_e| {
                 Error::IncorrectApiUsageError("Failed to convert rows to Python objects")
             })
         })
@@ -131,27 +131,26 @@ impl ZeroMysqlConn {
     /// Execute a prepared statement with parameters
     pub async fn exec(&mut self, query: String, params: Params) -> PyroResult<Vec<Py<PyTuple>>> {
         use super::params_adapter::ParamsAdapter;
-
         // Check if we have a cached statement
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
-            let stmt_id = self.inner.prepare(&query).await.map_err(|e| {
-                println!("--- error from zero: {:?}", e);
-                Error::IncorrectApiUsageError("Failed to prepare query")
-            })?;
+            let stmt_id = self
+                .inner
+                .prepare(&query)
+                .await
+                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
             self.stmt_cache.insert(query.clone(), stmt_id);
             stmt_id
         };
 
-        // Create handler and buffer without Python GIL
-        let mut handler = TupleHandler::new();
-        let mut buffer = Vec::new();
+        // Clear handler state for reuse
+        self.handler.clear();
 
         // Convert Params to zero-mysql params format
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
-            .exec_fold(stmt_id, &params_adapter, &mut handler, &mut buffer)
+            .exec(stmt_id, &params_adapter, &mut self.handler)
             .await
             .map_err(|e| {
                 println!("error from zero: {:?}", e);
@@ -160,7 +159,7 @@ impl ZeroMysqlConn {
 
         // Convert raw rows to Python objects with the GIL
         Python::attach(|py| {
-            handler.into_py_rows(py).map_err(|_e| {
+            self.handler.rows_to_python(py).map_err(|_e| {
                 Error::IncorrectApiUsageError("Failed to convert rows to Python objects")
             })
         })

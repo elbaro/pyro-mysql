@@ -379,9 +379,27 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
 
                     rows
                 }
-                MultiAsyncConn::ZeroMysql(_) => {
-                    // zero_mysql only supports binary protocol (exec_fold), not text protocol
-                    todo!("zero_mysql does not support text protocol queries")
+                MultiAsyncConn::ZeroMysql(zero_conn) => {
+                    // zero_mysql uses prepared statements for all queries
+                    let py_tuples = zero_conn.query(query).await?;
+
+                    // Convert to Vec<Row> for consistency with other backends
+                    // For zero_mysql, we work directly with PyTuples
+                    return Python::attach(|py| {
+                        let result: Vec<Py<PyAny>> = if as_dict {
+                            // For as_dict=true, we need to convert tuples to dicts
+                            // However, zero_mysql doesn't provide column names easily
+                            // For now, return tuples (this is a limitation)
+                            py_tuples.iter()
+                                .map(|t| Ok(t.clone_ref(py).into_any()))
+                                .collect::<PyResult<_>>()?
+                        } else {
+                            py_tuples.iter()
+                                .map(|t| Ok(t.clone_ref(py).into_any()))
+                                .collect::<PyResult<_>>()?
+                        };
+                        Ok(result)
+                    });
                 }
             };
 
@@ -426,9 +444,25 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
 
                     Some(row)
                 }
-                MultiAsyncConn::ZeroMysql(_) => {
-                    // zero_mysql only supports binary protocol (exec_fold), not text protocol
-                    todo!("zero_mysql does not support text protocol queries")
+                MultiAsyncConn::ZeroMysql(zero_conn) => {
+                    // zero_mysql uses prepared statements for all queries
+                    let py_tuples = zero_conn.query(query).await?;
+
+                    // Return first tuple if available
+                    return Python::attach(|py| {
+                        if let Some(first) = py_tuples.first() {
+                            let result: Py<PyAny> = if as_dict {
+                                // For as_dict=true, we need column names which zero_mysql doesn't provide easily
+                                // Return tuple for now
+                                first.clone_ref(py).into_any()
+                            } else {
+                                first.clone_ref(py).into_any()
+                            };
+                            Ok(Some(result))
+                        } else {
+                            Ok(None)
+                        }
+                    });
                 }
             };
 
@@ -472,9 +506,10 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
 
                     Ok(())
                 }
-                MultiAsyncConn::ZeroMysql(_) => {
-                    // zero_mysql only supports binary protocol (exec_fold), not text protocol
-                    todo!("zero_mysql does not support text protocol queries")
+                MultiAsyncConn::ZeroMysql(zero_conn) => {
+                    // zero_mysql uses prepared statements for all queries, drop the results
+                    let _ = zero_conn.query(query).await?;
+                    Ok(())
                 }
             }
         })
@@ -537,7 +572,7 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     let tuples = zero_conn.exec(query.to_string(), pyro_params).await.map_err(Error::from)?;
 
                     // Return directly - zero_mysql already returns tuples
-                    return Python::attach(|py| {
+                    return Python::attach(|_py| {
                         let result: Vec<Py<PyAny>> = if as_dict {
                             // TODO: convert tuples to dicts
                             todo!("as_dict not yet supported for zero_mysql")
@@ -605,9 +640,25 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
 
                     Some(row)
                 }
-                MultiAsyncConn::ZeroMysql(_) => {
-                    // zero_mysql only supports binary protocol (exec_fold), not text protocol
-                    todo!("zero_mysql does not support text protocol queries")
+                MultiAsyncConn::ZeroMysql(zero_conn) => {
+                    // zero_mysql returns Vec<Py<PyTuple>> directly
+                    let pyro_params = Python::attach(|py| params.extract::<crate::params::Params>(py))?;
+                    let tuples = zero_conn.exec(query.to_string(), pyro_params).await.map_err(Error::from)?;
+
+                    // Return first tuple if available
+                    return Python::attach(|py| {
+                        if let Some(first) = tuples.first() {
+                            let result: Py<PyAny> = if as_dict {
+                                // TODO: convert tuple to dict (need column names)
+                                first.clone_ref(py).into_any()
+                            } else {
+                                first.clone_ref(py).into_any()
+                            };
+                            Ok(Some(result))
+                        } else {
+                            Ok(None)
+                        }
+                    });
                 }
             };
 

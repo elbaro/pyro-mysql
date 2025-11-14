@@ -4,18 +4,17 @@ import asyncio
 import time
 
 import pytest
-from pyro_mysql import AsyncConn
 
-from .conftest import get_test_db_url
+from .conftest import get_async_conn_with_backend, get_test_db_url
 
 
 @pytest.mark.asyncio
-async def test_concurrent_sleep():
+async def test_concurrent_sleep(async_backend):
     """Test that multiple async connections can run queries concurrently."""
     # Create 3 async connections
-    conn1 = await AsyncConn.new(get_test_db_url())
-    conn2 = await AsyncConn.new(get_test_db_url())
-    conn3 = await AsyncConn.new(get_test_db_url())
+    conn1 = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn2 = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn3 = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     try:
         # Record start time

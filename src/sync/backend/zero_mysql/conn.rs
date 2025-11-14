@@ -100,15 +100,12 @@ impl ZeroMysqlConn {
         // Create handler with Python GIL
         let static_py = unsafe { std::mem::transmute::<Python<'py>, Python<'static>>(py) };
         let mut handler = TupleHandler::new(static_py);
-        let mut buffer = Vec::new();
 
         // Execute with empty params (for text protocol queries)
-        self.inner
-            .exec_fold(stmt_id, &(), &mut handler, &mut buffer)
-            .map_err(|e| {
-                println!("error in query: {:?}", e);
-                Error::IncorrectApiUsageError("Failed to execute query")
-            })?;
+        self.inner.exec(stmt_id, &(), &mut handler).map_err(|e| {
+            println!("error in query: {:?}", e);
+            Error::IncorrectApiUsageError("Failed to execute query")
+        })?;
 
         Ok(handler.into_rows())
     }
@@ -137,12 +134,11 @@ impl ZeroMysqlConn {
         // Create handler with Python GIL
         let static_py = unsafe { std::mem::transmute::<Python<'py>, Python<'static>>(py) };
         let mut handler = TupleHandler::new(static_py);
-        let mut buffer = Vec::new();
 
         // Convert Params to zero-mysql params format
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
-            .exec_fold(stmt_id, &params_adapter, &mut handler, &mut buffer)
+            .exec(stmt_id, &params_adapter, &mut handler)
             .map_err(|e| {
                 println!("error from zero: {:?}", e);
                 Error::IncorrectApiUsageError("Failed to execute query")

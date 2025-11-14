@@ -1,14 +1,12 @@
 import pytest
-from pyro_mysql.async_ import Conn
 
-from .conftest import cleanup_test_table_async, get_async_opts, setup_test_table_async
+from .conftest import cleanup_test_table_async, get_async_conn_with_backend, get_test_db_url, setup_test_table_async
 
 
 @pytest.mark.asyncio
-async def test_basic_query():
+async def test_basic_query(async_backend):
     """Test basic query execution."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     result = await conn.query("SELECT 1 UNION SELECT 2 UNION SELECT 3")
 
@@ -21,10 +19,9 @@ async def test_basic_query():
 
 
 @pytest.mark.asyncio
-async def test_query_with_params():
+async def test_query_with_params(async_backend):
     """Test query execution with parameters."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -47,10 +44,9 @@ async def test_query_with_params():
 
 
 @pytest.mark.asyncio
-async def test_query_first():
+async def test_query_first(async_backend):
     """Test query_first method."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -106,10 +102,9 @@ async def test_query_first():
 
 
 @pytest.mark.asyncio
-async def test_named_params():
+async def test_named_params(async_backend):
     """Test named parameter queries."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -133,10 +128,9 @@ async def test_named_params():
 
 
 @pytest.mark.asyncio
-async def test_batch_exec():
+async def test_batch_exec(async_backend):
     """Test batch execution."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -159,10 +153,9 @@ async def test_batch_exec():
 
 
 @pytest.mark.asyncio
-async def test_query_with_nulls():
+async def test_query_with_nulls(async_backend):
     """Test handling of NULL values in queries."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -182,10 +175,9 @@ async def test_query_with_nulls():
 
 
 @pytest.mark.asyncio
-async def test_multi_statement_query():
+async def test_multi_statement_query(async_backend):
     """Test multi-statement query execution."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -203,10 +195,9 @@ async def test_multi_statement_query():
 
 
 @pytest.mark.asyncio
-async def test_last_insert_id():
+async def test_last_insert_id(async_backend):
     """Test last_insert_id functionality."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -231,10 +222,9 @@ async def test_last_insert_id():
 
 
 @pytest.mark.asyncio
-async def test_affected_rows():
+async def test_affected_rows(async_backend):
     """Test affected_rows functionality."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 

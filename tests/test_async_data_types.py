@@ -2,16 +2,14 @@ from datetime import date, datetime, time
 from decimal import Decimal
 
 import pytest
-from pyro_mysql.async_ import Conn
 
-from tests.conftest import get_async_opts
+from tests.conftest import get_async_conn_with_backend, get_test_db_url
 
 
 @pytest.mark.asyncio
-async def test_integer_types():
+async def test_integer_types(async_backend):
     """Test various integer types."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await conn.query_drop("DROP TABLE IF EXISTS test_int_types")
     await conn.query_drop(
@@ -47,10 +45,9 @@ async def test_integer_types():
 
 
 @pytest.mark.asyncio
-async def test_float_types():
+async def test_float_types(async_backend):
     """Test float and double types."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await conn.query_drop("DROP TABLE IF EXISTS test_float_types")
     await conn.query_drop(
@@ -77,10 +74,9 @@ async def test_float_types():
 
 
 @pytest.mark.asyncio
-async def test_string_types():
+async def test_string_types(async_backend):
     """Test various string types."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await conn.query_drop("DROP TABLE IF EXISTS test_string_types")
     await conn.query_drop(
@@ -118,10 +114,9 @@ async def test_string_types():
 
 
 @pytest.mark.asyncio
-async def test_date_time_types():
+async def test_date_time_types(async_backend):
     """Test date and time types."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await conn.query_drop("DROP TABLE IF EXISTS test_datetime_types")
     await conn.query_drop(
@@ -152,10 +147,9 @@ async def test_date_time_types():
 
 
 @pytest.mark.asyncio
-async def test_decimal_types():
+async def test_decimal_types(async_backend):
     """Test decimal and numeric types."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await conn.query_drop("DROP TABLE IF EXISTS test_decimal_types")
     await conn.query_drop(
@@ -186,10 +180,9 @@ async def test_decimal_types():
 
 
 @pytest.mark.asyncio
-async def test_binary_types():
+async def test_binary_types(async_backend):
     """Test binary data types."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await conn.query_drop("DROP TABLE IF EXISTS test_binary_types")
     await conn.query_drop(
@@ -218,10 +211,9 @@ async def test_binary_types():
 
 
 @pytest.mark.asyncio
-async def test_null_values():
+async def test_null_values(async_backend):
     """Test NULL value handling."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await conn.query_drop("DROP TABLE IF EXISTS test_null_types")
     await conn.query_drop(
@@ -247,10 +239,9 @@ async def test_null_values():
 
 
 @pytest.mark.asyncio
-async def test_boolean_type():
+async def test_boolean_type(async_backend):
     """Test boolean type handling."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await conn.query_drop("DROP TABLE IF EXISTS test_boolean_types")
     await conn.query_drop(

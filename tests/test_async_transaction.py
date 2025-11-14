@@ -2,16 +2,14 @@ import asyncio
 
 import pytest
 from pyro_mysql import IsolationLevel
-from pyro_mysql.async_ import Conn
 
-from .conftest import cleanup_test_table_async, get_async_opts, setup_test_table_async
+from .conftest import cleanup_test_table_async, get_async_conn_with_backend, get_test_db_url, setup_test_table_async
 
 
 @pytest.mark.asyncio
-async def test_basic_transaction():
+async def test_basic_transaction(async_backend):
     """Test basic transaction commit."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -35,10 +33,9 @@ async def test_basic_transaction():
 
 
 @pytest.mark.asyncio
-async def test_transaction_rollback():
+async def test_transaction_rollback(async_backend):
     """Test transaction rollback."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -62,10 +59,9 @@ async def test_transaction_rollback():
 
 
 @pytest.mark.asyncio
-async def test_transaction_isolation_levels():
+async def test_transaction_isolation_levels(async_backend):
     """Test different transaction isolation levels."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -96,10 +92,9 @@ async def test_transaction_isolation_levels():
 # TODO
 # Server error: `ERROR HY000 (1295): This command is not supported in the prepared statement protocol yet
 @pytest.mark.asyncio
-async def test_nested_transactions():
+async def test_nested_transactions(async_backend):
     """Test nested transactions with savepoints."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -135,10 +130,9 @@ async def test_nested_transactions():
 
 
 @pytest.mark.asyncio
-async def test_transaction_with_error():
+async def test_transaction_with_error(async_backend):
     """Test transaction behavior with errors."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -169,11 +163,10 @@ async def test_transaction_with_error():
 
 
 @pytest.mark.asyncio
-async def test_transaction_concurrent_read():
+async def test_transaction_concurrent_read(async_backend):
     """Test concurrent reads with transactions."""
-    opts = get_async_opts()
-    conn1 = await Conn.new(opts)
-    conn2 = await Conn.new(opts)
+    conn1 = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn2 = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn1)
 
@@ -206,10 +199,9 @@ async def test_transaction_concurrent_read():
 
 
 @pytest.mark.asyncio
-async def test_transaction_read_only():
+async def test_transaction_read_only(async_backend):
     """Test read-only transactions."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -234,10 +226,9 @@ async def test_transaction_read_only():
 
 
 @pytest.mark.asyncio
-async def test_transaction_consistent_snapshot():
+async def test_transaction_consistent_snapshot(async_backend):
     """Test consistent snapshot transactions."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 
@@ -259,10 +250,9 @@ async def test_transaction_consistent_snapshot():
 
 
 @pytest.mark.asyncio
-async def test_transaction_auto_rollback_on_drop():
+async def test_transaction_auto_rollback_on_drop(async_backend):
     """Test automatic rollback when transaction is dropped."""
-    opts = get_async_opts()
-    conn = await Conn.new(opts)
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
 
     await setup_test_table_async(conn)
 

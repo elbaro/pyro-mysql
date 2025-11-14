@@ -31,11 +31,17 @@ impl TupleHandler {
         }
     }
 
+    /// Clear the handler state to reuse it for another query
+    pub fn clear(&mut self) {
+        self.cols.clear();
+        self.rows.clear();
+    }
+
     /// Convert collected raw rows to Python tuples
     /// This must be called with the GIL held, after the async operation completes
-    pub fn into_py_rows(self, py: Python) -> PyResult<Vec<Py<PyTuple>>> {
+    pub fn rows_to_python(&mut self, py: Python) -> PyResult<Vec<Py<PyTuple>>> {
         self.rows
-            .into_iter()
+            .iter()
             .map(|raw_row| {
                 let mut values = Vec::with_capacity(self.cols.len());
                 let mut bytes = &raw_row.bytes[..];

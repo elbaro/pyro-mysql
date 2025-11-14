@@ -74,9 +74,7 @@ impl AsyncConn {
                     }
                 };
                 rust_future_into_py(py, async move {
-                    println!("pyro creating MultiAsyncConn::new_zero_mysql");
                     let multi_conn = MultiAsyncConn::new_zero_mysql(&url).await?;
-                    println!("pyro creating MultiAsyncConn::new_zero_mysql - done");
                     Ok(Self {
                         inner: Arc::new(RwLock::new(Some(multi_conn))),
                     })
