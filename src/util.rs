@@ -62,7 +62,7 @@ where
     F: Future + Send + 'static,
     F::Output: Send + 'static,
 {
-    AbortOnDropHandle::new(pyo3_async_runtimes::tokio::get_runtime().spawn(fut))
+    AbortOnDropHandle::new(crate::tokio_thread::get_tokio_thread().spawn(fut))
 }
 
 /// == Coroutine::new(AbortOnDropHandle::new(pyo3_async_runtimes::tokio::get_runtime().spawn(fut)))
@@ -82,7 +82,7 @@ where
     let py_future = create_future.call0(py)?;
     {
         let py_future = py_future.clone_ref(py);
-        pyo3_async_runtimes::tokio::get_runtime().spawn(async move {
+        crate::tokio_thread::get_tokio_thread().spawn(async move {
             let result = fut.await;
 
             // TODO: spawn_blocking or not?

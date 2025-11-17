@@ -190,6 +190,9 @@ pub fn bench(c: &mut Criterion) {
                             let start = std::time::Instant::now();
                             py.eval(c_statement.as_c_str(), None, None).unwrap();
                             sum += start.elapsed();
+
+                            // Check no background tasks remain
+                            py.run(c"assert len(__import__('asyncio').all_tasks(loop)) == 0", None, None).unwrap();
                         }
                         sum
                     });

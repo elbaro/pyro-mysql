@@ -20,7 +20,7 @@ in
 pkgs.mkShell {
   buildInputs = [
     # Python with packages
-    (pkgs.python3.withPackages (
+    (pkgs.python313.withPackages (
       ps: with ps; [
         # Runtime dependencies
         greenlet
@@ -28,16 +28,16 @@ pkgs.mkShell {
         typing-extensions
 
         # Development dependencies
-        pip
+        # pip
         pytest
         pytest-asyncio
-        pytest-benchmark
-        rich
+        pytest-benchmark # broken in 3.14
+        rich # broken in 3.14
 
         # Comparisons
-        asyncmy
-        aiomysql
-        pymysql
+        asyncmy # broken in 3.14
+        aiomysql # broken in 3.14
+        pymysql # broken in 3.14
         mysqlclient
       ]
     ))

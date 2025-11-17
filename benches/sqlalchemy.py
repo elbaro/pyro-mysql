@@ -1,7 +1,5 @@
 import sys
 
-sys.path = [".venv/lib/python3.14/site-packages"] + sys.path
-
 from sqlalchemy import Column, Float, Integer, String, Text, create_engine
 from sqlalchemy.dialects import registry
 from sqlalchemy.ext.declarative import declarative_base

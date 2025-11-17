@@ -1,14 +1,10 @@
-import sys
-
-sys.path = [".venv/lib/python3.14/site-packages"] + sys.path
-
 import asyncio
+import sys
 
 import aiomysql
 import asyncmy
 import MySQLdb
 import pymysql
-
 import pyro_mysql
 
 HOST = "127.0.0.1"
@@ -41,7 +37,9 @@ def connect_pymysql():
 
 
 def connect_pyro_sync():
-    conn = pyro_mysql.SyncConn("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false")
+    conn = pyro_mysql.SyncConn(
+        "mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false"
+    )
     # SyncConn closes automatically when dropped
 
 
@@ -49,7 +47,9 @@ def connect_pyro_sync():
 
 
 async def connect_pyro_async():
-    conn = await pyro_mysql.AsyncConn.new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false")
+    conn = await pyro_mysql.AsyncConn.new(
+        "mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false"
+    )
     # AsyncConn closes automatically when dropped
 
 

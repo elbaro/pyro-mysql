@@ -1,13 +1,10 @@
+import asyncio
 import sys
 
-sys.path = [".venv/lib/python3.14/site-packages"] + sys.path
-
-import asyncio
-
-import aiomysql
-import asyncmy
-import MySQLdb
-import pymysql
+# import aiomysql
+# import asyncmy
+# import MySQLdb
+# import pymysql
 import pyro_mysql
 
 HOST = "127.0.0.1"
@@ -98,14 +95,14 @@ async def insert_pyro_wtx(conn, n):
 
 async def insert_pyro_zero_mysql_async(conn, n):
     for i in range(n):
-        # await conn.exec_drop(
-        #     "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
-        #     DATA[i % 10000],
-        # )
-        await conn.query_drop(
-            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES ('%s', %s, '%s', %s, '%s')"
-            % DATA[i % 10000],
+        await conn.exec_drop(
+            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
+            DATA[i % 10000],
         )
+        # await conn.query_drop(
+        #     "INSERT INTO benchmark_test (name, age, email, score, description) VALUES ('%s', %s, '%s', %s, '%s')"
+        #     % DATA[i % 10000],
+        # )
 
 
 def insert_pyro_sync(conn, n):
@@ -133,14 +130,19 @@ def insert_pyro_zero_mysql(conn, n):
         )
 
 
+import time
+
+
 async def insert_async(conn, n: int):
     async with conn.cursor() as cursor:
         for i in range(n):
+            # t = time.perf_counter_ns()
             await cursor.execute(
                 """INSERT INTO benchmark_test (name, age, email, score, description)
                     VALUES (%s, %s, %s, %s, %s)""",
                 DATA[i % 10000],
             )
+            # print((time.perf_counter_ns() - t) / 1000.0, "us")
         await cursor.close()
 
 

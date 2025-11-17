@@ -14,7 +14,6 @@ pub mod value;
 pub mod zero_mysql_util;
 
 use pyo3::prelude::*;
-use tokio::runtime::Builder;
 
 use crate::r#async::opts::AsyncOpts;
 use crate::r#async::opts::AsyncOptsBuilder;
@@ -31,18 +30,17 @@ use crate::{
 };
 
 #[pyfunction]
-/// This function can be called multiple times until any async operation is called.
-#[pyo3(signature = (worker_threads=Some(1), thread_name=None))]
+/// Initialize the Tokio runtime thread.
+/// This is called automatically when the module is loaded.
+/// Note: worker_threads and thread_name parameters are ignored since we use a single-threaded runtime.
+#[pyo3(signature = (worker_threads=None, thread_name=None))]
 fn init(worker_threads: Option<usize>, thread_name: Option<&str>) {
-    let mut builder = Builder::new_multi_thread();
-    builder.enable_all();
-    if let Some(n) = worker_threads {
-        builder.worker_threads(n);
-    }
-    if let Some(name) = thread_name {
-        builder.thread_name(name);
-    }
-    pyo3_async_runtimes::tokio::init(builder);
+    // Initialize the global TokioThread
+    let _ = tokio_thread::get_tokio_thread();
+
+    // Suppress unused variable warnings
+    let _ = worker_threads;
+    let _ = thread_name;
 }
 
 /// A Python module implemented in Rust.
@@ -368,7 +366,7 @@ mod pyro_mysql {
             log::debug!("Running in Release mode.");
         }
 
-        super::init(Some(1), None);
+        super::init(None, None);
 
         // ─── Alias ───────────────────────────────────────────────────
         Python::attach(|py| {

@@ -54,18 +54,17 @@ impl AsyncCursorImpl {
 impl AsyncCursor {
     #[getter]
     fn arraysize(&self) -> usize {
-        pyo3_async_runtimes::tokio::get_runtime().block_on(async { self.0.read().await.arraysize })
+        futures::executor::block_on(async { self.0.read().await.arraysize })
     }
 
     #[setter]
     fn set_arraysize(&self, value: usize) {
-        pyo3_async_runtimes::tokio::get_runtime()
-            .block_on(async { self.0.write().await.arraysize = value })
+        futures::executor::block_on(async { self.0.write().await.arraysize = value })
     }
 
     #[getter]
     fn description(&self, py: Python) -> Option<Py<PyList>> {
-        pyo3_async_runtimes::tokio::get_runtime().block_on(async {
+        futures::executor::block_on(async {
             self.0
                 .read()
                 .await
@@ -77,12 +76,12 @@ impl AsyncCursor {
 
     #[getter]
     fn rowcount(&self) -> i64 {
-        pyo3_async_runtimes::tokio::get_runtime().block_on(async { self.0.read().await.rowcount })
+        futures::executor::block_on(async { self.0.read().await.rowcount })
     }
 
     #[getter]
     fn lastrowid(&self) -> Option<u64> {
-        pyo3_async_runtimes::tokio::get_runtime().block_on(async { self.0.read().await.lastrowid })
+        futures::executor::block_on(async { self.0.read().await.lastrowid })
     }
 
     /// Closes the cursor. The connection is still alive

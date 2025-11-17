@@ -1,9 +1,17 @@
 use std::future::Future;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::thread::{self, JoinHandle};
 use tokio::runtime::Handle;
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle as TokioJoinHandle;
+
+/// Global TokioThread instance
+static GLOBAL_TOKIO_THREAD: OnceLock<TokioThread> = OnceLock::new();
+
+/// Get or initialize the global TokioThread instance
+pub fn get_tokio_thread() -> &'static TokioThread {
+    GLOBAL_TOKIO_THREAD.get_or_init(|| TokioThread::new())
+}
 
 /// A dedicated OS thread running a Tokio runtime with 'current_thread' flavor.
 ///
