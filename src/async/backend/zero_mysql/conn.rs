@@ -113,7 +113,7 @@ impl ZeroMysqlConn {
 
         // Execute with empty params (for text protocol queries)
         self.inner
-            .exec(stmt_id, &(), &mut self.handler)
+            .exec(stmt_id, (), &mut self.handler)
             .await
             .map_err(|e| {
                 println!("error in query: {:?}", e);
@@ -126,6 +126,19 @@ impl ZeroMysqlConn {
                 Error::IncorrectApiUsageError("Failed to convert rows to Python objects")
             })
         })
+    }
+
+    /// Execute a query and discard results using the text protocol
+    pub async fn query_drop(&mut self, query: String) -> PyroResult<()> {
+        self.inner
+            .query_drop(&query)
+            .await
+            .map_err(|_e| {
+                // TODO: Propagate the error details
+                Error::IncorrectApiUsageError("Failed to execute query")
+            })?;
+
+        Ok(())
     }
 
     /// Execute a prepared statement with parameters
@@ -150,7 +163,7 @@ impl ZeroMysqlConn {
         // Convert Params to zero-mysql params format
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
-            .exec(stmt_id, &params_adapter, &mut self.handler)
+            .exec(stmt_id, params_adapter, &mut self.handler)
             .await
             .map_err(|e| {
                 println!("error from zero: {:?}", e);
@@ -163,5 +176,76 @@ impl ZeroMysqlConn {
                 Error::IncorrectApiUsageError("Failed to convert rows to Python objects")
             })
         })
+    }
+
+    /// Execute a prepared statement and return only the first row
+    pub async fn exec_first(
+        &mut self,
+        query: String,
+        params: Params,
+    ) -> PyroResult<Option<Py<PyTuple>>> {
+        use super::params_adapter::ParamsAdapter;
+        // Check if we have a cached statement
+        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
+            cached_id
+        } else {
+            let stmt_id = self
+                .inner
+                .prepare(&query)
+                .await
+                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
+            self.stmt_cache.insert(query.clone(), stmt_id);
+            stmt_id
+        };
+
+        // Clear handler state for reuse
+        self.handler.clear();
+
+        // Convert Params to zero-mysql params format
+        let params_adapter = ParamsAdapter::new(&params);
+        self.inner
+            .exec_first(stmt_id, params_adapter, &mut self.handler)
+            .await
+            .map_err(|e| {
+                println!("error from zero: {:?}", e);
+                Error::IncorrectApiUsageError("Failed to execute query")
+            })?;
+
+        // Convert raw rows to Python objects with the GIL
+        Python::attach(|py| {
+            let rows = self.handler.rows_to_python(py).map_err(|_e| {
+                Error::IncorrectApiUsageError("Failed to convert rows to Python objects")
+            })?;
+            Ok(rows.into_iter().next())
+        })
+    }
+
+    /// Execute a prepared statement and discard results (for INSERT, UPDATE, DELETE)
+    pub async fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
+        use super::params_adapter::ParamsAdapter;
+        // Check if we have a cached statement
+        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
+            cached_id
+        } else {
+            let stmt_id = self
+                .inner
+                .prepare(&query)
+                .await
+                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
+            self.stmt_cache.insert(query.clone(), stmt_id);
+            stmt_id
+        };
+
+        // Convert Params to zero-mysql params format
+        let params_adapter = ParamsAdapter::new(&params);
+        self.inner
+            .exec_drop(stmt_id, params_adapter)
+            .await
+            .map_err(|e| {
+                println!("error from zero: {:?}", e);
+                Error::IncorrectApiUsageError("Failed to execute query")
+            })?;
+
+        Ok(())
     }
 }

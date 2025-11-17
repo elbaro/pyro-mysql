@@ -102,12 +102,24 @@ impl ZeroMysqlConn {
         let mut handler = TupleHandler::new(static_py);
 
         // Execute with empty params (for text protocol queries)
-        self.inner.exec(stmt_id, &(), &mut handler).map_err(|e| {
+        self.inner.exec(stmt_id, (), &mut handler).map_err(|e| {
             println!("error in query: {:?}", e);
             Error::IncorrectApiUsageError("Failed to execute query")
         })?;
 
         Ok(handler.into_rows())
+    }
+
+    /// Execute a query and discard results using the text protocol
+    pub fn query_drop(&mut self, query: String) -> PyroResult<()> {
+        self.inner
+            .query_drop(&query)
+            .map_err(|_e| {
+                // TODO: Propagate the error details
+                Error::IncorrectApiUsageError("Failed to execute query")
+            })?;
+
+        Ok(())
     }
 
     /// Execute a prepared statement with parameters
@@ -138,12 +150,81 @@ impl ZeroMysqlConn {
         // Convert Params to zero-mysql params format
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
-            .exec(stmt_id, &params_adapter, &mut handler)
+            .exec(stmt_id, params_adapter, &mut handler)
             .map_err(|e| {
                 println!("error from zero: {:?}", e);
                 Error::IncorrectApiUsageError("Failed to execute query")
             })?;
 
         Ok(handler.into_rows())
+    }
+
+    /// Execute a prepared statement and return only the first row
+    pub fn exec_first<'py>(
+        &mut self,
+        py: Python<'py>,
+        query: String,
+        params: Params,
+    ) -> PyroResult<Option<Py<PyAny>>> {
+        use super::params_adapter::ParamsAdapter;
+
+        // Check if we have a cached statement
+        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
+            cached_id
+        } else {
+            let stmt_id = self.inner.prepare(&query).map_err(|e| {
+                println!("--- error from zero: {:?}", e);
+                Error::IncorrectApiUsageError("Failed to prepare query")
+            })?;
+            self.stmt_cache.insert(query.clone(), stmt_id);
+            stmt_id
+        };
+
+        // Create handler with Python GIL
+        let static_py = unsafe { std::mem::transmute::<Python<'py>, Python<'static>>(py) };
+        let mut handler = TupleHandler::new(static_py);
+
+        // Convert Params to zero-mysql params format
+        let params_adapter = ParamsAdapter::new(&params);
+        self.inner
+            .exec_first(stmt_id, params_adapter, &mut handler)
+            .map_err(|e| {
+                println!("error from zero: {:?}", e);
+                Error::IncorrectApiUsageError("Failed to execute query")
+            })?;
+
+        // Get the first row if any
+        let rows = handler.into_rows();
+        Ok(if rows.bind(py).len() > 0 {
+            Some(rows.bind(py).get_item(0)?.unbind())
+        } else {
+            None
+        })
+    }
+
+    /// Execute a prepared statement and discard results (for INSERT, UPDATE, DELETE)
+    pub fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
+        use super::params_adapter::ParamsAdapter;
+
+        // Check if we have a cached statement
+        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
+            cached_id
+        } else {
+            let stmt_id = self.inner.prepare(&query).map_err(|e| {
+                println!("--- error from zero: {:?}", e);
+                Error::IncorrectApiUsageError("Failed to prepare query")
+            })?;
+            self.stmt_cache.insert(query.clone(), stmt_id);
+            stmt_id
+        };
+
+        // Convert Params to zero-mysql params format
+        let params_adapter = ParamsAdapter::new(&params);
+        self.inner.exec_drop(stmt_id, params_adapter).map_err(|e| {
+            println!("error from zero: {:?}", e);
+            Error::IncorrectApiUsageError("Failed to execute query")
+        })?;
+
+        Ok(())
     }
 }

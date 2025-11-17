@@ -3,7 +3,7 @@ use mysql::{TxOpts, prelude::Queryable};
 use pyo3::{ffi::c_str, prelude::*};
 
 fn setup_db() {
-    let mut conn = mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test").unwrap();
+    let mut conn = mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false").unwrap();
     conn.exec_drop("DROP TABLE IF EXISTS benchmark_test", ())
         .unwrap();
     conn.exec_drop(
@@ -21,12 +21,12 @@ fn setup_db() {
 }
 
 fn clear_table() {
-    let mut conn = mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test").unwrap();
+    let mut conn = mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false").unwrap();
     conn.exec_drop("TRUNCATE TABLE benchmark_test", ()).unwrap();
 }
 
 fn populate_table(n: usize) {
-    let mut conn = mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test").unwrap();
+    let mut conn = mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false").unwrap();
     conn.exec_drop("TRUNCATE TABLE benchmark_test", ()).unwrap();
     {
         let mut tx = conn.start_transaction(TxOpts::default()).unwrap();
@@ -72,7 +72,7 @@ pub fn bench(c: &mut Criterion) {
             ),
             (
                 "pyro-sync",
-                cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test')",
+                cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false')",
                 c"select_pyro_sync(pyro_sync_conn)",
             ),
             (
@@ -135,7 +135,7 @@ pub fn bench(c: &mut Criterion) {
             ),
             (
                 "pyro-sync",
-                cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test')",
+                cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false')",
                 "insert_pyro_sync(pyro_sync_conn, {})",
             ),
             (

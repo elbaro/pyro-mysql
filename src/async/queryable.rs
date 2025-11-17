@@ -508,7 +508,7 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                 }
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
                     // zero_mysql uses prepared statements for all queries, drop the results
-                    let _ = zero_conn.query(query).await?;
+                    let _ = zero_conn.query_drop(query).await?;
                     Ok(())
                 }
             }
@@ -641,18 +641,18 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     Some(row)
                 }
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
-                    // zero_mysql returns Vec<Py<PyTuple>> directly
+                    // zero_mysql has a dedicated exec_first method
                     let pyro_params = Python::attach(|py| params.extract::<crate::params::Params>(py))?;
-                    let tuples = zero_conn.exec(query.to_string(), pyro_params).await.map_err(Error::from)?;
+                    let first_tuple = zero_conn.exec_first(query.to_string(), pyro_params).await.map_err(Error::from)?;
 
                     // Return first tuple if available
-                    return Python::attach(|py| {
-                        if let Some(first) = tuples.first() {
+                    return Python::attach(|_py| {
+                        if let Some(first) = first_tuple {
                             let result: Py<PyAny> = if as_dict {
                                 // TODO: convert tuple to dict (need column names)
-                                first.clone_ref(py).into_any()
+                                first.into_any()
                             } else {
-                                first.clone_ref(py).into_any()
+                                first.into_any()
                             };
                             Ok(Some(result))
                         } else {
@@ -714,9 +714,9 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     Ok(())
                 }
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
-                    // Execute and drop results
+                    // Use dedicated exec_drop method
                     let pyro_params = Python::attach(|py| params.extract::<crate::params::Params>(py))?;
-                    zero_conn.exec(query.to_string(), pyro_params).await.map_err(Error::from)?;
+                    zero_conn.exec_drop(query.to_string(), pyro_params).await.map_err(Error::from)?;
                     Ok(())
                 }
             }
@@ -775,10 +775,10 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     Ok(())
                 }
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
-                    // Execute batch with zero_mysql
+                    // Execute batch with zero_mysql using exec_drop
                     for params_item in params {
                         let pyro_params = Python::attach(|py| params_item.extract::<crate::params::Params>(py))?;
-                        zero_conn.exec(query.to_string(), pyro_params).await.map_err(Error::from)?;
+                        zero_conn.exec_drop(query.to_string(), pyro_params).await.map_err(Error::from)?;
                     }
                     Ok(())
                 }

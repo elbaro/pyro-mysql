@@ -8,6 +8,7 @@ pub mod isolation_level;
 pub mod params;
 pub mod row;
 pub mod sync;
+pub mod tokio_thread;
 pub mod util;
 pub mod value;
 pub mod zero_mysql_util;

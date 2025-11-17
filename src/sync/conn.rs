@@ -156,8 +156,9 @@ impl SyncConn {
             }
             MultiSyncConn::ZeroMysql(conn) => {
                 let tuples = conn.query(py, query)?;
-                // ZeroMysql always returns tuples, convert to dict if needed
-                todo!()
+                // ZeroMysql returns PyList, convert to Vec<Py<PyAny>>
+                let result: Vec<Py<PyAny>> = tuples.bind(py).iter().map(|item| item.unbind()).collect();
+                Ok(result)
             }
         }
     }
@@ -194,7 +195,12 @@ impl SyncConn {
             }
             MultiSyncConn::ZeroMysql(conn) => {
                 let tuples = conn.query(py, query)?;
-                todo!()
+                // Get first tuple if any
+                Ok(if tuples.bind(py).len() > 0 {
+                    Some(tuples.bind(py).get_item(0)?.unbind())
+                } else {
+                    None
+                })
             }
         }
     }
@@ -325,8 +331,7 @@ impl SyncConn {
                 conn.exec_first(query, params, as_dict)
             }
             MultiSyncConn::ZeroMysql(conn) => {
-                let tuples = conn.exec(py, query, params)?;
-                todo!()
+                conn.exec_first(py, query, params)
             }
         }
     }
@@ -342,11 +347,7 @@ impl SyncConn {
             }
             MultiSyncConn::Diesel(conn) => conn.exec_drop(query, params),
             MultiSyncConn::ZeroMysql(conn) => {
-                // Execute and discard results
-                Python::attach(|py| {
-                    conn.exec(py, query, params)?;
-                    Ok(())
-                })
+                conn.exec_drop(query, params)
             }
         }
     }
@@ -363,12 +364,10 @@ impl SyncConn {
             MultiSyncConn::Diesel(conn) => conn.exec_batch(query, params_list),
             MultiSyncConn::ZeroMysql(conn) => {
                 // Execute each params set
-                Python::attach(|py| {
-                    for params in params_list {
-                        conn.exec(py, query.clone(), params)?;
-                    }
-                    Ok(())
-                })
+                for params in params_list {
+                    conn.exec_drop(query.clone(), params)?;
+                }
+                Ok(())
             }
         }
     }

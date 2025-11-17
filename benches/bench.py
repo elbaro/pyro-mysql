@@ -8,7 +8,6 @@ import aiomysql
 import asyncmy
 import MySQLdb
 import pymysql
-
 import pyro_mysql
 
 HOST = "127.0.0.1"
@@ -39,7 +38,9 @@ pyro_mysql.init(worker_threads=1)
 
 
 async def create_pyro_async_conn():
-    return await pyro_mysql.AsyncConn.new("mysql://test:1234@127.0.0.1:3306/test")
+    return await pyro_mysql.AsyncConn.new(
+        "mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false"
+    )
 
 
 async def create_pyro_wtx_conn():
@@ -97,13 +98,18 @@ async def insert_pyro_wtx(conn, n):
 
 async def insert_pyro_zero_mysql_async(conn, n):
     for i in range(n):
-        await conn.exec_drop(
-            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
-            DATA[i % 10000],
+        # await conn.exec_drop(
+        #     "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
+        #     DATA[i % 10000],
+        # )
+        await conn.query_drop(
+            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES ('%s', %s, '%s', %s, '%s')"
+            % DATA[i % 10000],
         )
 
 
 def insert_pyro_sync(conn, n):
+    print("n=", n)
     for i in range(n):
         conn.exec_drop(
             "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
