@@ -3,10 +3,9 @@ use zero_mysql::col::{ColumnDefinitionBytes, ColumnTypeAndFlags};
 use zero_mysql::error::Result;
 use zero_mysql::protocol::packet::OkPayloadBytes;
 use zero_mysql::protocol::r#trait::ResultSetHandler;
-use zero_mysql::protocol::value::Value;
 use zero_mysql::row::RowPayload;
 
-use crate::zero_mysql_util::zero_mysql_value_to_python;
+use crate::zero_mysql_util::decode_bytes_to_python;
 
 /// Raw row data collected during async operation
 /// Stores the entire row bytes with null information to be parsed later with GIL
@@ -46,20 +45,13 @@ impl TupleHandler {
                 let mut values = Vec::with_capacity(self.cols.len());
                 let mut bytes = &raw_row.bytes[..];
 
-                // Parse each column from the raw bytes
+                // Parse each column from the raw bytes directly to Python objects
                 for i in 0..self.cols.len() {
                     if raw_row.is_null[i] {
                         values.push(py.None().into_bound(py));
                     } else {
-                        let value;
-                        (value, bytes) = Value::parse(&self.cols[i], bytes).map_err(|e| {
-                            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                                "Failed to parse value: {}",
-                                e
-                            ))
-                        })?;
-
-                        let py_value = zero_mysql_value_to_python(py, value)?;
+                        let py_value;
+                        (py_value, bytes) = decode_bytes_to_python(py, &self.cols[i], bytes)?;
                         values.push(py_value);
                     }
                 }

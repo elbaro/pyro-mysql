@@ -41,7 +41,8 @@ wtx = { version = "0.38", features = [
   "getrandom",
   "tokio",
 ] }
-zero-mysql = { path = "../zero-mysql", features = ["async"] }
+zerocopy = { version = "0.8", features = ["derive"] }
+zero-mysql = { path = "../zero-mysql", features = ["tokio"] }
 
 
 [patch.crates-io]

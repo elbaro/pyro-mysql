@@ -3,7 +3,7 @@ use crate::error::{Error, PyroResult};
 use crate::params::Params;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
-use zero_mysql::r#async::Conn;
+use zero_mysql::tokio::Conn;
 
 /// Zero-MySQL asynchronous connection wrapper
 pub struct ZeroMysqlConn {

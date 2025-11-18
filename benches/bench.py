@@ -1,10 +1,10 @@
 import asyncio
 import sys
 
-# import aiomysql
-# import asyncmy
-# import MySQLdb
-# import pymysql
+import aiomysql
+import asyncmy
+import MySQLdb
+import pymysql
 import pyro_mysql
 
 HOST = "127.0.0.1"
@@ -106,7 +106,6 @@ async def insert_pyro_zero_mysql_async(conn, n):
 
 
 def insert_pyro_sync(conn, n):
-    print("n=", n)
     for i in range(n):
         conn.exec_drop(
             "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
@@ -136,13 +135,11 @@ import time
 async def insert_async(conn, n: int):
     async with conn.cursor() as cursor:
         for i in range(n):
-            # t = time.perf_counter_ns()
             await cursor.execute(
                 """INSERT INTO benchmark_test (name, age, email, score, description)
                     VALUES (%s, %s, %s, %s, %s)""",
                 DATA[i % 10000],
             )
-            # print((time.perf_counter_ns() - t) / 1000.0, "us")
         await cursor.close()
 
 
@@ -162,38 +159,26 @@ def insert_sync(conn, n: int):
 
 async def select_pyro_async(conn):
     rows = await conn.exec("SELECT * FROM benchmark_test")
-    for row in rows:
-        tuple(row[i] for i in range(len(row)))
 
 
 async def select_pyro_wtx(conn):
     rows = await conn.exec("SELECT * FROM benchmark_test")
-    for row in rows:
-        tuple(row[i] for i in range(len(row)))
 
 
 async def select_pyro_zero_mysql_async(conn):
     rows = await conn.exec("SELECT * FROM benchmark_test")
-    for row in rows:
-        tuple(row[i] for i in range(len(row)))
 
 
 def select_pyro_sync(conn):
     rows = conn.exec("SELECT * FROM benchmark_test")
-    for row in rows:
-        tuple(row[i] for i in range(len(row)))
 
 
 def select_pyro_diesel(conn):
     rows = conn.exec("SELECT * FROM benchmark_test")
-    for row in rows:
-        tuple(row[i] for i in range(len(row)))
 
 
 def select_pyro_zero_mysql(conn):
     rows = conn.exec("SELECT * FROM benchmark_test")
-    for row in rows:
-        tuple(row[i] for i in range(len(row)))
 
 
 async def select_async(conn):

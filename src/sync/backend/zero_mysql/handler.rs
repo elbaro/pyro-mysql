@@ -4,11 +4,10 @@ use zero_mysql::col::{ColumnDefinitionBytes, ColumnTypeAndFlags};
 use zero_mysql::error::Result;
 use zero_mysql::protocol::packet::OkPayloadBytes;
 use zero_mysql::protocol::r#trait::ResultSetHandler;
-use zero_mysql::protocol::value::Value;
 use zero_mysql::row::RowPayload;
 
 use crate::util::PyTupleBuilder;
-use crate::zero_mysql_util::zero_mysql_value_to_python;
+use crate::zero_mysql_util::decode_bytes_to_python;
 
 /// Handler that collects rows as PyTuples
 pub struct TupleHandler {
@@ -55,18 +54,14 @@ impl<'a> ResultSetHandler<'a> for TupleHandler {
             if row.null_bitmap().is_null(i) {
                 tuple.set(i, self.py.None().into_bound(self.py));
             } else {
-                let value;
-                (value, bytes) = Value::parse(&self.cols[i], bytes)?;
-
-                tuple.set(
-                    i,
-                    zero_mysql_value_to_python(self.py, value).map_err(|e| {
-                        zero_mysql::error::Error::LibraryBug(format!(
-                            "Python conversion error: {}",
-                            e
-                        ))
-                    })?,
-                );
+                let py_value;
+                (py_value, bytes) = decode_bytes_to_python(self.py, &self.cols[i], bytes).map_err(|e| {
+                    zero_mysql::error::Error::LibraryBug(format!(
+                        "Python conversion error: {}",
+                        e
+                    ))
+                })?;
+                tuple.set(i, py_value);
             }
         }
 

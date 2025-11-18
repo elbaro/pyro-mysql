@@ -5,11 +5,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyList;
 use zero_mysql::sync::Conn;
 
-/// Zero-MySQL synchronous connection wrapper
 pub struct ZeroMysqlConn {
     pub inner: Conn,
-    /// Cache to store statement IDs for prepared statements
-    /// In production, this should use LRU cache or similar
     stmt_cache: std::collections::HashMap<String, u32>,
 }
 
@@ -112,12 +109,10 @@ impl ZeroMysqlConn {
 
     /// Execute a query and discard results using the text protocol
     pub fn query_drop(&mut self, query: String) -> PyroResult<()> {
-        self.inner
-            .query_drop(&query)
-            .map_err(|_e| {
-                // TODO: Propagate the error details
-                Error::IncorrectApiUsageError("Failed to execute query")
-            })?;
+        self.inner.query_drop(&query).map_err(|_e| {
+            // TODO: Propagate the error details
+            Error::IncorrectApiUsageError("Failed to execute query")
+        })?;
 
         Ok(())
     }
@@ -135,10 +130,10 @@ impl ZeroMysqlConn {
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
-            let stmt_id = self.inner.prepare(&query).map_err(|e| {
-                println!("--- error from zero: {:?}", e);
-                Error::IncorrectApiUsageError("Failed to prepare query")
-            })?;
+            let stmt_id = self
+                .inner
+                .prepare(&query)
+                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
             self.stmt_cache.insert(query.clone(), stmt_id);
             stmt_id
         };
@@ -151,10 +146,7 @@ impl ZeroMysqlConn {
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
             .exec(stmt_id, params_adapter, &mut handler)
-            .map_err(|e| {
-                println!("error from zero: {:?}", e);
-                Error::IncorrectApiUsageError("Failed to execute query")
-            })?;
+            .map_err(|_e| Error::IncorrectApiUsageError("Failed to execute query"))?;
 
         Ok(handler.into_rows())
     }
@@ -210,20 +202,19 @@ impl ZeroMysqlConn {
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
-            let stmt_id = self.inner.prepare(&query).map_err(|e| {
-                println!("--- error from zero: {:?}", e);
-                Error::IncorrectApiUsageError("Failed to prepare query")
-            })?;
+            let stmt_id = self
+                .inner
+                .prepare(&query)
+                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
             self.stmt_cache.insert(query.clone(), stmt_id);
             stmt_id
         };
 
         // Convert Params to zero-mysql params format
         let params_adapter = ParamsAdapter::new(&params);
-        self.inner.exec_drop(stmt_id, params_adapter).map_err(|e| {
-            println!("error from zero: {:?}", e);
-            Error::IncorrectApiUsageError("Failed to execute query")
-        })?;
+        self.inner
+            .exec_drop(stmt_id, params_adapter)
+            .map_err(|_e| Error::IncorrectApiUsageError("Failed to execute query"))?;
 
         Ok(())
     }
