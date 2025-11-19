@@ -5,12 +5,7 @@ import threading
 import time
 
 import pytest
-from pyro_mysql import (
-    SyncConn,
-    SyncOptsBuilder,
-    SyncPool,
-    SyncPoolOpts,
-)
+from pyro_mysql import SyncConn
 
 from .conftest import get_test_db_url
 
@@ -35,44 +30,6 @@ def sync_conn():
     # Cleanup
     conn.exec_drop("DROP TABLE IF EXISTS test_threads")
     conn.close()
-
-
-@pytest.fixture
-def sync_pool():
-    """Create a sync connection pool for testing."""
-    # Create pool opts with constraints
-    pool_opts = SyncPoolOpts().with_constraints((2, 10))  # (min, max)
-
-    # Create connection opts with pool options
-    opts = SyncOptsBuilder.from_url(get_test_db_url()).pool_opts(pool_opts).build()
-
-    pool = SyncPool(opts)
-    # Create test table using a connection from pool
-    conn = pool.get()
-    try:
-        conn.exec_drop(
-            """
-            CREATE TABLE IF NOT EXISTS test_threads (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                thread_id VARCHAR(50),
-                value INT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """
-        )
-        conn.exec_drop("TRUNCATE TABLE test_threads")
-    finally:
-        conn.close()
-
-    yield pool
-
-    # Cleanup
-    conn = pool.get()
-    try:
-        conn.exec_drop("DROP TABLE IF EXISTS test_threads")
-    finally:
-        conn.close()
-    # pool.close()  # Pool doesn't have close method, connections cleaned up when pool drops
 
 
 class TestSyncConnThreadSafety:

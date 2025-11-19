@@ -56,6 +56,9 @@ pub enum Error {
 
     #[error("Wtx Error: {0}")]
     WtxError(String),
+
+    #[error("{0}")]
+    ZeroMysqlError(#[from] zero_mysql::error::Error),
     // #[error("")]
     // NetworkTimeoutError(String),
     // #[error("invalid header (expected {expected:?}, found {found:?})")]
@@ -97,6 +100,7 @@ impl From<Error> for pyo3::PyErr {
             }
             Error::IoError(s) => MysqlError::new_err(format!("IO Error: {}", s)),
             Error::WtxError(s) => MysqlError::new_err(format!("Wtx Error: {}", s)),
+            Error::ZeroMysqlError(e) => MysqlError::new_err(e.to_string()),
         }
     }
 }

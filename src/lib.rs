@@ -5,6 +5,7 @@ pub mod capability_flags;
 pub mod dbapi;
 pub mod error;
 pub mod isolation_level;
+pub mod opts;
 pub mod params;
 pub mod row;
 pub mod sync;
@@ -15,17 +16,12 @@ pub mod zero_mysql_util;
 
 use pyo3::prelude::*;
 
-use crate::r#async::opts::AsyncOpts;
-use crate::r#async::opts::AsyncOptsBuilder;
-use crate::r#async::pool_opts::AsyncPoolOpts;
 use crate::{
-    r#async::{conn::AsyncConn, pool::AsyncPool, transaction::AsyncTransaction},
+    opts::Opts,
+    r#async::{conn::AsyncConn, transaction::AsyncTransaction},
     capability_flags::CapabilityFlags,
     isolation_level::IsolationLevel,
-    sync::{
-        conn::SyncConn,
-        opts::{SyncOpts, SyncOptsBuilder},
-    },
+    sync::conn::SyncConn,
     util::PyroFuture,
 };
 
@@ -46,9 +42,6 @@ fn init(worker_threads: Option<usize>, thread_name: Option<&str>) {
 /// A Python module implemented in Rust.
 #[pymodule(gil_used = false)]
 mod pyro_mysql {
-    use crate::sync::pool::SyncPool;
-    use crate::sync::pool_opts::SyncPoolOpts;
-    use crate::sync::pooled_conn::SyncPooledConn;
     use crate::sync::transaction::SyncTransaction;
 
     use super::*;
@@ -61,6 +54,9 @@ mod pyro_mysql {
 
     #[pymodule_export]
     use super::CapabilityFlags;
+
+    #[pymodule_export]
+    use super::Opts;
 
     #[pymodule_export]
     use super::PyroFuture;
@@ -100,22 +96,10 @@ mod pyro_mysql {
     #[pymodule]
     mod async_ {
         #[pymodule_export]
-        use crate::r#async::pool::AsyncPool;
-
-        #[pymodule_export]
         use crate::r#async::conn::AsyncConn;
 
         #[pymodule_export]
         use crate::r#async::transaction::AsyncTransaction;
-
-        #[pymodule_export]
-        use crate::r#async::opts::AsyncOpts;
-
-        #[pymodule_export]
-        use crate::r#async::opts::AsyncOptsBuilder;
-
-        #[pymodule_export]
-        use crate::r#async::pool_opts::AsyncPoolOpts;
     }
 
     #[pymodule]
@@ -124,22 +108,7 @@ mod pyro_mysql {
         use crate::sync::conn::SyncConn;
 
         #[pymodule_export]
-        use crate::sync::pool::SyncPool;
-
-        #[pymodule_export]
-        use crate::sync::pooled_conn::SyncPooledConn;
-
-        #[pymodule_export]
         use crate::sync::transaction::SyncTransaction;
-
-        #[pymodule_export]
-        use crate::sync::opts::SyncOpts;
-
-        #[pymodule_export]
-        use crate::sync::opts::SyncOptsBuilder;
-
-        #[pymodule_export]
-        use crate::sync::pool_opts::SyncPoolOpts;
 
         #[pymodule_export]
         use crate::sync::iterator::ResultSetIterator;
@@ -370,18 +339,10 @@ mod pyro_mysql {
 
         // ─── Alias ───────────────────────────────────────────────────
         Python::attach(|py| {
-            m.add("AsyncPool", py.get_type::<AsyncPool>())?;
+            m.add("Opts", py.get_type::<Opts>())?;
             m.add("AsyncConn", py.get_type::<AsyncConn>())?;
-            m.add("AsyncOpts", py.get_type::<AsyncOpts>())?;
-            m.add("AsyncOptsBuilder", py.get_type::<AsyncOptsBuilder>())?;
-            m.add("AsyncPoolOpts", py.get_type::<AsyncPoolOpts>())?;
             m.add("AsyncTransaction", py.get_type::<AsyncTransaction>())?;
             m.add("SyncConn", py.get_type::<SyncConn>())?;
-            m.add("SyncOpts", py.get_type::<SyncOpts>())?;
-            m.add("SyncOptsBuilder", py.get_type::<SyncOptsBuilder>())?;
-            m.add("SyncPool", py.get_type::<SyncPool>())?;
-            m.add("SyncPoolOpts", py.get_type::<SyncPoolOpts>())?;
-            m.add("SyncPooledConn", py.get_type::<SyncPooledConn>())?;
             m.add("SyncTransaction", py.get_type::<SyncTransaction>())?;
             PyResult::Ok(())
         })?;

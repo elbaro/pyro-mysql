@@ -1,5 +1,5 @@
 import pytest
-from pyro_mysql import AsyncOptsBuilder
+from pyro_mysql import Opts
 from pyro_mysql.async_ import Conn
 
 from .conftest import (
@@ -28,7 +28,7 @@ async def test_connection_with_database(async_backend):
     url = get_test_db_url()
 
     if async_backend == "mysql_async":
-        opts = AsyncOptsBuilder.from_url(url).db_name("test").build()
+        opts = Opts(url).db("test")
         conn = await Conn.new(opts, backend=async_backend)
     else:
         # wtx and zero backends use URL strings
@@ -46,12 +46,8 @@ async def test_connection_timeout(async_backend):
     url = get_test_db_url()
 
     try:
-        if async_backend == "mysql_async":
-            opts = AsyncOptsBuilder.from_url(url).wait_timeout(0).build()
-            conn = await Conn.new(opts, backend=async_backend)
-        else:
-            # wtx and zero don't support timeout configuration
-            conn = await get_async_conn_with_backend(url, async_backend)
+        # Note: wait_timeout is backend-specific and not in unified Opts
+        conn = await get_async_conn_with_backend(url, async_backend)
         await conn.close()
     except Exception:
         # Connection timeout is expected to potentially fail
@@ -108,7 +104,7 @@ async def test_connection_charset(async_backend):
     url = get_test_db_url()
 
     if async_backend == "mysql_async":
-        opts = AsyncOptsBuilder.from_url(url).build()
+        opts = Opts(url)
         conn = await Conn.new(opts, backend=async_backend)
     else:
         conn = await get_async_conn_with_backend(url, async_backend)
@@ -160,11 +156,8 @@ async def test_connection_ssl(async_backend):
     url = get_test_db_url()
 
     try:
-        if async_backend == "mysql_async":
-            opts = AsyncOptsBuilder.from_url(url).prefer_socket(False).build()
-            conn = await Conn.new(opts, backend=async_backend)
-        else:
-            conn = await get_async_conn_with_backend(url, async_backend)
+        # Note: prefer_socket is backend-specific, just use URL
+        conn = await get_async_conn_with_backend(url, async_backend)
 
         try:
             _ssl_result = await conn.query_first("SHOW STATUS LIKE 'Ssl_cipher'")
@@ -183,17 +176,16 @@ async def test_connection_init_command(async_backend):
     """Test connection initialization commands."""
     url = get_test_db_url()
 
-    if async_backend == "mysql_async":
-        opts = AsyncOptsBuilder.from_url(url).init(["SET @init_test = 123"]).build()
-        conn = await Conn.new(opts, backend=async_backend)
+    # Note: init commands are backend-specific and not in unified Opts
+    # Test manually setting variable after connection
+    conn = await get_async_conn_with_backend(url, async_backend)
 
-        result = await conn.query_first("SELECT @init_test")
-        assert result and result[0] == 123
+    await conn.query_drop("SET @init_test = 123")
 
-        await conn.close()
-    else:
-        # wtx and zero backends don't support init commands
-        pytest.skip(f"Backend {async_backend} doesn't support init commands")
+    result = await conn.query_first("SELECT @init_test")
+    assert result and result[0] == 123
+
+    await conn.close()
 
 
 # TODO: needs a separate table dedicated for this test
@@ -201,7 +193,7 @@ async def test_connection_init_command(async_backend):
 # async def test_large_data_transfer():
 #     """Test handling of large data transfers."""
 #     opts = (
-#         AsyncOptsBuilder().from_url(get_test_db_url()).max_allowed_packet(200).build()
+#         OptsBuilder().from_url(get_test_db_url()).max_allowed_packet(200).build()
 #     )
 #     conn = await Conn.new(opts)
 
@@ -223,11 +215,10 @@ async def test_connection_with_wrong_credentials(async_backend):
     """Test connection failure with wrong credentials."""
     if async_backend == "mysql_async":
         opts = (
-            AsyncOptsBuilder()
-            .ip_or_hostname("127.0.0.1")
+            Opts()
+            .host("127.0.0.1")
             .user("nonexistent_user")
             .password("wrong_password")
-            .build()
         )
 
         with pytest.raises(Exception):
@@ -246,10 +237,9 @@ async def test_connection_to_invalid_host(async_backend):
     """Test connection failure to invalid host."""
     if async_backend == "mysql_async":
         opts = (
-            AsyncOptsBuilder()
-            .ip_or_hostname("invalid.host.that.does.not.exist")
-            .tcp_port(3306)
-            .build()
+            Opts()
+            .host("invalid.host.that.does.not.exist")
+            .port(3306)
         )
 
         with pytest.raises(Exception):

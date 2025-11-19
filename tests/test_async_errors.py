@@ -1,5 +1,5 @@
 import pytest
-from pyro_mysql import AsyncOptsBuilder
+from pyro_mysql import Opts
 
 from .conftest import get_async_conn_with_backend, get_async_opts, get_test_db_url
 
@@ -8,7 +8,7 @@ from .conftest import get_async_conn_with_backend, get_async_opts, get_test_db_u
 # async def test_wait_timeout_error():
 #     """Test wait timeout errors."""
 #     opts = (
-#         AsyncOptsBuilder()
+#         OptsBuilder()
 #         .ip_or_hostname("192.0.2.0")  # Non-routable IP
 #         .tcp_port(3306)
 #         .wait_timeout(1)
@@ -24,12 +24,11 @@ from .conftest import get_async_conn_with_backend, get_async_opts, get_test_db_u
 async def test_invalid_credentials_error(async_backend):
     """Test invalid credentials error (mysql_async only)."""
     opts = (
-        AsyncOptsBuilder()
-        .ip_or_hostname("127.0.0.1")
-        .tcp_port(3306)
+        Opts()
+        .host("127.0.0.1")
+        .port(3306)
         .user("nonexistent_user")
         .password("wrong_password")
-        .build()
     )
 
     with pytest.raises(Exception) as exc_info:
@@ -44,7 +43,7 @@ async def test_invalid_credentials_error(async_backend):
 async def test_invalid_database_error(async_backend):
     """Test connecting to non-existent database (mysql_async only)."""
     url = get_test_db_url()
-    opts = AsyncOptsBuilder.from_url(url).db_name("nonexistent_database").build()
+    opts = Opts(url).db("nonexistent_database")
 
     with pytest.raises(Exception):
         await get_async_conn_with_backend(opts, async_backend)

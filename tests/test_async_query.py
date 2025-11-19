@@ -102,32 +102,6 @@ async def test_query_first(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_named_params(async_backend):
-    """Test named parameter queries."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
-
-    await setup_test_table_async(conn)
-
-    params = {
-        "name": "Alice",
-        "age": 30,
-    }
-
-    await conn.exec_drop(
-        "INSERT INTO test_table (name, age) VALUES (:name, :age)", params
-    )
-
-    result = await conn.exec_first(
-        "SELECT name, age FROM test_table WHERE name = :name", {"name": "Alice"}
-    )
-    assert result
-    assert (result[0], result[1]) == ("Alice", 30)
-
-    await cleanup_test_table_async(conn)
-    await conn.close()
-
-
-@pytest.mark.asyncio
 async def test_batch_exec(async_backend):
     """Test batch execution."""
     conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)

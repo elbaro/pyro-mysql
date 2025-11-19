@@ -19,50 +19,40 @@ A high-performance MySQL driver for Python, backed by Rust.
 
 ```py
 # Async
-from pyro_mysql.async_ import Conn, Pool
-from pyro_mysql import AsyncConn, AsyncPool
+from pyro_mysql.async_ import Conn
+from pyro_mysql import AsyncConn
 
 # Sync
-from pyro_mysql.sync import Conn, Transaction
-from pyro_mysql import SyncConn, SyncTransaction
+from pyro_mysql.sync import Conn
+from pyro_mysql import SyncConn
 ````
 
 ### 1. Connection
 
 
 ```py
-from pyro_mysql.async_ import Conn, Pool, OptsBuilder
+from pyro_mysql.async_ import Conn, Opts
 
-def example1():
-    conn = await Conn.new(f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
-
-def example2():
-    pool = Pool(
-        OptsBuilder()
-            .ip_or_hostname("localhost")
-            .port(3333)
+def example():
+    conn1 = await Conn.new(f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
+    conn2 = await Conn.new(
+        Opts(f"mysql://{USER}:{PASSWORD}@localhost")
+            .tcp_nodelay(false)
+    )
+    conn3 = await Conn.new(
+        Opts()
+            .socket("../unix.socket")
             .user("username")
             .db_name("db")
-            .wait_timeout(100)
-            .tcp_nodelay(True)
-            .compression(3)
-            .build()
     )
-    conn = await pool.get()
-
-def example3(pool):
-    with pool.get() as conn:
-        ...
 ```
 
 
 ### 2. Query Execution
 
-`AsyncConn` and `AsyncTransaction` provide the following methods.
-`SyncConn`, `SyncPooledConn` and `SyncTransaction` provide similar API.
+`SyncConn` and `AsyncConn` provides the following 8 methods:
 
 ```py
-
 # Text Protocols - supports multiple statements concatenated with ';' but accepts no argument
 def query(self, query: str, *, as_dict: bool = False) -> Awaitable[list[tuple] | list[dict]]: ...
 def query_first(self, query: str, *, as_dict: bool = False) -> Awaitable[tuple | dict | None]: ...
@@ -78,7 +68,6 @@ def exec_batch(self, query: str, params: Iterable[Params] = []) -> Awaitable[Non
 # Examples
 rows = await conn.exec("SELECT * FROM my_table WHERE a=? AND b=?", (a, b))  # returns list of tuples
 rows_as_dicts = await conn.exec("SELECT * FROM my_table WHERE a=? AND b=?", (a, b), as_dict=True)  # returns list of dicts
-rows = await conn.exec("SELECT * FROM my_table WHERE a=:x AND b=:y AND c=:y", {'x': 100, 'y': 200})
 await conn.exec_batch("SELECT * FROM my_table WHERE a=? AND b=?", [(a1, b1), (a2, b2)])
 ```
 
@@ -104,26 +93,26 @@ with conn.start_transaction() as tx:
 
 ### 4. Choosing a backend
 ```
-conn = Conn(url, backend="mysql")  # the default backend
-conn = Conn(url, backend="diesel")
-
-conn = await Conn.new(url, backend="mysql")  # the default backend
-conn = await Conn.new(url, backend="wtx")  # wtx is experimental
+conn = Conn(url)
+conn = Conn(url, backend="mysql")
+conn = await Conn.new(url, backend="mysql")
 ```
 
-| feature | `mysql` (sync) | `diesel` (sync) |
-| ------- | ------- | ----------- |
-| zero-copy, allocation| X | X |
-| server_version | O | X |
-| ping | O | X |
-| named parameters (dict) | O | X |
+Sync
 
-| feature | `mysql` (async) | `wtx` (async) |
-| ------- | ------- | ----------- |
-| zero-copy, allocation| X | O |
-| server_version | O | X |
-| ping | O | X |
-| named parameters (dict) | O | X |
+| backend | zero-copy, allocation | server_version | ping |
+| ------- | --------------------- | -------------- | ---- |
+| `zero` |  O | O | O |
+| `mysql` | X | O | O |
+| `diesel` | X | X | X |
+
+Async
+
+| backend | zero-copy, allocation | server_version | ping |
+| ------- | --------------------- | -------------- | ---- |
+| `zero` | O | O | O |
+| `mysql` | X | O | O |
+| `wtx` | O | X | X |
 
 
 ## DataType Mapping
@@ -201,7 +190,7 @@ In sqlalchemy, the following dialects are supported.
 - `mysql+pyro_mysql_async://` (async)
 - `mariadb+pyro_mysql_async://` (async)
 
-The supported connection parameters are [the docs](https://docs.rs/mysql/latest/mysql/struct.OptsBuilder.html#method.from_hash_map) and [`capabilities`](https://docs.rs/mysql/latest/mysql/consts/struct.CapabilityFlags.html) (default 2).
+The supported connection parameters are [the docs](https://docs.rs/mysql/latest/mysql/struct.Opts.html#method.from_hash_map) and [`capabilities`](https://docs.rs/mysql/latest/mysql/consts/struct.CapabilityFlags.html) (default 2).
 
 ```py
 from sqlalchemy import create_engine, text
@@ -251,14 +240,14 @@ pytest -p pyro_mysql.testing.sqlalchemy_pytest_plugin --dburi=mariadb+pyro_mysql
     │   ├── Transaction
     │   ├── Pool
     │   ├── Opts
-    │   ├── OptsBuilder
+    │   ├── Opts
     │   └── PoolOpts
     ├── async_/
     │   ├── Conn
     │   ├── Transaction
     │   ├── Pool
     │   ├── Opts
-    │   ├── OptsBuilder
+    │   ├── Opts
     │   └── PoolOpts
     ├── dbapi/
     │   ├── connect()
@@ -294,13 +283,13 @@ pytest -p pyro_mysql.testing.sqlalchemy_pytest_plugin --dburi=mariadb+pyro_mysql
         ├── SyncConn
         ├── SyncTransaction
         ├── SyncPool
-        ├── SyncOpts
-        ├── SyncOptsBuilder
+        ├── Opts
+        ├── Opts
         ├── SyncPoolOpts
         ├── AsyncConn
         ├── AsyncTransaction
         ├── AsyncPool
-        ├── AsyncOpts
-        ├── AsyncOptsBuilder
+        ├── Opts
+        ├── Opts
         └── AsyncPoolOpts
 ```

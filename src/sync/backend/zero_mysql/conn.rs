@@ -22,6 +22,17 @@ impl ZeroMysqlConn {
         })
     }
 
+    /// Create a new Zero-MySQL connection from Opts
+    pub fn new_with_opts(opts: zero_mysql::Opts) -> PyroResult<Self> {
+        let conn = Conn::new(opts)
+            .map_err(|_e| Error::IncorrectApiUsageError("Failed to connect with zero-mysql"))?;
+
+        Ok(ZeroMysqlConn {
+            inner: conn,
+            stmt_cache: std::collections::HashMap::new(),
+        })
+    }
+
     /// Get the connection ID
     /// Note: zero-mysql doesn't expose connection_id yet, so we return 0
     pub fn id(&self) -> u32 {

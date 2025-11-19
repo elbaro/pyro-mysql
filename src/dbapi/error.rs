@@ -72,6 +72,7 @@ impl From<crate::error::Error> for DbApiError {
             crate::error::Error::PythonObjectCreationError(e) => Error::new_err(e.to_string()),
             crate::error::Error::IoError(s) => Error::new_err(format!("IO Error: {}", s)),
             crate::error::Error::WtxError(s) => Error::new_err(format!("Wtx Error: {}", s)),
+            crate::error::Error::ZeroMysqlError(e) => Error::new_err(e.to_string()),
         })
     }
 }

@@ -96,29 +96,6 @@ def test_sync_query_iter(backend):
     conn.close()
 
 
-def test_sync_named_params(backend):
-    """Test sync named parameter queries."""
-    conn = Conn(get_test_db_url(), backend=backend)
-
-    setup_test_table_sync(conn)
-
-    params = {
-        "name": "Alice",
-        "age": 30,
-    }
-
-    conn.exec_drop("INSERT INTO test_table (name, age) VALUES (:name, :age)", params)
-
-    result = conn.exec_first(
-        "SELECT name, age FROM test_table WHERE name = :name", {"name": "Alice"}
-    )
-    assert result
-    assert (result[0], result[1]) == ("Alice", 30)
-
-    cleanup_test_table_sync(conn)
-    conn.close()
-
-
 def test_sync_batch_exec(backend):
     """Test sync batch execution."""
     conn = Conn(get_test_db_url(), backend=backend)

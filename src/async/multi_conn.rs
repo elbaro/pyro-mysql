@@ -27,6 +27,12 @@ impl MultiAsyncConn {
         Ok(MultiAsyncConn::ZeroMysql(zero_conn))
     }
 
+    /// Create a new ZeroMysql connection from Opts
+    pub async fn new_zero_mysql_with_opts(opts: zero_mysql::Opts) -> PyroResult<Self> {
+        let zero_conn = ZeroMysqlConn::new_with_opts(opts).await?;
+        Ok(MultiAsyncConn::ZeroMysql(zero_conn))
+    }
+
     /// Get the connection ID
     /// Note: Returns 0 for wtx and zero_mysql connections as they don't expose this information
     pub fn id(&self) -> u32 {

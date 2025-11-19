@@ -11,9 +11,9 @@ use pyo3::{prelude::*, types::PyList};
 use crate::{
     dbapi::{cursor::Cursor, error::DbApiResult},
     error::Error,
+    opts::Opts as PyroOpts,
     params::Params,
     row::Row,
-    sync::opts::SyncOpts,
 };
 
 #[pyclass(module = "pyro_mysql.dbapi", name = "Connection")]
@@ -31,10 +31,10 @@ pub enum DbApiExecResult {
 }
 
 impl DbApiConn {
-    pub fn new(url_or_opts: Either<String, PyRef<SyncOpts>>) -> DbApiResult<Self> {
+    pub fn new(url_or_opts: Either<String, PyRef<PyroOpts>>) -> DbApiResult<Self> {
         let opts = match url_or_opts {
             Either::Left(url) => Opts::from_url(&url).map_err(Error::from)?,
-            Either::Right(opts) => opts.opts.clone(),
+            Either::Right(opts) => opts.to_mysql_opts(),
         };
         let conn = mysql::Conn::new(opts).map_err(Error::from)?;
         Ok(Self(RwLock::new(Some(conn))))

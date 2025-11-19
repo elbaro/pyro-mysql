@@ -290,9 +290,6 @@ impl DieselConn {
                         .collect())
                 }
             }
-            Params::Named(_) => Err(Error::IncorrectApiUsageError(
-                "Named parameters not yet supported in Diesel backend. Use positional (?) parameters.",
-            )),
         }
     }
 
@@ -333,9 +330,6 @@ impl DieselConn {
                     Ok(result.map(|row_tuple| row_tuple.0.into_any()))
                 }
             }
-            Params::Named(_) => Err(Error::IncorrectApiUsageError(
-                "Named parameters not yet supported in Diesel backend. Use positional (?) parameters.",
-            )),
         }
     }
 
@@ -354,9 +348,6 @@ impl DieselConn {
                 self.affected_rows = rows_affected as u64;
                 Ok(())
             }
-            Params::Named(_) => Err(Error::IncorrectApiUsageError(
-                "Named parameters not yet supported in Diesel backend. Use positional (?) parameters.",
-            )),
         }
     }
 
@@ -382,11 +373,6 @@ impl DieselConn {
                         .map_err(|e| Error::IoError(format!("Batch query failed: {}", e)))?;
 
                     total_affected += rows_affected as u64;
-                }
-                Params::Named(_) => {
-                    return Err(Error::IncorrectApiUsageError(
-                        "Named parameters not yet supported in Diesel backend. Use positional (?) parameters.",
-                    ));
                 }
             }
         }

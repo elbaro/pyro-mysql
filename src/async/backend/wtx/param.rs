@@ -174,7 +174,7 @@ impl WtxParams {
         }
 
         Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-            "Expected None, tuple, or list for params (wtx backend doesn't support named params yet)",
+            "Expected None, tuple, or list for params",
         ))
     }
 }

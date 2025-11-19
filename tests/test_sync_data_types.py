@@ -286,7 +286,7 @@ def test_frozenset_type(backend):
 
 
 def test_dict_type(backend):
-    """Test dict type handling (as named parameters)."""
+    """Test basic data type handling."""
     conn = Conn(get_test_db_url(), backend=backend)
 
     conn.query_drop("DROP TABLE IF EXISTS test_dict_types")

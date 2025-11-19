@@ -9,12 +9,11 @@ pub mod type_object;
 use std::sync::Arc;
 
 use crate::{
+    opts::Opts,
     r#async::multi_conn::MultiAsyncConn,
-    r#async::opts::AsyncOpts,
     dbapi::{async_conn::AsyncDbApiConn, conn::DbApiConn, error::DbApiResult},
     error::Error,
     params::Params,
-    sync::opts::SyncOpts,
     util::{PyroFuture, rust_future_into_py, url_error_to_pyerr},
 };
 use either::Either;
@@ -25,7 +24,7 @@ use pyo3::prelude::*;
 #[pyfunction]
 #[pyo3(signature = (url_or_opts, autocommit=Some(false)))]
 pub fn connect(
-    url_or_opts: Either<String, PyRef<SyncOpts>>,
+    url_or_opts: Either<String, PyRef<Opts>>,
     autocommit: Option<bool>,
 ) -> DbApiResult<DbApiConn> {
     let conn = DbApiConn::new(url_or_opts)?;
@@ -39,7 +38,7 @@ pub fn connect(
 #[pyo3(name = "connect", signature = (url_or_opts, autocommit=Some(false), wtx=false))]
 pub fn connect_async(
     py: Python,
-    url_or_opts: Either<String, PyRef<AsyncOpts>>,
+    url_or_opts: Either<String, PyRef<Opts>>,
     autocommit: Option<bool>,
     wtx: bool,
 ) -> DbApiResult<Py<PyroFuture>> {
@@ -49,7 +48,7 @@ pub fn connect_async(
             Either::Left(url) => url,
             Either::Right(_) => {
                 return Err(error::InterfaceError::new_err(
-                    "AsyncOpts is not supported for wtx connections, use URL string instead",
+                    "Opts is not supported for wtx connections, use URL string instead",
                 )
                 .into());
             }
@@ -86,7 +85,7 @@ pub fn connect_async(
         // Use mysql_async backend
         let opts = match url_or_opts {
             Either::Left(url) => mysql_async::Opts::from_url(&url).map_err(url_error_to_pyerr)?,
-            Either::Right(opts) => opts.opts.clone(),
+            Either::Right(opts) => opts.to_mysql_async_opts(),
         };
         Ok(rust_future_into_py(py, async move {
             let mut conn = mysql_async::Conn::new(opts).await?;

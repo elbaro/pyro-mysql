@@ -42,10 +42,6 @@ impl<'a> Params for ParamsAdapter<'a> {
                     }
                 }
             }
-            PyroParams::Named(_) => {
-                // Named parameters not supported by zero-mysql binary protocol
-                // This should have been caught earlier
-            }
         }
     }
 
@@ -57,9 +53,6 @@ impl<'a> Params for ParamsAdapter<'a> {
                     let value_ref: &Value = value;
                     value_ref.write_type(out);
                 }
-            }
-            PyroParams::Named(_) => {
-                // Named parameters not supported
             }
         }
     }
@@ -74,10 +67,6 @@ impl<'a> Params for ParamsAdapter<'a> {
                         value_ref.write_value(out)?;
                     }
                 }
-                Ok(())
-            }
-            PyroParams::Named(_) => {
-                // Named parameters not supported
                 Ok(())
             }
         }

@@ -4,8 +4,8 @@ use pyo3::pybacked::PyBackedStr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+use crate::opts::Opts;
 use crate::r#async::multi_conn::MultiAsyncConn;
-use crate::r#async::opts::AsyncOpts;
 use crate::r#async::queryable::Queryable;
 use crate::r#async::transaction::AsyncTransaction;
 use crate::error::{Error, PyroResult};
@@ -32,14 +32,14 @@ impl AsyncConn {
     #[pyo3(signature = (url_or_opts, backend="mysql_async"))]
     pub fn new<'py>(
         py: Python<'py>,
-        url_or_opts: Either<String, PyRef<AsyncOpts>>,
+        url_or_opts: Either<String, PyRef<Opts>>,
         backend: &str,
     ) -> PyResult<Py<PyroFuture>> {
         match backend {
             "mysql_async" => {
                 let opts = match url_or_opts {
                     Either::Left(url) => mysql_async::Opts::from_url(&url).map_err(url_error_to_pyerr)?,
-                    Either::Right(opts) => opts.opts.clone(),
+                    Either::Right(opts) => opts.to_mysql_async_opts(),
                 };
                 rust_future_into_py(py, async move {
                     let conn = mysql_async::Conn::new(opts).await?;
@@ -53,7 +53,7 @@ impl AsyncConn {
                     Either::Left(url) => url,
                     Either::Right(_opts) => {
                         return Err(Error::IncorrectApiUsageError(
-                            "WTX backend requires a URL string, not AsyncOpts",
+                            "WTX backend currently only supports URL strings",
                         ).into());
                     }
                 };
@@ -65,16 +65,15 @@ impl AsyncConn {
                 })
             }
             "zero" => {
-                let url = match url_or_opts {
-                    Either::Left(url) => url,
-                    Either::Right(_opts) => {
-                        return Err(Error::IncorrectApiUsageError(
-                            "Zero backend requires a URL string, not AsyncOpts",
-                        ).into());
+                let opts = match url_or_opts {
+                    Either::Left(url) => {
+                        let inner: zero_mysql::Opts = url.as_str().try_into().map_err(Error::from)?;
+                        inner
                     }
+                    Either::Right(opts) => opts.inner.clone(),
                 };
                 rust_future_into_py(py, async move {
-                    let multi_conn = MultiAsyncConn::new_zero_mysql(&url).await?;
+                    let multi_conn = MultiAsyncConn::new_zero_mysql_with_opts(opts).await?;
                     Ok(Self {
                         inner: Arc::new(RwLock::new(Some(multi_conn))),
                     })

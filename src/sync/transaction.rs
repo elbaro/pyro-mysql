@@ -9,29 +9,27 @@ use crate::error::{Error, PyroResult};
 use crate::sync::backend::MysqlConn;
 use crate::sync::iterator::ResultSetIterator;
 use crate::sync::multi_conn::MultiSyncConn;
-use crate::sync::{conn::SyncConn, pooled_conn::SyncPooledConn};
+use crate::sync::conn::SyncConn;
 use crate::{params::Params, row::Row};
 
 #[pyclass(module = "pyro_mysql.sync", name = "Transaction")]
 pub struct SyncTransaction {
     // Hold a reference to the connection Python object to prevent it from being GC-ed
-    conn: Either<Py<SyncConn>, Py<SyncPooledConn>>,
+    conn: Py<SyncConn>,
     opts: TxOpts,
 
     // initialized and reset in __enter__ and __exit__
     inner: Option<mysql::Transaction<'static>>,
-    conn1: Option<Pin<Box<MysqlConn>>>, // Transaction takes the ownership of the Rust Conn struct from the Python Conn object
-    conn2: Option<Pin<Box<mysql::PooledConn>>>,
+    conn_inner: Option<Pin<Box<MysqlConn>>>, // Transaction takes the ownership of the Rust Conn struct from the Python Conn object
 }
 
 impl SyncTransaction {
-    pub fn new(conn: Either<Py<SyncConn>, Py<SyncPooledConn>>, opts: TxOpts) -> Self {
+    pub fn new(conn: Py<SyncConn>, opts: TxOpts) -> Self {
         SyncTransaction {
             conn,
             opts,
             inner: None,
-            conn1: None,
-            conn2: None,
+            conn_inner: None,
         }
     }
 }
@@ -40,60 +38,39 @@ impl SyncTransaction {
 impl SyncTransaction {
     pub fn __enter__<'py>(slf: Bound<'py, Self>, py: Python<'py>) -> PyroResult<Bound<'py, Self>> {
         let slf_ref = slf.borrow();
-        let (conn1, conn2, tx) = match &slf_ref.conn {
-            Either::Left(py_conn) => {
-                let mut conn = {
-                    let conn_mut = py_conn.borrow_mut(py);
-                    let inner = &conn_mut.inner;
-                    let multi_conn = py.detach(|| inner.write())
-                        .take()
-                        .ok_or_else(|| Error::ConnectionClosedError)?;
-                    // Extract inner mysql::Conn from MultiSyncConn
-                    let mysql_conn = match multi_conn {
-                        MultiSyncConn::Mysql(conn) => conn,
-                        MultiSyncConn::Diesel(_) => {
-                            return Err(Error::IncorrectApiUsageError(
-                                "Transactions are not supported for Diesel backend",
-                            ))
-                        }
-                        MultiSyncConn::ZeroMysql(_) => {
-                            return Err(Error::IncorrectApiUsageError(
-                                "Transactions are not supported for Zero-MySQL backend",
-                            ))
-                        }
-                    };
-                    Box::pin(mysql_conn)
-                };
-
-                let tx = conn.inner.start_transaction(slf_ref.opts)?;
-                let tx =
-                    unsafe { std::mem::transmute::<Transaction<'_>, Transaction<'static>>(tx) };
-                (Some(conn), None, tx)
-            }
-            Either::Right(py_conn) => {
-                let mut conn = {
-                    let conn_mut = py_conn.borrow_mut(py);
-                    let inner = &conn_mut.inner;
-                    Box::pin(
-                        py.detach(|| inner.write())
-                            .take()
-                            .ok_or_else(|| Error::ConnectionClosedError)?,
-                    )
-                };
-
-                // PooledConn doesn't have an inner field, it IS the connection
-                let tx = conn.start_transaction(slf_ref.opts)?;
-                let tx =
-                    unsafe { std::mem::transmute::<Transaction<'_>, Transaction<'static>>(tx) };
-                (None, Some(conn), tx)
-            }
+        let py_conn = &slf_ref.conn;
+        let mut conn = {
+            let conn_mut: PyRefMut<SyncConn> = py_conn.borrow_mut(py);
+            let inner = &conn_mut.inner;
+            let multi_conn = py.detach(|| inner.write())
+                .take()
+                .ok_or_else(|| Error::ConnectionClosedError)?;
+            // Extract inner mysql::Conn from MultiSyncConn
+            let mysql_conn = match multi_conn {
+                MultiSyncConn::Mysql(conn) => conn,
+                MultiSyncConn::Diesel(_) => {
+                    return Err(Error::IncorrectApiUsageError(
+                        "Transactions are not supported for Diesel backend",
+                    ))
+                }
+                MultiSyncConn::ZeroMysql(_) => {
+                    return Err(Error::IncorrectApiUsageError(
+                        "Transactions are not supported for Zero-MySQL backend",
+                    ))
+                }
+            };
+            Box::pin(mysql_conn)
         };
+
+        let tx = conn.inner.start_transaction(slf_ref.opts)?;
+        let tx =
+            unsafe { std::mem::transmute::<Transaction<'_>, Transaction<'static>>(tx) };
+
         drop(slf_ref);
         {
             let mut slf_mut = slf.borrow_mut();
             slf_mut.inner = Some(tx);
-            slf_mut.conn1 = conn1;
-            slf_mut.conn2 = conn2;
+            slf_mut.conn_inner = Some(conn);
         }
         Ok(slf)
     }
@@ -120,21 +97,13 @@ impl SyncTransaction {
             slf_mut.rollback()?;
             slf_mut.inner.take();
         }
-        let conn1 = slf_mut.conn1.take();
-        let conn2 = slf_mut.conn2.take();
-        match &slf_mut.conn {
-            Either::Left(py_conn) => {
-                let conn_mut = py_conn.borrow_mut(py);
-                let inner = &conn_mut.inner;
-                let mysql_conn = *Pin::into_inner(conn1.unwrap());
-                *py.detach(|| inner.write()) = Some(MultiSyncConn::Mysql(mysql_conn));
-            }
-            Either::Right(py_conn) => {
-                let conn_mut = py_conn.borrow_mut(py);
-                let inner = &conn_mut.inner;
-                *py.detach(|| inner.write()) = Some(*Pin::into_inner(conn2.unwrap()));
-            }
-        }
+        let conn_inner = slf_mut.conn_inner.take();
+        let py_conn = &slf_mut.conn;
+        let conn_mut: PyRefMut<SyncConn> = py_conn.borrow_mut(py);
+        let inner = &conn_mut.inner;
+        let mysql_conn = *Pin::into_inner(conn_inner.unwrap());
+        *py.detach(|| inner.write()) = Some(MultiSyncConn::Mysql(mysql_conn));
+
         Ok(false) // Don't suppress exceptions
     }
 

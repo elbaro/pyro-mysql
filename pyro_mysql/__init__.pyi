@@ -72,19 +72,71 @@ def init(worker_threads: int | None = 1, thread_name: str | None = None) -> None
 
 # Compatibility aliases for backward compatibility
 AsyncConn = async_.Conn
-AsyncPool = async_.Pool
 AsyncTransaction = async_.Transaction
-AsyncOpts = async_.Opts
-AsyncOptsBuilder = async_.OptsBuilder
-AsyncPoolOpts = async_.PoolOpts
 
 SyncConn = sync.Conn
-SyncPool = sync.Pool
-SyncPooledConn = sync.PooledConn
 SyncTransaction = sync.Transaction
-SyncOpts = sync.Opts
-SyncOptsBuilder = sync.OptsBuilder
-SyncPoolOpts = sync.PoolOpts
+
+class Opts:
+    """
+    Connection options for MySQL connections.
+
+    This class provides a builder API for configuring MySQL connection parameters.
+    Methods can be chained to configure multiple options.
+
+    Examples:
+        # Create from URL
+        opts = Opts("mysql://user:pass@localhost:3306/mydb")
+
+        # Create with builder pattern
+        opts = Opts().host("localhost").port(3306).user("root").password("secret").db("mydb")
+    """
+
+    def __new__(cls, url: str | None = None) -> "Opts":
+        """
+        Create a new Opts instance.
+
+        Args:
+            url: Optional MySQL connection URL. If provided, parses the URL.
+                 If not provided, creates default opts.
+        """
+        ...
+
+    def host(self, hostname: str) -> "Opts":
+        """Set the hostname or IP address."""
+        ...
+
+    def port(self, port: int) -> "Opts":
+        """Set the TCP port number."""
+        ...
+
+    def socket(self, path: str | None) -> "Opts":
+        """Set the Unix socket path for local connections."""
+        ...
+
+    def user(self, username: str) -> "Opts":
+        """Set the username for authentication."""
+        ...
+
+    def password(self, password: str | None) -> "Opts":
+        """Set the password for authentication."""
+        ...
+
+    def db(self, database: str | None) -> "Opts":
+        """Set the database name to connect to."""
+        ...
+
+    def tcp_nodelay(self, enable: bool) -> "Opts":
+        """Enable or disable TCP_NODELAY socket option."""
+        ...
+
+    def compress(self, enable: bool) -> "Opts":
+        """Enable or disable compression for the connection."""
+        ...
+
+    def capabilities(self, capabilities: int) -> "Opts":
+        """Set MySQL client capability flags."""
+        ...
 
 JsonEncodable = (
     dict[str, "JsonEncodable"] | list["JsonEncodable"] | str | int | float | bool | None
@@ -115,8 +167,7 @@ type Value = (
 Parameters that can be passed to query execution methods:
 - `None`: No parameters
 - `tuple[Value, ...]`: Positional parameters for queries with ? placeholders
-- `list[Value]`: List of parameters for queries with ? placeholders  
-- `dict[str, Value]`: Named parameters for queries with named placeholders
+- `list[Value]`: List of parameters for queries with ? placeholders
 
 Examples:
 No parameters:
@@ -130,12 +181,8 @@ Positional parameters:
 Multiple positional parameters:
 
     `await conn.exec("SELECT * FROM users WHERE age > ? AND city = ?", (18, "NYC"))`
-
-Named parameters:
-
-    `await conn.exec("SELECT * FROM users WHERE age > :age AND city = :city", dict(age=18, name="NYC"))`
 """
-type Params = None | tuple[Value, ...] | Sequence[Value] | dict[str, Value]
+type Params = None | tuple[Value, ...] | Sequence[Value]
 
 T = TypeVar("T")
 

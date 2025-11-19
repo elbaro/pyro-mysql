@@ -1,16 +1,16 @@
 use either::Either;
-use mysql::{AccessMode, Opts, prelude::*};
+use mysql::{AccessMode, Opts as MysqlOpts, prelude::*};
 use parking_lot::RwLock;
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 
 use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
+use crate::opts::Opts;
 use crate::params::Params;
 use crate::row::Row;
 use crate::sync::iterator::ResultSetIterator;
 use crate::sync::multi_conn::MultiSyncConn;
-use crate::sync::opts::SyncOpts;
 use crate::sync::transaction::SyncTransaction;
 
 #[pyclass(module = "pyro_mysql.sync", name = "Conn")]
@@ -22,12 +22,12 @@ pub struct SyncConn {
 impl SyncConn {
     #[new]
     #[pyo3(signature = (url_or_opts, backend="mysql"))]
-    pub fn new(url_or_opts: Either<String, PyRef<SyncOpts>>, backend: &str) -> PyroResult<Self> {
+    pub fn new(url_or_opts: Either<String, PyRef<Opts>>, backend: &str) -> PyroResult<Self> {
         match backend {
             "mysql" => {
                 let opts = match url_or_opts {
-                    Either::Left(url) => Opts::from_url(&url)?,
-                    Either::Right(opts) => opts.opts.clone(),
+                    Either::Left(url) => MysqlOpts::from_url(&url)?,
+                    Either::Right(opts) => opts.to_mysql_opts(),
                 };
                 let conn = crate::sync::backend::MysqlConn::new(opts)?;
 
@@ -39,9 +39,8 @@ impl SyncConn {
                 let url = match url_or_opts {
                     Either::Left(url) => url,
                     Either::Right(_opts) => {
-                        // For diesel, we need a URL string
                         return Err(crate::error::Error::IncorrectApiUsageError(
-                            "Diesel backend requires a URL string, not SyncOpts",
+                            "Diesel backend currently only supports URL strings",
                         ));
                     }
                 };
@@ -52,16 +51,14 @@ impl SyncConn {
                 })
             }
             "zero" => {
-                let url = match url_or_opts {
-                    Either::Left(url) => url,
-                    Either::Right(_opts) => {
-                        // For zero backend, we need a URL string
-                        return Err(crate::error::Error::IncorrectApiUsageError(
-                            "Zero backend requires a URL string, not SyncOpts",
-                        ));
+                let opts = match url_or_opts {
+                    Either::Left(url) => {
+                        let inner: zero_mysql::Opts = url.as_str().try_into().map_err(Error::from)?;
+                        inner
                     }
+                    Either::Right(opts) => opts.inner.clone(),
                 };
-                let conn = crate::sync::backend::ZeroMysqlConn::new(&url)?;
+                let conn = crate::sync::backend::ZeroMysqlConn::new_with_opts(opts)?;
 
                 Ok(Self {
                     inner: RwLock::new(Some(MultiSyncConn::ZeroMysql(conn))),
@@ -94,7 +91,7 @@ impl SyncConn {
                 }
             }));
 
-        Ok(SyncTransaction::new(Either::Left(slf.clone_ref(py)), opts))
+        Ok(SyncTransaction::new(slf.clone_ref(py), opts))
     }
 
     fn id(&self) -> PyroResult<u32> {

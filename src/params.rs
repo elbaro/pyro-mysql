@@ -1,10 +1,9 @@
 use pyo3::prelude::*;
-use std::collections::HashMap;
 
 use crate::value::Value;
 
 /// Parameter type for SQL queries
-/// Supports positional (tuple/list) and named (dict) parameters
+/// Supports positional (tuple/list) parameters
 #[derive(Debug)]
 pub enum Params {
     /// No parameters
@@ -13,10 +12,6 @@ pub enum Params {
     /// Positional parameters (from tuple or list)
     /// Uses ? placeholders in SQL
     Positional(Vec<Value>),
-
-    /// Named parameters (from dict)
-    /// Uses :name placeholders in SQL
-    Named(HashMap<String, Value>),
 }
 
 impl Default for Params {
@@ -37,13 +32,6 @@ impl Params {
                     .collect();
                 mysql_common::params::Params::Positional(mysql_values)
             }
-            Params::Named(map) => {
-                let mysql_map: HashMap<Vec<u8>, mysql_async::Value> = map
-                    .into_iter()
-                    .map(|(k, v)| (k.into_bytes(), v.to_mysql_value()))
-                    .collect();
-                mysql_common::params::Params::Named(mysql_map)
-            }
         }
     }
 
@@ -57,7 +45,6 @@ impl Params {
         match self {
             Params::Empty => 0,
             Params::Positional(v) => v.len(),
-            Params::Named(m) => m.len(),
         }
     }
 }
@@ -86,18 +73,9 @@ impl FromPyObject<'_, '_> for Params {
                 params.push(Value::extract(item.as_borrowed())?);
             }
             Ok(Params::Positional(params))
-        } else if type_name == "dict" {
-            let dict = ob.cast::<pyo3::types::PyDict>()?;
-            let mut params = HashMap::new();
-            for (key, value) in dict.iter() {
-                let key_str = key.extract::<String>()?;
-                let param_value = Value::extract(value.as_borrowed())?;
-                params.insert(key_str, param_value);
-            }
-            Ok(Params::Named(params))
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
-                "Expected None, tuple, list, or dict for Params, got '{}'",
+                "Expected None, tuple, or list for Params, got '{}'",
                 type_name
             )))
         }

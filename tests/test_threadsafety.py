@@ -9,12 +9,9 @@ import pytest
 THREADSAFE_FILES = [
     # Async API - uses Arc<RwLock<>> for internal synchronization
     "src/async/conn.rs",
-    "src/async/pool.rs",
     "src/async/transaction.rs",
     # Sync API - uses parking_lot::RwLock for internal synchronization
     "src/sync/conn.rs",
-    "src/sync/pool.rs",
-    "src/sync/pooled_conn.rs",
     "src/sync/transaction.rs",
 ]
 

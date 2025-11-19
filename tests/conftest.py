@@ -2,7 +2,7 @@ import logging
 import os
 
 import pytest
-from pyro_mysql import AsyncOpts, AsyncOptsBuilder, SyncOpts, SyncOptsBuilder
+from pyro_mysql import Opts
 
 
 def pytest_configure(config):
@@ -14,16 +14,16 @@ def get_test_db_url() -> str:
     return os.environ.get("TEST_DATABASE_URL", "mysql://test:1234@127.0.0.1:3306/test")
 
 
-def get_async_opts() -> AsyncOpts:
+def get_async_opts() -> Opts:
     """Get async connection options for testing."""
     url = get_test_db_url()
-    return AsyncOptsBuilder.from_url(url).build()
+    return Opts(url)
 
 
-def get_sync_opts() -> SyncOpts:
+def get_sync_opts() -> Opts:
     """Get sync connection options for testing."""
     url = get_test_db_url()
-    return SyncOptsBuilder.from_url(url).build()
+    return Opts(url)
 
 
 @pytest.fixture
