@@ -51,13 +51,13 @@ impl SyncConn {
                     inner: RwLock::new(Some(MultiSyncConn::Diesel(conn))),
                 })
             }
-            "zero-mysql" => {
+            "zero" => {
                 let url = match url_or_opts {
                     Either::Left(url) => url,
                     Either::Right(_opts) => {
-                        // For zero-mysql, we need a URL string
+                        // For zero backend, we need a URL string
                         return Err(crate::error::Error::IncorrectApiUsageError(
-                            "Zero-mysql backend requires a URL string, not SyncOpts",
+                            "Zero backend requires a URL string, not SyncOpts",
                         ));
                     }
                 };
@@ -68,7 +68,7 @@ impl SyncConn {
                 })
             }
             _ => Err(crate::error::Error::IncorrectApiUsageError(
-                "Unknown backend. Supported backends: 'mysql', 'diesel', 'zero-mysql'",
+                "Unknown backend. Supported backends: 'mysql', 'diesel', 'zero'",
             )),
         }
     }

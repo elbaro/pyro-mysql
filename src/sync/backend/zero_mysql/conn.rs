@@ -95,9 +95,7 @@ impl ZeroMysqlConn {
         };
 
         // Create handler with Python GIL
-        let static_py = unsafe { std::mem::transmute::<Python<'py>, Python<'static>>(py) };
-        let mut handler = TupleHandler::new(static_py);
-
+        let mut handler = TupleHandler::new(py);
         // Execute with empty params (for text protocol queries)
         self.inner.exec(stmt_id, (), &mut handler).map_err(|e| {
             println!("error in query: {:?}", e);
@@ -138,11 +136,7 @@ impl ZeroMysqlConn {
             stmt_id
         };
 
-        // Create handler with Python GIL
-        let static_py = unsafe { std::mem::transmute::<Python<'py>, Python<'static>>(py) };
-        let mut handler = TupleHandler::new(static_py);
-
-        // Convert Params to zero-mysql params format
+        let mut handler = TupleHandler::new(py);
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
             .exec(stmt_id, params_adapter, &mut handler)
@@ -172,11 +166,7 @@ impl ZeroMysqlConn {
             stmt_id
         };
 
-        // Create handler with Python GIL
-        let static_py = unsafe { std::mem::transmute::<Python<'py>, Python<'static>>(py) };
-        let mut handler = TupleHandler::new(static_py);
-
-        // Convert Params to zero-mysql params format
+        let mut handler = TupleHandler::new(py);
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
             .exec_first(stmt_id, params_adapter, &mut handler)

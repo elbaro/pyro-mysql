@@ -42,7 +42,9 @@ class Transaction:
         """Get the number of affected rows from the last operation."""
         ...
 
-    def query(self, query: str, *, as_dict: bool = False) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+    def query(
+        self, query: str, *, as_dict: bool = False
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         """
         Execute a query using text protocol and return all rows.
 
@@ -55,7 +57,9 @@ class Transaction:
         """
         ...
 
-    def query_first(self, query: str, *, as_dict: bool = False) -> tuple[Any, ...] | dict[str, Any] | None:
+    def query_first(
+        self, query: str, *, as_dict: bool = False
+    ) -> tuple[Any, ...] | dict[str, Any] | None:
         """
         Execute a query using text protocol and return the first row.
 
@@ -89,7 +93,9 @@ class Transaction:
         """
         ...
 
-    def exec(self, query: str, params: Params = None, *, as_dict: bool = False) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: bool = False
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         """
         Execute a query and return all rows.
 
@@ -103,7 +109,9 @@ class Transaction:
         """
         ...
 
-    def exec_first(self, query: str, params: Params = None, *, as_dict: bool = False) -> tuple[Any, ...] | dict[str, Any] | None:
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: bool = False
+    ) -> tuple[Any, ...] | dict[str, Any] | None:
         """
         Execute a query and return the first row.
 
@@ -155,7 +163,7 @@ class Conn:
     Synchronous MySQL connection.
     """
 
-    def __init__(self, url_or_opts: str | Opts) -> None:
+    def __init__(self, url_or_opts: str | Opts, backend: str = "mysql") -> None:
         """
         Create a new synchronous connection.
 

@@ -209,7 +209,9 @@ class Transaction:
         """Ping the server to check connection."""
         ...
 
-    def query(self, query: str, *, as_dict: bool = False) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
+    def query(
+        self, query: str, *, as_dict: bool = False
+    ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
         """
         Execute a query using text protocol and return all rows.
 
@@ -222,7 +224,9 @@ class Transaction:
         """
         ...
 
-    def query_first(self, query: str, *, as_dict: bool = False) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
+    def query_first(
+        self, query: str, *, as_dict: bool = False
+    ) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
         """
         Execute a query using text protocol and return the first row.
 
@@ -244,7 +248,9 @@ class Transaction:
         """
         ...
 
-    def exec(self, query: str, params: Params = None, *, as_dict: bool = False) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: bool = False
+    ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
         """
         Execute a query and return all rows.
 
@@ -258,7 +264,9 @@ class Transaction:
         """
         ...
 
-    def exec_first(self, query: str, params: Params = None, *, as_dict: bool = False) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: bool = False
+    ) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
         """
         Execute a query and return the first row.
 
@@ -307,32 +315,13 @@ class Conn:
         ...
 
     @staticmethod
-    def new(url_or_opts: str | Opts) -> PyroFuture["Conn"]:
+    def new(url_or_opts: str | Opts, backend: str = "mysql") -> PyroFuture["Conn"]:
         """
         Create a new connection.
 
         Args:
             url_or_opts: MySQL connection URL (e.g., 'mysql://user:password@host:port/database')
                 or AsyncOpts object with connection configuration.
-
-        Returns:
-            New Conn instance.
-        """
-        ...
-
-    @staticmethod
-    def new_wtx(
-        url: str,
-        max_statements: int | None = None,
-        buffer_size: tuple[int, int, int, int, int] | None = None,
-    ) -> PyroFuture["Conn"]:
-        """
-        Create a new connection using the wtx backend.
-
-        Args:
-            url: MySQL connection URL (e.g., 'mysql://user:password@host:port/database')
-            max_statements: Maximum number of prepared statements to cache (default: unlimited)
-            buffer_size: Tuple of buffer sizes (default: uses wtx defaults)
 
         Returns:
             New Conn instance.
@@ -365,7 +354,9 @@ class Conn:
         """Ping the server to check connection."""
         ...
 
-    def query(self, query: str, *, as_dict: bool = False) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
+    def query(
+        self, query: str, *, as_dict: bool = False
+    ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
         """
         Execute a query using text protocol and return all rows.
 
@@ -378,7 +369,9 @@ class Conn:
         """
         ...
 
-    def query_first(self, query: str, *, as_dict: bool = False) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
+    def query_first(
+        self, query: str, *, as_dict: bool = False
+    ) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
         """
         Execute a query using text protocol and return the first row.
 
@@ -400,7 +393,9 @@ class Conn:
         """
         ...
 
-    def exec(self, query: str, params: Params = None, *, as_dict: bool = False) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: bool = False
+    ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
         """
         Execute a query and return all rows.
 
@@ -414,7 +409,9 @@ class Conn:
         """
         ...
 
-    def exec_first(self, query: str, params: Params = None, *, as_dict: bool = False) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: bool = False
+    ) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
         """
         Execute a query and return the first row.
 

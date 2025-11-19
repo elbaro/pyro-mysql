@@ -64,12 +64,12 @@ impl AsyncConn {
                     })
                 })
             }
-            "zero-mysql" => {
+            "zero" => {
                 let url = match url_or_opts {
                     Either::Left(url) => url,
                     Either::Right(_opts) => {
                         return Err(Error::IncorrectApiUsageError(
-                            "Zero-mysql backend requires a URL string, not AsyncOpts",
+                            "Zero backend requires a URL string, not AsyncOpts",
                         ).into());
                     }
                 };
@@ -81,7 +81,7 @@ impl AsyncConn {
                 })
             }
             _ => Err(Error::IncorrectApiUsageError(
-                "Unknown backend. Supported backends: 'mysql_async', 'wtx', 'zero-mysql'",
+                "Unknown backend. Supported backends: 'mysql_async', 'wtx', 'zero'",
             ).into()),
         }
     }

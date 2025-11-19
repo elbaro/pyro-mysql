@@ -31,7 +31,7 @@ async def test_connection_with_database(async_backend):
         opts = AsyncOptsBuilder.from_url(url).db_name("test").build()
         conn = await Conn.new(opts, backend=async_backend)
     else:
-        # wtx and zero-mysql backends use URL strings
+        # wtx and zero backends use URL strings
         conn = await get_async_conn_with_backend(url, async_backend)
 
     db_name = await conn.query_first("SELECT DATABASE()")
@@ -50,7 +50,7 @@ async def test_connection_timeout(async_backend):
             opts = AsyncOptsBuilder.from_url(url).wait_timeout(0).build()
             conn = await Conn.new(opts, backend=async_backend)
         else:
-            # wtx and zero-mysql don't support timeout configuration
+            # wtx and zero don't support timeout configuration
             conn = await get_async_conn_with_backend(url, async_backend)
         await conn.close()
     except Exception:
@@ -192,7 +192,7 @@ async def test_connection_init_command(async_backend):
 
         await conn.close()
     else:
-        # wtx and zero-mysql backends don't support init commands
+        # wtx and zero backends don't support init commands
         pytest.skip(f"Backend {async_backend} doesn't support init commands")
 
 
@@ -233,7 +233,7 @@ async def test_connection_with_wrong_credentials(async_backend):
         with pytest.raises(Exception):
             _ = await Conn.new(opts, backend=async_backend)
     else:
-        # For wtx and zero-mysql, construct URL string with wrong credentials
+        # For wtx and zero, construct URL string with wrong credentials
         with pytest.raises(Exception):
             _ = await get_async_conn_with_backend(
                 "mysql://nonexistent_user:wrong_password@127.0.0.1:3306/test",
@@ -255,7 +255,7 @@ async def test_connection_to_invalid_host(async_backend):
         with pytest.raises(Exception):
             await Conn.new(opts, backend=async_backend)
     else:
-        # For wtx and zero-mysql, use URL string with invalid host
+        # For wtx and zero, use URL string with invalid host
         with pytest.raises(Exception):
             await get_async_conn_with_backend(
                 "mysql://test:1234@invalid.host.that.does.not.exist:3306/test",

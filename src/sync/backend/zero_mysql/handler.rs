@@ -10,14 +10,14 @@ use crate::util::PyTupleBuilder;
 use crate::zero_mysql_util::decode_bytes_to_python;
 
 /// Handler that collects rows as PyTuples
-pub struct TupleHandler {
-    py: Python<'static>,
+pub struct TupleHandler<'a> {
+    py: Python<'a>,
     cols: Vec<ColumnTypeAndFlags>,
     rows: Py<PyList>,
 }
 
-impl TupleHandler {
-    pub fn new(py: Python<'static>) -> Self {
+impl<'a> TupleHandler<'a> {
+    pub fn new(py: Python<'a>) -> Self {
         Self {
             py,
             cols: Vec::new(),
@@ -30,7 +30,7 @@ impl TupleHandler {
     }
 }
 
-impl<'a> ResultSetHandler<'a> for TupleHandler {
+impl<'a> ResultSetHandler<'a> for TupleHandler<'a> {
     fn no_result_set(&mut self, _ok: OkPayloadBytes) -> Result<()> {
         Ok(())
     }
@@ -55,12 +55,13 @@ impl<'a> ResultSetHandler<'a> for TupleHandler {
                 tuple.set(i, self.py.None().into_bound(self.py));
             } else {
                 let py_value;
-                (py_value, bytes) = decode_bytes_to_python(self.py, &self.cols[i], bytes).map_err(|e| {
-                    zero_mysql::error::Error::LibraryBug(format!(
-                        "Python conversion error: {}",
-                        e
-                    ))
-                })?;
+                (py_value, bytes) =
+                    decode_bytes_to_python(self.py, &self.cols[i], bytes).map_err(|e| {
+                        zero_mysql::error::Error::LibraryBug(format!(
+                            "Python conversion error: {}",
+                            e
+                        ))
+                    })?;
                 tuple.set(i, py_value);
             }
         }

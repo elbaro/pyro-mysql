@@ -28,28 +28,12 @@ DATA = [
 ]
 
 
-pyro_mysql.init(worker_threads=1)
-
-
 # ─── Connection Setup Helpers ─────────────────────────────────────────────────
 
 
-async def create_pyro_async_conn():
-    return await pyro_mysql.AsyncConn.new(
-        "mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false"
-    )
-
-
-async def create_pyro_wtx_conn():
-    return await pyro_mysql.AsyncConn.new(
-        "mysql://test:1234@127.0.0.1:3306/test", backend="wtx"
-    )
-
-
-async def create_pyro_zero_mysql_conn():
-    return await pyro_mysql.AsyncConn.new(
-        "mysql://test:1234@127.0.0.1:3306/test", backend="zero-mysql"
-    )
+async def create_pyro_async_conn(backend="mysql"):
+    url = "mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false" if backend == "mysql" else "mysql://test:1234@127.0.0.1:3306/test"
+    return await pyro_mysql.AsyncConn.new(url, backend=backend)
 
 
 async def create_asyncmy_conn():
@@ -85,43 +69,7 @@ async def insert_pyro_async(conn, n):
         )
 
 
-async def insert_pyro_wtx(conn, n):
-    for i in range(n):
-        await conn.exec_drop(
-            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
-            DATA[i % 10000],
-        )
-
-
-async def insert_pyro_zero_mysql_async(conn, n):
-    for i in range(n):
-        await conn.exec_drop(
-            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
-            DATA[i % 10000],
-        )
-        # await conn.query_drop(
-        #     "INSERT INTO benchmark_test (name, age, email, score, description) VALUES ('%s', %s, '%s', %s, '%s')"
-        #     % DATA[i % 10000],
-        # )
-
-
 def insert_pyro_sync(conn, n):
-    for i in range(n):
-        conn.exec_drop(
-            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
-            DATA[i % 10000],
-        )
-
-
-def insert_pyro_diesel(conn, n):
-    for i in range(n):
-        conn.exec_drop(
-            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
-            DATA[i % 10000],
-        )
-
-
-def insert_pyro_zero_mysql(conn, n):
     for i in range(n):
         conn.exec_drop(
             "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
@@ -161,23 +109,7 @@ async def select_pyro_async(conn):
     rows = await conn.exec("SELECT * FROM benchmark_test")
 
 
-async def select_pyro_wtx(conn):
-    rows = await conn.exec("SELECT * FROM benchmark_test")
-
-
-async def select_pyro_zero_mysql_async(conn):
-    rows = await conn.exec("SELECT * FROM benchmark_test")
-
-
 def select_pyro_sync(conn):
-    rows = conn.exec("SELECT * FROM benchmark_test")
-
-
-def select_pyro_diesel(conn):
-    rows = conn.exec("SELECT * FROM benchmark_test")
-
-
-def select_pyro_zero_mysql(conn):
     rows = conn.exec("SELECT * FROM benchmark_test")
 
 

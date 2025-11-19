@@ -16,8 +16,6 @@ DATABASE = "test"
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
-pyro_mysql.init(worker_threads=1)
-
 
 # ─── Sync Connection ──────────────────────────────────────────────────────────
 

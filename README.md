@@ -33,10 +33,6 @@ from pyro_mysql import SyncConn, SyncTransaction
 ```py
 from pyro_mysql.async_ import Conn, Pool, OptsBuilder
 
-
-# Optionally configure the number of Rust threads
-# pyro_mysql.init(worker_threads=1)
-
 def example1():
     conn = await Conn.new(f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
 
@@ -246,7 +242,6 @@ pytest -p pyro_mysql.testing.sqlalchemy_pytest_plugin --dburi=mariadb+pyro_mysql
 ```
 .
 └── pyro_mysql/
-    ├── init()
     ├── (common classes)/
     │   ├── IsolationLevel
     │   ├── CapabilityFlags
