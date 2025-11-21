@@ -94,7 +94,7 @@ impl SyncConn {
         Ok(SyncTransaction::new(slf.clone_ref(py), opts))
     }
 
-    fn id(&self) -> PyroResult<u32> {
+    fn id(&self) -> PyroResult<u64> {
         let guard = self.inner.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
         Ok(conn.id())
@@ -403,7 +403,7 @@ impl SyncConn {
         conn.reset()
     }
 
-    fn server_version(&self) -> PyroResult<(u16, u16, u16)> {
+    fn server_version(&self) -> PyroResult<String> {
         let guard = self.inner.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
         Ok(conn.server_version())

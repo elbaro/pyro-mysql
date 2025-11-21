@@ -9,7 +9,7 @@ impl Param for &Value {
         matches!(self, Value::NULL)
     }
 
-    fn write_type(&self, out: &mut Vec<u8>) {
+    fn encode_type(&self, out: &mut Vec<u8>) {
         match self {
             Value::NULL => {
                 out.push(ColumnType::MYSQL_TYPE_NULL as u8);
@@ -55,7 +55,7 @@ impl Param for &Value {
         }
     }
 
-    fn write_value(&self, out: &mut Vec<u8>) -> zero_mysql::error::Result<()> {
+    fn encode_value(&self, out: &mut Vec<u8>) -> zero_mysql::error::Result<()> {
         match self {
             Value::NULL => {
                 // NULL values don't write anything

@@ -1,6 +1,11 @@
 import pytest
 
-from .conftest import cleanup_test_table_async, get_async_conn_with_backend, get_test_db_url, setup_test_table_async
+from .conftest import (
+    cleanup_test_table_async,
+    get_async_conn_with_backend,
+    get_test_db_url,
+    setup_test_table_async,
+)
 
 
 @pytest.mark.asyncio
@@ -69,36 +74,6 @@ async def test_query_first(async_backend):
 
     await cleanup_test_table_async(conn)
     await conn.close()
-
-
-# TODO
-# @pytest.mark.asyncio
-# async def test_query_iter():
-#     """Test query_iter functionality."""
-#     opts = get_async_opts()
-#     conn = await Conn.new(opts)
-
-#     await setup_test_table_async(conn)
-
-#     await conn.exec_drop(
-#         "INSERT INTO test_table (name, age) VALUES (?, ?), (?, ?), (?, ?)",
-#         ("Alice", 30, "Bob", 25, "Charlie", 35),
-#     )
-
-#     result_iter = await conn.query_iter("SELECT name, age FROM test_table ORDER BY age")
-
-#     count = 0
-#     expected_results = [("Bob", 25), ("Alice", 30), ("Charlie", 35)]
-
-#     async for row in result_iter:
-#         name, age = row
-#         assert (name, age) == expected_results[count]
-#         count += 1
-
-#     assert count == 3
-
-#     await cleanup_test_table_async(conn)
-#     await conn.close()
 
 
 @pytest.mark.asyncio

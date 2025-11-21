@@ -34,11 +34,11 @@ impl MultiAsyncConn {
     }
 
     /// Get the connection ID
-    /// Note: Returns 0 for wtx and zero_mysql connections as they don't expose this information
-    pub fn id(&self) -> u32 {
+    /// Note: Returns 0 for wtx connections as they don't expose this information
+    pub fn id(&self) -> u64 {
         match self {
-            MultiAsyncConn::MysqlAsync(conn) => conn.id(),
-            MultiAsyncConn::Wtx(wtx_conn) => wtx_conn.id(),
+            MultiAsyncConn::MysqlAsync(conn) => conn.id() as u64,
+            MultiAsyncConn::Wtx(wtx_conn) => wtx_conn.id() as u64,
             MultiAsyncConn::ZeroMysql(zero_conn) => zero_conn.id(),
         }
     }
@@ -59,17 +59,26 @@ impl MultiAsyncConn {
         match self {
             MultiAsyncConn::MysqlAsync(conn) => conn.last_insert_id(),
             MultiAsyncConn::Wtx(wtx_conn) => wtx_conn.last_insert_id(),
-            MultiAsyncConn::ZeroMysql(zero_conn) => zero_conn.last_insert_id(),
+            MultiAsyncConn::ZeroMysql(zero_conn) => Some(zero_conn.last_insert_id()),
         }
     }
 
-    /// Get the server version
-    /// Note: Returns (0, 0, 0) for wtx connections as wtx doesn't expose this information
-    pub fn server_version(&self) -> (u16, u16, u16) {
+    /// Get the server version as a string
+    /// Note: Returns "0.0.0" for wtx connections as wtx doesn't expose this information
+    pub fn server_version(&self) -> String {
         match self {
-            MultiAsyncConn::MysqlAsync(conn) => conn.server_version(),
-            MultiAsyncConn::Wtx(wtx_conn) => wtx_conn.server_version(),
-            MultiAsyncConn::ZeroMysql(zero_conn) => zero_conn.server_version(),
+            MultiAsyncConn::MysqlAsync(conn) => {
+                let (major, minor, patch) = conn.server_version();
+                format!("{}.{}.{}", major, minor, patch)
+            }
+            MultiAsyncConn::Wtx(wtx_conn) => {
+                let (major, minor, patch) = wtx_conn.server_version();
+                format!("{}.{}.{}", major, minor, patch)
+            }
+            MultiAsyncConn::ZeroMysql(zero_conn) => {
+                let version_bytes = zero_conn.server_version();
+                String::from_utf8_lossy(version_bytes).to_string()
+            }
         }
     }
 

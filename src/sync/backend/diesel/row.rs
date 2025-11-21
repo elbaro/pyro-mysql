@@ -11,7 +11,7 @@ use pyo3::{
 };
 
 use crate::row::{RowDict, RowTuple};
-use crate::value::{get_date_class, get_datetime_class, get_decimal_class, get_timedelta_class};
+use crate::py_imports::{get_date_class, get_datetime_class, get_decimal_class, get_timedelta_class};
 
 /// Convert diesel's MysqlValue to a Python object
 /// bytes(&[u8]) point to the data provided by libmysqlclient, which can be different from the packet data

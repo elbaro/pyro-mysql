@@ -1,19 +1,20 @@
 use pyo3::prelude::*;
 use pyo3::types::PyList;
-use zero_mysql::col::{ColumnDefinitionBytes, ColumnTypeAndFlags};
 use zero_mysql::error::Result;
-use zero_mysql::protocol::packet::OkPayloadBytes;
-use zero_mysql::protocol::r#trait::ResultSetHandler;
-use zero_mysql::row::RowPayload;
+use zero_mysql::protocol::connection::{ColumnDefinitionBytes, ColumnTypeAndFlags};
+use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
+use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
+use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
 
 use crate::util::PyTupleBuilder;
-use crate::zero_mysql_util::decode_bytes_to_python;
+use crate::zero_mysql_util::{decode_binary_bytes_to_python, decode_text_value_to_python};
 
-/// Handler that collects rows as PyTuples
 pub struct TupleHandler<'a> {
     py: Python<'a>,
     cols: Vec<ColumnTypeAndFlags>,
     rows: Py<PyList>,
+    affected_rows: u64,
+    last_insert_id: u64,
 }
 
 impl<'a> TupleHandler<'a> {
@@ -22,16 +23,29 @@ impl<'a> TupleHandler<'a> {
             py,
             cols: Vec::new(),
             rows: PyList::empty(py).unbind(),
+            affected_rows: 0,
+            last_insert_id: 0,
         }
     }
 
     pub fn into_rows(self) -> Py<PyList> {
         self.rows
     }
+
+    pub fn affected_rows(&self) -> u64 {
+        self.affected_rows
+    }
+
+    pub fn last_insert_id(&self) -> u64 {
+        self.last_insert_id
+    }
 }
 
-impl<'a> ResultSetHandler<'a> for TupleHandler<'a> {
-    fn no_result_set(&mut self, _ok: OkPayloadBytes) -> Result<()> {
+impl<'a> BinaryResultSetHandler<'a> for TupleHandler<'a> {
+    fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
+        let ok_payload = OkPayload::try_from(ok)?;
+        self.affected_rows = ok_payload.affected_rows;
+        self.last_insert_id = ok_payload.last_insert_id;
         Ok(())
     }
 
@@ -46,7 +60,7 @@ impl<'a> ResultSetHandler<'a> for TupleHandler<'a> {
         Ok(())
     }
 
-    fn row(&mut self, row: &RowPayload) -> Result<()> {
+    fn row(&mut self, row: &BinaryRowPayload) -> Result<()> {
         let mut bytes = row.values();
         let tuple = PyTupleBuilder::new(self.py, self.cols.len());
 
@@ -55,13 +69,8 @@ impl<'a> ResultSetHandler<'a> for TupleHandler<'a> {
                 tuple.set(i, self.py.None().into_bound(self.py));
             } else {
                 let py_value;
-                (py_value, bytes) =
-                    decode_bytes_to_python(self.py, &self.cols[i], bytes).map_err(|e| {
-                        zero_mysql::error::Error::LibraryBug(format!(
-                            "Python conversion error: {}",
-                            e
-                        ))
-                    })?;
+                (py_value, bytes) = decode_binary_bytes_to_python(self.py, &self.cols[i], bytes)
+                    .map_err(|_e| zero_mysql::error::Error::InvalidPacket)?;
                 tuple.set(i, py_value);
             }
         }
@@ -73,7 +82,135 @@ impl<'a> ResultSetHandler<'a> for TupleHandler<'a> {
         Ok(())
     }
 
-    fn resultset_end(&mut self, _eof: OkPayloadBytes) -> Result<()> {
+    fn resultset_end(&mut self, eof: OkPayloadBytes) -> Result<()> {
+        let ok_payload = OkPayload::try_from(eof)?;
+        self.affected_rows = ok_payload.affected_rows;
+        self.last_insert_id = ok_payload.last_insert_id;
+        Ok(())
+    }
+}
+
+impl<'a> TextResultSetHandler<'a> for TupleHandler<'a> {
+    fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
+        let ok_payload = OkPayload::try_from(ok)?;
+        self.affected_rows += ok_payload.affected_rows;
+        self.last_insert_id = ok_payload.last_insert_id;
+        Ok(())
+    }
+
+    fn resultset_start(&mut self, num_columns: usize) -> Result<()> {
+        self.cols.clear();
+        self.cols.reserve(num_columns);
+        Ok(())
+    }
+
+    fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
+        self.cols.push(col.tail()?.type_and_flags()?);
+        Ok(())
+    }
+
+    fn row(&mut self, row: &TextRowPayload) -> Result<()> {
+        use zero_mysql::protocol::primitive::read_string_lenenc;
+
+        let tuple = PyTupleBuilder::new(self.py, self.cols.len());
+        let mut data = row.0;
+
+        for i in 0..self.cols.len() {
+            // Check for NULL (0xFB)
+            if !data.is_empty() && data[0] == 0xFB {
+                tuple.set(i, self.py.None().into_bound(self.py));
+                data = &data[1..];
+            } else {
+                // Read length-encoded string
+                let (value_bytes, rest) = read_string_lenenc(data)?;
+                let py_value = decode_text_value_to_python(self.py, &self.cols[i], value_bytes)
+                    .map_err(|_e| zero_mysql::error::Error::InvalidPacket)?;
+                tuple.set(i, py_value);
+                data = rest;
+            }
+        }
+
+        self.rows
+            .bind(self.py)
+            .append(tuple.build(self.py))
+            .unwrap();
+        Ok(())
+    }
+
+    fn resultset_end(&mut self, eof: OkPayloadBytes) -> Result<()> {
+        let ok_payload = OkPayload::try_from(eof)?;
+        self.affected_rows += ok_payload.affected_rows;
+        self.last_insert_id = ok_payload.last_insert_id;
+        Ok(())
+    }
+}
+
+pub struct DropHandler {
+    pub affected_rows: u64,
+    pub last_insert_id: u64,
+}
+
+impl DropHandler {
+    pub fn new() -> Self {
+        Self {
+            affected_rows: 0,
+            last_insert_id: 0,
+        }
+    }
+}
+
+impl<'a> BinaryResultSetHandler<'a> for DropHandler {
+    fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
+        let ok_payload = OkPayload::try_from(ok)?;
+        self.affected_rows = ok_payload.affected_rows;
+        self.last_insert_id = ok_payload.last_insert_id;
+        Ok(())
+    }
+
+    fn resultset_start(&mut self, _num_columns: usize) -> Result<()> {
+        Ok(())
+    }
+
+    fn col(&mut self, _col: ColumnDefinitionBytes) -> Result<()> {
+        Ok(())
+    }
+
+    fn row(&mut self, _row: &BinaryRowPayload) -> Result<()> {
+        Ok(())
+    }
+
+    fn resultset_end(&mut self, eof: OkPayloadBytes) -> Result<()> {
+        let ok_payload = OkPayload::try_from(eof)?;
+        self.affected_rows = ok_payload.affected_rows;
+        self.last_insert_id = ok_payload.last_insert_id;
+        Ok(())
+    }
+}
+
+impl<'a> TextResultSetHandler<'a> for DropHandler {
+    fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
+        let ok_payload = OkPayload::try_from(ok)?;
+        self.affected_rows += ok_payload.affected_rows;
+        self.last_insert_id = ok_payload.last_insert_id;
+        Ok(())
+    }
+
+    fn resultset_start(&mut self, _num_columns: usize) -> Result<()> {
+        Ok(())
+    }
+
+    fn col(&mut self, _col: ColumnDefinitionBytes) -> Result<()> {
+        Ok(())
+    }
+
+    fn row(&mut self, _row: &TextRowPayload) -> Result<()> {
+        Ok(())
+    }
+
+    fn resultset_end(&mut self, eof: OkPayloadBytes) -> Result<()> {
+        let ok_payload = OkPayload::try_from(eof)?;
+        self.affected_rows += ok_payload.affected_rows;
+        self.last_insert_id = ok_payload.last_insert_id;
         Ok(())
     }
 }

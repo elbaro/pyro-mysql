@@ -10,10 +10,10 @@ pub enum MultiSyncConn {
 
 impl MultiSyncConn {
     /// Get the connection ID
-    pub fn id(&self) -> u32 {
+    pub fn id(&self) -> u64 {
         match self {
-            MultiSyncConn::Mysql(conn) => conn.id(),
-            MultiSyncConn::Diesel(conn) => conn.id(),
+            MultiSyncConn::Mysql(conn) => conn.id() as u64,
+            MultiSyncConn::Diesel(conn) => conn.id() as u64,
             MultiSyncConn::ZeroMysql(conn) => conn.id(),
         }
     }
@@ -32,16 +32,25 @@ impl MultiSyncConn {
         match self {
             MultiSyncConn::Mysql(conn) => conn.last_insert_id(),
             MultiSyncConn::Diesel(conn) => conn.last_insert_id(),
-            MultiSyncConn::ZeroMysql(conn) => conn.last_insert_id(),
+            MultiSyncConn::ZeroMysql(conn) => Some(conn.last_insert_id()),
         }
     }
 
-    /// Get the server version
-    pub fn server_version(&self) -> (u16, u16, u16) {
+    /// Get the server version as a string
+    pub fn server_version(&self) -> String {
         match self {
-            MultiSyncConn::Mysql(conn) => conn.server_version(),
-            MultiSyncConn::Diesel(conn) => conn.server_version(),
-            MultiSyncConn::ZeroMysql(conn) => conn.server_version(),
+            MultiSyncConn::Mysql(conn) => {
+                let (major, minor, patch) = conn.server_version();
+                format!("{}.{}.{}", major, minor, patch)
+            }
+            MultiSyncConn::Diesel(conn) => {
+                let (major, minor, patch) = conn.server_version();
+                format!("{}.{}.{}", major, minor, patch)
+            }
+            MultiSyncConn::ZeroMysql(conn) => {
+                let version_bytes = conn.server_version();
+                String::from_utf8_lossy(version_bytes).to_string()
+            }
         }
     }
 

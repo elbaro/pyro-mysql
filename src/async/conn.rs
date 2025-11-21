@@ -101,7 +101,7 @@ impl AsyncConn {
         AsyncTransaction::new(self.inner.clone(), opts)
     }
 
-    async fn id(&self) -> PyResult<u32> {
+    async fn id(&self) -> PyResult<u64> {
         Ok(self
             .inner
             .read()

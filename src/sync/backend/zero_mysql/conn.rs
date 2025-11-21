@@ -1,6 +1,6 @@
 use crate::error::{Error, PyroResult};
 use crate::params::Params;
-use crate::sync::backend::zero_mysql::handler::TupleHandler;
+use crate::sync::backend::zero_mysql::handler::{DropHandler, TupleHandler};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 use zero_mysql::sync::Conn;
@@ -8,6 +8,8 @@ use zero_mysql::sync::Conn;
 pub struct ZeroMysqlConn {
     pub inner: Conn,
     stmt_cache: std::collections::HashMap<String, u32>,
+    affected_rows: u64,
+    last_insert_id: u64,
 }
 
 impl ZeroMysqlConn {
@@ -19,10 +21,11 @@ impl ZeroMysqlConn {
         Ok(ZeroMysqlConn {
             inner: conn,
             stmt_cache: std::collections::HashMap::new(),
+            affected_rows: 0,
+            last_insert_id: 0,
         })
     }
 
-    /// Create a new Zero-MySQL connection from Opts
     pub fn new_with_opts(opts: zero_mysql::Opts) -> PyroResult<Self> {
         let conn = Conn::new(opts)
             .map_err(|_e| Error::IncorrectApiUsageError("Failed to connect with zero-mysql"))?;
@@ -30,103 +33,73 @@ impl ZeroMysqlConn {
         Ok(ZeroMysqlConn {
             inner: conn,
             stmt_cache: std::collections::HashMap::new(),
+            affected_rows: 0,
+            last_insert_id: 0,
         })
     }
 
     /// Get the connection ID
-    /// Note: zero-mysql doesn't expose connection_id yet, so we return 0
-    pub fn id(&self) -> u32 {
-        // TODO: Extract connection_id from handshake
-        0
+    pub fn id(&self) -> u64 {
+        self.inner.connection_id()
     }
 
-    /// Get the number of affected rows from the last query
-    /// Note: zero-mysql doesn't track this yet
+    /// Get the status flags from the last packet
+    pub fn status_flags(&self) -> zero_mysql::constant::ServerStatusFlags {
+        self.inner.status_flags()
+    }
+
     pub fn affected_rows(&self) -> u64 {
-        // TODO: Track affected_rows from OK packet
-        0
+        self.affected_rows
     }
 
-    /// Get the last insert ID
-    /// Note: zero-mysql doesn't track this yet
-    pub fn last_insert_id(&self) -> Option<u64> {
-        // TODO: Track last_insert_id from OK packet
-        None
+    pub fn last_insert_id(&self) -> u64 {
+        self.last_insert_id
     }
 
-    /// Get the server version
-    pub fn server_version(&self) -> (u16, u16, u16) {
-        // Parse server version string (e.g., "8.0.33")
-        let version_str = self.inner.server_version();
-        let parts: Vec<&str> = version_str.split('.').collect();
-
-        let major = parts.get(0).and_then(|s| s.parse().ok()).unwrap_or(0);
-        let minor = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
-        let patch = parts
-            .get(2)
-            .and_then(|s| {
-                // Handle versions like "8.0.33-0ubuntu0.22.04.4"
-                s.split('-').next()?.parse().ok()
-            })
-            .unwrap_or(0);
-
-        (major, minor, patch)
+    /// Get the server version string as bytes
+    pub fn server_version(&self) -> &[u8] {
+        self.inner.server_version()
     }
 
     /// Ping the server to keep the connection alive
-    /// Note: zero-mysql doesn't have ping yet
     pub fn ping(&mut self) -> PyroResult<()> {
-        // TODO: Implement COM_PING
+        self.inner.ping()?;
         Ok(())
     }
 
     /// Reset the connection state
-    /// Note: zero-mysql doesn't have reset yet
+    /// This clears temporary tables, user variables, prepared statements, etc.
     pub fn reset(&mut self) -> PyroResult<()> {
-        // TODO: Implement COM_RESET_CONNECTION
+        self.inner.reset()?;
+        self.stmt_cache.clear();
         Ok(())
     }
 
-    /// Execute a query using the text protocol
-    /// For zero-mysql, we use prepared statements instead
     pub fn query<'py>(&mut self, py: Python<'py>, query: String) -> PyroResult<Py<PyList>> {
-        // For zero-mysql, convert text query to prepared statement
-        // This is not ideal but zero-mysql focuses on binary protocol
-
-        // Check if we have a cached statement
-        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
-            cached_id
-        } else {
-            let stmt_id = self
-                .inner
-                .prepare(&query)
-                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare statement"))?;
-            self.stmt_cache.insert(query.clone(), stmt_id);
-            stmt_id
-        };
-
-        // Create handler with Python GIL
         let mut handler = TupleHandler::new(py);
-        // Execute with empty params (for text protocol queries)
-        self.inner.exec(stmt_id, (), &mut handler).map_err(|e| {
+
+        self.inner.query(&query, &mut handler).map_err(|e| {
             println!("error in query: {:?}", e);
             Error::IncorrectApiUsageError("Failed to execute query")
         })?;
 
+        self.affected_rows = handler.affected_rows();
+        self.last_insert_id = handler.last_insert_id();
         Ok(handler.into_rows())
     }
 
-    /// Execute a query and discard results using the text protocol
     pub fn query_drop(&mut self, query: String) -> PyroResult<()> {
-        self.inner.query_drop(&query).map_err(|_e| {
-            // TODO: Propagate the error details
+        let mut handler = DropHandler::new();
+
+        self.inner.query(&query, &mut handler).map_err(|_e| {
             Error::IncorrectApiUsageError("Failed to execute query")
         })?;
 
+        self.affected_rows = handler.affected_rows;
+        self.last_insert_id = handler.last_insert_id;
         Ok(())
     }
 
-    /// Execute a prepared statement with parameters
     pub fn exec<'py>(
         &mut self,
         py: Python<'py>,
@@ -135,7 +108,6 @@ impl ZeroMysqlConn {
     ) -> PyroResult<Py<PyList>> {
         use super::params_adapter::ParamsAdapter;
 
-        // Check if we have a cached statement
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
@@ -153,10 +125,11 @@ impl ZeroMysqlConn {
             .exec(stmt_id, params_adapter, &mut handler)
             .map_err(|_e| Error::IncorrectApiUsageError("Failed to execute query"))?;
 
+        self.affected_rows = handler.affected_rows();
+        self.last_insert_id = handler.last_insert_id();
         Ok(handler.into_rows())
     }
 
-    /// Execute a prepared statement and return only the first row
     pub fn exec_first<'py>(
         &mut self,
         py: Python<'py>,
@@ -165,7 +138,6 @@ impl ZeroMysqlConn {
     ) -> PyroResult<Option<Py<PyAny>>> {
         use super::params_adapter::ParamsAdapter;
 
-        // Check if we have a cached statement
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
@@ -186,7 +158,8 @@ impl ZeroMysqlConn {
                 Error::IncorrectApiUsageError("Failed to execute query")
             })?;
 
-        // Get the first row if any
+        self.affected_rows = handler.affected_rows();
+        self.last_insert_id = handler.last_insert_id();
         let rows = handler.into_rows();
         Ok(if rows.bind(py).len() > 0 {
             Some(rows.bind(py).get_item(0)?.unbind())
@@ -195,11 +168,9 @@ impl ZeroMysqlConn {
         })
     }
 
-    /// Execute a prepared statement and discard results (for INSERT, UPDATE, DELETE)
     pub fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
         use super::params_adapter::ParamsAdapter;
 
-        // Check if we have a cached statement
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
@@ -211,12 +182,14 @@ impl ZeroMysqlConn {
             stmt_id
         };
 
-        // Convert Params to zero-mysql params format
+        let mut handler = DropHandler::new();
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
-            .exec_drop(stmt_id, params_adapter)
+            .exec(stmt_id, params_adapter, &mut handler)
             .map_err(|_e| Error::IncorrectApiUsageError("Failed to execute query"))?;
 
+        self.affected_rows = handler.affected_rows;
+        self.last_insert_id = handler.last_insert_id;
         Ok(())
     }
 }

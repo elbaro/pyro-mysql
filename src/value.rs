@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::py_imports::{get_date_class, get_datetime_class, get_decimal_class, get_json_module, get_timedelta_class};
 use mysql_common::Value as MySqlValue;
 use mysql_common::constants::ColumnType;
 use mysql_common::packets::Column;
@@ -7,70 +8,9 @@ use pyo3::{
     IntoPyObjectExt,
     prelude::*,
     pybacked::{PyBackedBytes, PyBackedStr},
-    sync::PyOnceLock,
     types::{PyBytes, PyString},
 };
 use simdutf8::basic::from_utf8;
-
-static DATETIME_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
-static DATE_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
-static TIMEDELTA_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
-static DECIMAL_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
-static JSON_MODULE: PyOnceLock<Py<PyModule>> = PyOnceLock::new();
-
-pub fn get_datetime_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
-    Ok(DATETIME_CLASS
-        .get_or_init(py, || {
-            PyModule::import(py, "datetime")
-                .unwrap()
-                .getattr("datetime")
-                .unwrap()
-                .unbind()
-        })
-        .bind(py))
-}
-
-pub fn get_date_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
-    Ok(DATE_CLASS
-        .get_or_init(py, || {
-            PyModule::import(py, "datetime")
-                .unwrap()
-                .getattr("date")
-                .unwrap()
-                .unbind()
-        })
-        .bind(py))
-}
-
-pub fn get_timedelta_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
-    Ok(TIMEDELTA_CLASS
-        .get_or_init(py, || {
-            PyModule::import(py, "datetime")
-                .unwrap()
-                .getattr("timedelta")
-                .unwrap()
-                .unbind()
-        })
-        .bind(py))
-}
-
-pub fn get_decimal_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
-    Ok(DECIMAL_CLASS
-        .get_or_init(py, || {
-            PyModule::import(py, "decimal")
-                .unwrap()
-                .getattr("Decimal")
-                .unwrap()
-                .unbind()
-        })
-        .bind(py))
-}
-
-fn get_json_module<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyModule>> {
-    Ok(JSON_MODULE
-        .get_or_init(py, || PyModule::import(py, "json").unwrap().unbind())
-        .bind(py))
-}
 
 /// Zero-copy MySQL value type using PyBackedStr and PyBackedBytes
 ///
