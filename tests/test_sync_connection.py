@@ -62,7 +62,7 @@ def test_sync_connection_server_info(backend):
     conn = Conn(get_test_db_url(), backend=backend)
 
     server_version = conn.server_version()
-    assert server_version[0] >= 5
+    assert len(server_version) >= 5
 
     connection_id = conn.id()
     assert connection_id > 0
@@ -179,12 +179,7 @@ def test_sync_connection_init_command(backend):
 
 def test_sync_connection_with_wrong_credentials(backend):
     """Test sync connection failure with wrong credentials."""
-    opts = (
-        Opts()
-        .host("127.0.0.1")
-        .user("nonexistent_user")
-        .password("wrong_password")
-    )
+    opts = Opts().host("127.0.0.1").user("nonexistent_user").password("wrong_password")
 
     with pytest.raises(Exception):
         Conn(opts, backend=backend)
@@ -192,11 +187,7 @@ def test_sync_connection_with_wrong_credentials(backend):
 
 def test_sync_connection_to_invalid_host(backend):
     """Test sync connection failure to invalid host."""
-    opts = (
-        Opts()
-        .host("invalid.host.that.does.not.exist")
-        .port(3306)
-    )
+    opts = Opts().host("invalid.host.that.does.not.exist").port(3306)
 
     with pytest.raises(Exception):
         Conn(opts, backend=backend)

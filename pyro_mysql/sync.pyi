@@ -5,18 +5,6 @@ from typing import Any, Literal, Self, Sequence, overload
 
 from pyro_mysql import IsolationLevel, Opts, Params
 
-class RowIterator:
-    def __iter__(self) -> "RowIterator": ...
-    def __next__(self) -> tuple[Any, ...]: ...
-
-class ResultSetIterator:
-    """Iterator over MySQL result sets."""
-
-    def __iter__(self) -> "ResultSetIterator":
-        """Return iterator."""
-        ...
-
-    def __next__(self) -> RowIterator: ...
 
 class Transaction:
     """
@@ -97,18 +85,6 @@ class Transaction:
         """
         ...
 
-    def query_iter(self, query: str) -> ResultSetIterator:
-        """
-        Execute a query using text protocol and return an iterator over the results.
-
-        Args:
-            query: SQL query string.
-
-        Returns:
-            ResultSetIterator object for iterating over rows.
-        """
-        ...
-
     @overload
     def exec(
         self, query: str, params: Params = None, *, as_dict: Literal[False] = False
@@ -174,19 +150,6 @@ class Transaction:
         Args:
             query: SQL query string with '?' placeholders.
             params_list: List of parameter sets.
-        """
-        ...
-
-    def exec_iter(self, query: str, params: Params = None) -> ResultSetIterator:
-        """
-        Execute a query using binary protocol and return an iterator over the results.
-
-        Args:
-            query: SQL query string with '?' placeholders.
-            params: Query parameters.
-
-        Returns:
-            ResultSetIterator object for iterating over rows.
         """
         ...
 
@@ -275,18 +238,6 @@ class Conn:
         """
         ...
 
-    def query_iter(self, query: str) -> ResultSetIterator:
-        """
-        Execute a query using text protocol and return an iterator over result sets.
-
-        Args:
-            query: SQL query string.
-
-        Returns:
-            Iterator over result sets.
-        """
-        ...
-
     @overload
     def exec(
         self, query: str, params: Params = None, *, as_dict: Literal[False] = False
@@ -354,8 +305,6 @@ class Conn:
             params_list: List of parameter sets.
         """
         ...
-
-    def exec_iter(self, query: str, params: Params = None) -> ResultSetIterator: ...
     def close(self) -> None:
         """
         Disconnect from the MySQL server.

@@ -11,7 +11,6 @@ use crate::isolation_level::IsolationLevel;
 use crate::opts::Opts;
 use crate::params::Params;
 use crate::row::Row;
-use crate::sync::iterator::ResultSetIterator;
 use crate::sync::multi_conn::MultiSyncConn;
 use crate::sync::transaction::SyncTransaction;
 
@@ -211,32 +210,6 @@ impl SyncConn {
             }
         }
     }
-    #[pyo3(signature = (query))]
-    fn query_iter(slf: Py<Self>, py: Python, query: String) -> PyroResult<ResultSetIterator> {
-        let slf_ref = slf.borrow(py);
-        let mut guard = slf_ref.inner.write();
-        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        match multi_conn {
-            MultiSyncConn::Mysql(conn) => {
-                let query_result = conn.inner.query_iter(query)?;
-                Ok(ResultSetIterator {
-                    owner: slf.clone_ref(py).into_any(),
-                    inner: Either::Left(unsafe {
-                        std::mem::transmute::<
-                            mysql::QueryResult<'_, '_, '_, mysql::Text>,
-                            mysql::QueryResult<'_, '_, '_, mysql::Text>,
-                        >(query_result)
-                    }),
-                })
-            }
-            MultiSyncConn::Diesel(_) => Err(Error::IncorrectApiUsageError(
-                "query_iter is not yet supported for Diesel backend",
-            )),
-            MultiSyncConn::ZeroMysql(_) => Err(Error::IncorrectApiUsageError(
-                "query_iter is not yet supported for Zero-MySQL backend",
-            )),
-        }
-    }
 
     // ─── Binary Protocol ─────────────────────────────────────────────────
 
@@ -362,29 +335,6 @@ impl SyncConn {
         }
     }
 
-    // #[pyo3(signature = (query, params=Params::default()))]
-    // fn exec_iter(
-    //     slf: Py<Self>,
-    //     py: Python,
-    //     query: String,
-    //     params: Params,
-    // ) -> PyroResult<ResultSetIterator> {
-    //     let slf_ref = slf.borrow(py);
-    //     let mut guard = slf_ref.inner.write();
-    //     let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-
-    //     log::debug!("exec_iter {query}");
-    //     let query_result = conn.exec_iter(query, params)?;
-    //     Ok(ResultSetIterator {
-    //         owner: slf.clone_ref(py).into_any(),
-    //         inner: Either::Right(unsafe {
-    //             std::mem::transmute::<
-    //                 mysql::QueryResult<'_, '_, '_, mysql::Binary>,
-    //                 mysql::QueryResult<'_, '_, '_, mysql::Binary>,
-    //             >(query_result)
-    //         }),
-    //     })
-    // }
 
     pub fn close(&self) {
         *self.inner.write() = None;

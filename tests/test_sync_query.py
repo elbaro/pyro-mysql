@@ -68,34 +68,6 @@ def test_sync_query_first(backend):
     conn.close()
 
 
-def test_sync_query_iter(backend):
-    """Test sync query_iter functionality."""
-    conn = Conn(get_test_db_url(), backend=backend)
-
-    setup_test_table_sync(conn)
-
-    conn.exec_drop(
-        "INSERT INTO test_table (name, age) VALUES (?, ?), (?, ?), (?, ?)",
-        ("Alice", 30, "Bob", 25, "Charlie", 35),
-    )
-
-    result_set_iter = conn.query_iter("SELECT name, age FROM test_table ORDER BY age")
-
-    count = 0
-    expected_results = [("Bob", 25), ("Alice", 30), ("Charlie", 35)]
-
-    for result_set in result_set_iter:
-        for row in result_set:
-            name, age = row[0], row[1]
-            assert (name, age) == expected_results[count]
-            count += 1
-
-    assert count == 3
-
-    cleanup_test_table_sync(conn)
-    conn.close()
-
-
 def test_sync_batch_exec(backend):
     """Test sync batch execution."""
     conn = Conn(get_test_db_url(), backend=backend)

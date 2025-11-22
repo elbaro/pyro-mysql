@@ -110,9 +110,6 @@ mod pyro_mysql {
 
         #[pymodule_export]
         use crate::sync::transaction::SyncTransaction;
-
-        #[pymodule_export]
-        use crate::sync::iterator::ResultSetIterator;
     }
 
     #[pymodule]
