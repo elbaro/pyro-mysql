@@ -1,6 +1,6 @@
 use crate::error::{Error, PyroResult};
 use crate::params::Params;
-use crate::sync::backend::zero_mysql::handler::{DropHandler, TupleHandler};
+use crate::sync::backend::zero_mysql::handler::{DictHandler, DropHandler, TupleHandler};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 use zero_mysql::sync::Conn;
@@ -72,12 +72,25 @@ impl ZeroMysqlConn {
         Ok(())
     }
 
-    pub fn query<'py>(&mut self, py: Python<'py>, query: String) -> PyroResult<Py<PyList>> {
-        let mut handler = TupleHandler::new(py);
-        self.inner.query(&query, &mut handler)?;
-        self.affected_rows = handler.affected_rows();
-        self.last_insert_id = handler.last_insert_id();
-        Ok(handler.into_rows())
+    pub fn query<'py>(
+        &mut self,
+        py: Python<'py>,
+        query: String,
+        as_dict: bool,
+    ) -> PyroResult<Py<PyList>> {
+        if as_dict {
+            let mut handler = DictHandler::new(py);
+            self.inner.query(&query, &mut handler)?;
+            self.affected_rows = handler.affected_rows();
+            self.last_insert_id = handler.last_insert_id();
+            Ok(handler.into_rows())
+        } else {
+            let mut handler = TupleHandler::new(py);
+            self.inner.query(&query, &mut handler)?;
+            self.affected_rows = handler.affected_rows();
+            self.last_insert_id = handler.last_insert_id();
+            Ok(handler.into_rows())
+        }
     }
 
     pub fn query_drop(&mut self, query: String) -> PyroResult<()> {
@@ -95,6 +108,7 @@ impl ZeroMysqlConn {
         py: Python<'py>,
         query: String,
         params: Params,
+        as_dict: bool,
     ) -> PyroResult<Py<PyList>> {
         use super::params_adapter::ParamsAdapter;
 
@@ -109,12 +123,20 @@ impl ZeroMysqlConn {
             stmt_id
         };
 
-        let mut handler = TupleHandler::new(py);
         let params_adapter = ParamsAdapter::new(&params);
-        self.inner.exec(stmt_id, params_adapter, &mut handler)?;
-        self.affected_rows = handler.affected_rows();
-        self.last_insert_id = handler.last_insert_id();
-        Ok(handler.into_rows())
+        if as_dict {
+            let mut handler = DictHandler::new(py);
+            self.inner.exec(stmt_id, params_adapter, &mut handler)?;
+            self.affected_rows = handler.affected_rows();
+            self.last_insert_id = handler.last_insert_id();
+            Ok(handler.into_rows())
+        } else {
+            let mut handler = TupleHandler::new(py);
+            self.inner.exec(stmt_id, params_adapter, &mut handler)?;
+            self.affected_rows = handler.affected_rows();
+            self.last_insert_id = handler.last_insert_id();
+            Ok(handler.into_rows())
+        }
     }
 
     pub fn exec_first<'py>(
@@ -122,6 +144,7 @@ impl ZeroMysqlConn {
         py: Python<'py>,
         query: String,
         params: Params,
+        as_dict: bool,
     ) -> PyroResult<Option<Py<PyAny>>> {
         use super::params_adapter::ParamsAdapter;
 
@@ -136,19 +159,32 @@ impl ZeroMysqlConn {
             stmt_id
         };
 
-        let mut handler = TupleHandler::new(py);
         let params_adapter = ParamsAdapter::new(&params);
-        self.inner
-            .exec_first(stmt_id, params_adapter, &mut handler)?;
-
-        self.affected_rows = handler.affected_rows();
-        self.last_insert_id = handler.last_insert_id();
-        let rows = handler.into_rows();
-        Ok(if rows.bind(py).len() > 0 {
-            Some(rows.bind(py).get_item(0)?.unbind())
+        if as_dict {
+            let mut handler = DictHandler::new(py);
+            self.inner
+                .exec_first(stmt_id, params_adapter, &mut handler)?;
+            self.affected_rows = handler.affected_rows();
+            self.last_insert_id = handler.last_insert_id();
+            let rows = handler.into_rows();
+            Ok(if rows.bind(py).len() > 0 {
+                Some(rows.bind(py).get_item(0)?.unbind())
+            } else {
+                None
+            })
         } else {
-            None
-        })
+            let mut handler = TupleHandler::new(py);
+            self.inner
+                .exec_first(stmt_id, params_adapter, &mut handler)?;
+            self.affected_rows = handler.affected_rows();
+            self.last_insert_id = handler.last_insert_id();
+            let rows = handler.into_rows();
+            Ok(if rows.bind(py).len() > 0 {
+                Some(rows.bind(py).get_item(0)?.unbind())
+            } else {
+                None
+            })
+        }
     }
 
     pub fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {

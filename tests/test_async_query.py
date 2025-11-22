@@ -197,3 +197,149 @@ async def test_affected_rows(async_backend):
 
     await cleanup_test_table_async(conn)
     await conn.close()
+
+
+# ─── as_dict=True Tests ────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_query_as_dict(async_backend):
+    """Test async query with as_dict=True returns dictionaries."""
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+
+    await setup_test_table_async(conn)
+
+    await conn.exec_drop(
+        "INSERT INTO test_table (name, age) VALUES (?, ?), (?, ?)",
+        ("Alice", 30, "Bob", 25),
+    )
+
+    results = await conn.query(
+        "SELECT name, age FROM test_table ORDER BY age", as_dict=True
+    )
+
+    assert len(results) == 2
+    assert isinstance(results[0], dict)
+    assert isinstance(results[1], dict)
+    assert results[0]["name"] == "Bob"
+    assert results[0]["age"] == 25
+    assert results[1]["name"] == "Alice"
+    assert results[1]["age"] == 30
+
+    await cleanup_test_table_async(conn)
+    await conn.close()
+
+
+@pytest.mark.asyncio
+async def test_query_first_as_dict(async_backend):
+    """Test async query_first with as_dict=True returns dictionary."""
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+
+    await setup_test_table_async(conn)
+
+    await conn.exec_drop(
+        "INSERT INTO test_table (name, age) VALUES (?, ?), (?, ?)",
+        ("Alice", 30, "Bob", 25),
+    )
+
+    result = await conn.query_first(
+        "SELECT name, age FROM test_table ORDER BY age DESC", as_dict=True
+    )
+
+    assert result is not None
+    assert isinstance(result, dict)
+    assert result["name"] == "Alice"
+    assert result["age"] == 30
+
+    # Test with no results
+    result = await conn.query_first(
+        "SELECT name, age FROM test_table WHERE age > 100", as_dict=True
+    )
+    assert result is None
+
+    await cleanup_test_table_async(conn)
+    await conn.close()
+
+
+@pytest.mark.asyncio
+async def test_exec_as_dict(async_backend):
+    """Test async exec with as_dict=True returns dictionaries."""
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+
+    await setup_test_table_async(conn)
+
+    await conn.exec_drop(
+        "INSERT INTO test_table (name, age) VALUES (?, ?), (?, ?)",
+        ("Alice", 30, "Bob", 25),
+    )
+
+    results = await conn.exec(
+        "SELECT name, age FROM test_table WHERE age > ?", (20,), as_dict=True
+    )
+
+    assert len(results) == 2
+    assert all(isinstance(r, dict) for r in results)
+
+    # Check that we can access by column name
+    names = {r["name"] for r in results}
+    assert names == {"Alice", "Bob"}
+
+    await cleanup_test_table_async(conn)
+    await conn.close()
+
+
+@pytest.mark.asyncio
+async def test_exec_first_as_dict(async_backend):
+    """Test async exec_first with as_dict=True returns dictionary."""
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+
+    await setup_test_table_async(conn)
+
+    await conn.exec_drop(
+        "INSERT INTO test_table (name, age) VALUES (?, ?), (?, ?)",
+        ("Alice", 30, "Bob", 25),
+    )
+
+    result = await conn.exec_first(
+        "SELECT name, age FROM test_table ORDER BY age DESC", (), as_dict=True
+    )
+
+    assert result is not None
+    assert isinstance(result, dict)
+    assert result["name"] == "Alice"
+    assert result["age"] == 30
+
+    # Test with no results
+    result = await conn.exec_first(
+        "SELECT name, age FROM test_table WHERE age > ?", (100,), as_dict=True
+    )
+    assert result is None
+
+    await cleanup_test_table_async(conn)
+    await conn.close()
+
+
+@pytest.mark.asyncio
+async def test_query_as_dict_with_nulls(async_backend):
+    """Test async query with as_dict=True handles NULL values correctly."""
+    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+
+    await setup_test_table_async(conn)
+
+    await conn.exec_drop(
+        "INSERT INTO test_table (name, age) VALUES (?, ?), (?, NULL)",
+        ("Alice", 30, "Bob"),
+    )
+
+    results = await conn.query(
+        "SELECT name, age FROM test_table ORDER BY name", as_dict=True
+    )
+
+    assert len(results) == 2
+    assert results[0]["name"] == "Alice"
+    assert results[0]["age"] == 30
+    assert results[1]["name"] == "Bob"
+    assert results[1]["age"] is None
+
+    await cleanup_test_table_async(conn)
+    await conn.close()

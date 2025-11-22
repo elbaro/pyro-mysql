@@ -145,10 +145,10 @@ impl SyncConn {
                 conn.query(query, as_dict)
             }
             MultiSyncConn::ZeroMysql(conn) => {
-                let tuples = conn.query(py, query)?;
+                let rows = conn.query(py, query, as_dict)?;
                 // ZeroMysql returns PyList, convert to Vec<Py<PyAny>>
                 let result: Vec<Py<PyAny>> =
-                    tuples.bind(py).iter().map(|item| item.unbind()).collect();
+                    rows.bind(py).iter().map(|item| item.unbind()).collect();
                 Ok(result)
             }
         }
@@ -185,10 +185,10 @@ impl SyncConn {
                 conn.query_first(query, as_dict)
             }
             MultiSyncConn::ZeroMysql(conn) => {
-                let tuples = conn.query(py, query)?;
-                // Get first tuple if any
-                Ok(if tuples.bind(py).len() > 0 {
-                    Some(tuples.bind(py).get_item(0)?.unbind())
+                let rows = conn.query(py, query, as_dict)?;
+                // Get first row if any
+                Ok(if rows.bind(py).len() > 0 {
+                    Some(rows.bind(py).get_item(0)?.unbind())
                 } else {
                     None
                 })
@@ -203,13 +203,7 @@ impl SyncConn {
         match multi_conn {
             MultiSyncConn::Mysql(conn) => Ok(conn.inner.query_drop(query)?),
             MultiSyncConn::Diesel(conn) => conn.query_drop(query),
-            MultiSyncConn::ZeroMysql(conn) => {
-                // Execute query and discard results
-                Python::attach(|py| {
-                    conn.query(py, query)?;
-                    Ok(())
-                })
-            }
+            MultiSyncConn::ZeroMysql(conn) => conn.query_drop(query),
         }
     }
 
@@ -254,11 +248,7 @@ impl SyncConn {
                     .unwrap()
                     .unbind())
             }
-            MultiSyncConn::ZeroMysql(conn) => {
-                let tuples = conn.exec(py, query, params)?;
-                // TODO: Convert to dict if as_dict is true
-                Ok(tuples)
-            }
+            MultiSyncConn::ZeroMysql(conn) => conn.exec(py, query, params, as_dict)
         }
     }
 
@@ -295,7 +285,7 @@ impl SyncConn {
                 // Diesel handles as_dict internally
                 conn.exec_first(query, params, as_dict)
             }
-            MultiSyncConn::ZeroMysql(conn) => conn.exec_first(py, query, params),
+            MultiSyncConn::ZeroMysql(conn) => conn.exec_first(py, query, params, as_dict),
         }
     }
 
@@ -359,13 +349,7 @@ impl SyncConn {
         match multi_conn {
             MultiSyncConn::Mysql(conn) => Ok(conn.inner.query_drop(query)?),
             MultiSyncConn::Diesel(conn) => conn.query_drop(query),
-            MultiSyncConn::ZeroMysql(conn) => {
-                // Execute query and discard results
-                Python::attach(|py| {
-                    conn.query(py, query)?;
-                    Ok(())
-                })
-            }
+            MultiSyncConn::ZeroMysql(conn) => conn.query_drop(query),
         }
     }
 }

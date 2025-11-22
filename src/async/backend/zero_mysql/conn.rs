@@ -1,14 +1,15 @@
-use crate::r#async::backend::zero_mysql::handler::{DropHandler, TupleHandler};
+use crate::r#async::backend::zero_mysql::handler::{DictHandler, DropHandler, TupleHandler};
 use crate::error::PyroResult;
 use crate::params::Params;
 use pyo3::prelude::*;
-use pyo3::types::PyTuple;
+use pyo3::types::{PyDict, PyTuple};
 use zero_mysql::tokio::Conn;
 
 pub struct ZeroMysqlConn {
     pub inner: Conn,
     stmt_cache: std::collections::HashMap<String, u32>,
-    handler: TupleHandler,
+    tuple_handler: TupleHandler,
+    dict_handler: DictHandler,
     affected_rows: u64,
     last_insert_id: u64,
 }
@@ -21,7 +22,8 @@ impl ZeroMysqlConn {
         Ok(ZeroMysqlConn {
             inner: conn,
             stmt_cache: std::collections::HashMap::new(),
-            handler: TupleHandler::new(),
+            tuple_handler: TupleHandler::new(),
+            dict_handler: DictHandler::new(),
             affected_rows: 0,
             last_insert_id: 0,
         })
@@ -33,7 +35,8 @@ impl ZeroMysqlConn {
         Ok(ZeroMysqlConn {
             inner: conn,
             stmt_cache: std::collections::HashMap::new(),
-            handler: TupleHandler::new(),
+            tuple_handler: TupleHandler::new(),
+            dict_handler: DictHandler::new(),
             affected_rows: 0,
             last_insert_id: 0,
         })
@@ -83,15 +86,30 @@ impl ZeroMysqlConn {
         Ok(())
     }
 
-    pub async fn query(&mut self, query: String) -> PyroResult<Vec<Py<PyTuple>>> {
-        self.handler.clear();
-
-        self.inner.query(&query, &mut self.handler).await?;
-
-        self.affected_rows = self.handler.affected_rows();
-        self.last_insert_id = self.handler.last_insert_id();
-
-        Python::attach(|py| Ok(self.handler.rows_to_python(py)?))
+    pub async fn query(
+        &mut self,
+        query: String,
+        as_dict: bool,
+    ) -> PyroResult<Py<PyAny>> {
+        if as_dict {
+            self.dict_handler.clear();
+            self.inner.query(&query, &mut self.dict_handler).await?;
+            self.affected_rows = self.dict_handler.affected_rows();
+            self.last_insert_id = self.dict_handler.last_insert_id();
+            Python::attach(|py| {
+                let rows: Vec<Py<PyDict>> = self.dict_handler.rows_to_python(py)?;
+                Ok(rows.into_pyobject(py)?.into_any().unbind())
+            })
+        } else {
+            self.tuple_handler.clear();
+            self.inner.query(&query, &mut self.tuple_handler).await?;
+            self.affected_rows = self.tuple_handler.affected_rows();
+            self.last_insert_id = self.tuple_handler.last_insert_id();
+            Python::attach(|py| {
+                let rows: Vec<Py<PyTuple>> = self.tuple_handler.rows_to_python(py)?;
+                Ok(rows.into_pyobject(py)?.into_any().unbind())
+            })
+        }
     }
 
     pub async fn query_drop(&mut self, query: String) -> PyroResult<()> {
@@ -103,7 +121,12 @@ impl ZeroMysqlConn {
         Ok(())
     }
 
-    pub async fn exec(&mut self, query: String, params: Params) -> PyroResult<Vec<Py<PyTuple>>> {
+    pub async fn exec(
+        &mut self,
+        query: String,
+        params: Params,
+        as_dict: bool,
+    ) -> PyroResult<Py<PyAny>> {
         use super::params_adapter::ParamsAdapter;
 
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
@@ -114,24 +137,38 @@ impl ZeroMysqlConn {
             stmt_id
         };
 
-        self.handler.clear();
-
         let params_adapter = ParamsAdapter::new(&params);
-        self.inner
-            .exec(stmt_id, params_adapter, &mut self.handler)
-            .await?;
-
-        self.affected_rows = self.handler.affected_rows();
-        self.last_insert_id = self.handler.last_insert_id();
-
-        Python::attach(|py| Ok(self.handler.rows_to_python(py)?))
+        if as_dict {
+            self.dict_handler.clear();
+            self.inner
+                .exec(stmt_id, params_adapter, &mut self.dict_handler)
+                .await?;
+            self.affected_rows = self.dict_handler.affected_rows();
+            self.last_insert_id = self.dict_handler.last_insert_id();
+            Python::attach(|py| {
+                let rows: Vec<Py<PyDict>> = self.dict_handler.rows_to_python(py)?;
+                Ok(rows.into_pyobject(py)?.into_any().unbind())
+            })
+        } else {
+            self.tuple_handler.clear();
+            self.inner
+                .exec(stmt_id, params_adapter, &mut self.tuple_handler)
+                .await?;
+            self.affected_rows = self.tuple_handler.affected_rows();
+            self.last_insert_id = self.tuple_handler.last_insert_id();
+            Python::attach(|py| {
+                let rows: Vec<Py<PyTuple>> = self.tuple_handler.rows_to_python(py)?;
+                Ok(rows.into_pyobject(py)?.into_any().unbind())
+            })
+        }
     }
 
     pub async fn exec_first(
         &mut self,
         query: String,
         params: Params,
-    ) -> PyroResult<Option<Py<PyTuple>>> {
+        as_dict: bool,
+    ) -> PyroResult<Option<Py<PyAny>>> {
         use super::params_adapter::ParamsAdapter;
 
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
@@ -142,20 +179,30 @@ impl ZeroMysqlConn {
             stmt_id
         };
 
-        self.handler.clear();
-
         let params_adapter = ParamsAdapter::new(&params);
-        self.inner
-            .exec_first(stmt_id, params_adapter, &mut self.handler)
-            .await?;
-
-        self.affected_rows = self.handler.affected_rows();
-        self.last_insert_id = self.handler.last_insert_id();
-
-        Python::attach(|py| {
-            let rows = self.handler.rows_to_python(py)?;
-            Ok(rows.into_iter().next())
-        })
+        if as_dict {
+            self.dict_handler.clear();
+            self.inner
+                .exec_first(stmt_id, params_adapter, &mut self.dict_handler)
+                .await?;
+            self.affected_rows = self.dict_handler.affected_rows();
+            self.last_insert_id = self.dict_handler.last_insert_id();
+            Python::attach(|py| {
+                let rows = self.dict_handler.rows_to_python(py)?;
+                Ok(rows.into_iter().next().map(|d| d.into_any()))
+            })
+        } else {
+            self.tuple_handler.clear();
+            self.inner
+                .exec_first(stmt_id, params_adapter, &mut self.tuple_handler)
+                .await?;
+            self.affected_rows = self.tuple_handler.affected_rows();
+            self.last_insert_id = self.tuple_handler.last_insert_id();
+            Python::attach(|py| {
+                let rows = self.tuple_handler.rows_to_python(py)?;
+                Ok(rows.into_iter().next().map(|t| t.into_any()))
+            })
+        }
     }
 
     pub async fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {

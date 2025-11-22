@@ -180,3 +180,142 @@ def test_sync_affected_rows(backend):
 
     cleanup_test_table_sync(conn)
     conn.close()
+
+
+# ─── as_dict=True Tests ────────────────────────────────────────────────────
+
+
+def test_sync_query_as_dict(backend):
+    """Test sync query with as_dict=True returns dictionaries."""
+    conn = Conn(get_test_db_url(), backend=backend)
+
+    setup_test_table_sync(conn)
+
+    conn.exec_drop(
+        "INSERT INTO test_table (name, age) VALUES (?, ?), (?, ?)",
+        ("Alice", 30, "Bob", 25),
+    )
+
+    results = conn.query("SELECT name, age FROM test_table ORDER BY age", as_dict=True)
+
+    assert len(results) == 2
+    assert isinstance(results[0], dict)
+    assert isinstance(results[1], dict)
+    assert results[0]["name"] == "Bob"
+    assert results[0]["age"] == 25
+    assert results[1]["name"] == "Alice"
+    assert results[1]["age"] == 30
+
+    cleanup_test_table_sync(conn)
+    conn.close()
+
+
+def test_sync_query_first_as_dict(backend):
+    """Test sync query_first with as_dict=True returns dictionary."""
+    conn = Conn(get_test_db_url(), backend=backend)
+
+    setup_test_table_sync(conn)
+
+    conn.exec_drop(
+        "INSERT INTO test_table (name, age) VALUES (?, ?), (?, ?)",
+        ("Alice", 30, "Bob", 25),
+    )
+
+    result = conn.query_first(
+        "SELECT name, age FROM test_table ORDER BY age DESC", as_dict=True
+    )
+
+    assert result is not None
+    assert isinstance(result, dict)
+    assert result["name"] == "Alice"
+    assert result["age"] == 30
+
+    # Test with no results
+    result = conn.query_first(
+        "SELECT name, age FROM test_table WHERE age > 100", as_dict=True
+    )
+    assert result is None
+
+    cleanup_test_table_sync(conn)
+    conn.close()
+
+
+def test_sync_exec_as_dict(backend):
+    """Test sync exec with as_dict=True returns dictionaries."""
+    conn = Conn(get_test_db_url(), backend=backend)
+
+    setup_test_table_sync(conn)
+
+    conn.exec_drop(
+        "INSERT INTO test_table (name, age) VALUES (?, ?), (?, ?)",
+        ("Alice", 30, "Bob", 25),
+    )
+
+    results = conn.exec(
+        "SELECT name, age FROM test_table WHERE age > ?", (20,), as_dict=True
+    )
+
+    assert len(results) == 2
+    assert all(isinstance(r, dict) for r in results)
+
+    # Check that we can access by column name
+    names = {r["name"] for r in results}
+    assert names == {"Alice", "Bob"}
+
+    cleanup_test_table_sync(conn)
+    conn.close()
+
+
+def test_sync_exec_first_as_dict(backend):
+    """Test sync exec_first with as_dict=True returns dictionary."""
+    conn = Conn(get_test_db_url(), backend=backend)
+
+    setup_test_table_sync(conn)
+
+    conn.exec_drop(
+        "INSERT INTO test_table (name, age) VALUES (?, ?), (?, ?)",
+        ("Alice", 30, "Bob", 25),
+    )
+
+    result = conn.exec_first(
+        "SELECT name, age FROM test_table ORDER BY age DESC", (), as_dict=True
+    )
+
+    assert result is not None
+    assert isinstance(result, dict)
+    assert result["name"] == "Alice"
+    assert result["age"] == 30
+
+    # Test with no results
+    result = conn.exec_first(
+        "SELECT name, age FROM test_table WHERE age > ?", (100,), as_dict=True
+    )
+    assert result is None
+
+    cleanup_test_table_sync(conn)
+    conn.close()
+
+
+def test_sync_query_as_dict_with_nulls(backend):
+    """Test sync query with as_dict=True handles NULL values correctly."""
+    conn = Conn(get_test_db_url(), backend=backend)
+
+    setup_test_table_sync(conn)
+
+    conn.exec_drop(
+        "INSERT INTO test_table (name, age) VALUES (?, ?), (?, NULL)",
+        ("Alice", 30, "Bob"),
+    )
+
+    results = conn.query(
+        "SELECT name, age FROM test_table ORDER BY name", as_dict=True
+    )
+
+    assert len(results) == 2
+    assert results[0]["name"] == "Alice"
+    assert results[0]["age"] == 30
+    assert results[1]["name"] == "Bob"
+    assert results[1]["age"] is None
+
+    cleanup_test_table_sync(conn)
+    conn.close()

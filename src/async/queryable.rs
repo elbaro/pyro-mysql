@@ -404,27 +404,10 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     rows
                 }
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
-                    // zero_mysql uses prepared statements for all queries
-                    let py_tuples = zero_conn.query(query).await?;
-
-                    // Convert to Vec<Row> for consistency with other backends
-                    // For zero_mysql, we work directly with PyTuples
+                    // zero_mysql now handles as_dict internally via DictHandler
+                    let py_rows = zero_conn.query(query, as_dict).await?;
                     return Python::attach(|py| {
-                        let result: Vec<Py<PyAny>> = if as_dict {
-                            // For as_dict=true, we need to convert tuples to dicts
-                            // However, zero_mysql doesn't provide column names easily
-                            // For now, return tuples (this is a limitation)
-                            py_tuples
-                                .iter()
-                                .map(|t| Ok(t.clone_ref(py).into_any()))
-                                .collect::<PyResult<_>>()?
-                        } else {
-                            py_tuples
-                                .iter()
-                                .map(|t| Ok(t.clone_ref(py).into_any()))
-                                .collect::<PyResult<_>>()?
-                        };
-                        Ok(result)
+                        Ok(py_rows.bind(py).extract::<Vec<Py<PyAny>>>()?)
                     });
                 }
             };
@@ -482,20 +465,12 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     Some(row)
                 }
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
-                    // zero_mysql uses prepared statements for all queries
-                    let py_tuples = zero_conn.query(query).await?;
-
-                    // Return first tuple if available
+                    // zero_mysql now handles as_dict internally via DictHandler
+                    let py_rows = zero_conn.query(query, as_dict).await?;
                     return Python::attach(|py| {
-                        if let Some(first) = py_tuples.first() {
-                            let result: Py<PyAny> = if as_dict {
-                                // For as_dict=true, we need column names which zero_mysql doesn't provide easily
-                                // Return tuple for now
-                                first.clone_ref(py).into_any()
-                            } else {
-                                first.clone_ref(py).into_any()
-                            };
-                            Ok(Some(result))
+                        let list = py_rows.bind(py);
+                        if list.len()? > 0 {
+                            Ok(Some(list.get_item(0)?.unbind()))
                         } else {
                             Ok(None)
                         }
@@ -609,23 +584,16 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     rows
                 }
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
-                    // zero_mysql returns Vec<Py<PyTuple>> directly
+                    // zero_mysql now handles as_dict internally via DictHandler
                     let pyro_params =
                         Python::attach(|py| params.extract::<crate::params::Params>(py))?;
-                    let tuples = zero_conn
-                        .exec(query.to_string(), pyro_params)
+                    let py_rows = zero_conn
+                        .exec(query.to_string(), pyro_params, as_dict)
                         .await
                         .map_err(Error::from)?;
 
-                    // Return directly - zero_mysql already returns tuples
-                    return Python::attach(|_py| {
-                        let result: Vec<Py<PyAny>> = if as_dict {
-                            // TODO: convert tuples to dicts
-                            todo!("as_dict not yet supported for zero_mysql")
-                        } else {
-                            tuples.into_iter().map(|t| t.into_any()).collect()
-                        };
-                        Ok(result)
+                    return Python::attach(|py| {
+                        Ok(py_rows.bind(py).extract::<Vec<Py<PyAny>>>()?)
                     });
                 }
             };
@@ -693,28 +661,15 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     Some(row)
                 }
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
-                    // zero_mysql has a dedicated exec_first method
+                    // zero_mysql now handles as_dict internally via DictHandler
                     let pyro_params =
                         Python::attach(|py| params.extract::<crate::params::Params>(py))?;
-                    let first_tuple = zero_conn
-                        .exec_first(query.to_string(), pyro_params)
+                    let first_row = zero_conn
+                        .exec_first(query.to_string(), pyro_params, as_dict)
                         .await
                         .map_err(Error::from)?;
 
-                    // Return first tuple if available
-                    return Python::attach(|_py| {
-                        if let Some(first) = first_tuple {
-                            let result: Py<PyAny> = if as_dict {
-                                // TODO: convert tuple to dict (need column names)
-                                first.into_any()
-                            } else {
-                                first.into_any()
-                            };
-                            Ok(Some(result))
-                        } else {
-                            Ok(None)
-                        }
-                    });
+                    return Ok(first_row);
                 }
             };
 
