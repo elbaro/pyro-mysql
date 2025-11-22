@@ -1,6 +1,6 @@
 import datetime
 from types import TracebackType
-from typing import Any, Self, Sequence
+from typing import Any, Literal, Self, Sequence, overload
 
 from pyro_mysql import IsolationLevel, Opts, Params, PyroFuture
 
@@ -38,6 +38,14 @@ class Transaction:
         """Ping the server to check connection."""
         ...
 
+    @overload
+    def query(
+        self, query: str, *, as_dict: Literal[False] = False
+    ) -> PyroFuture[list[tuple[Any, ...]]]: ...
+    @overload
+    def query(
+        self, query: str, *, as_dict: Literal[True]
+    ) -> PyroFuture[list[dict[str, Any]]]: ...
     def query(
         self, query: str, *, as_dict: bool = False
     ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
@@ -53,6 +61,14 @@ class Transaction:
         """
         ...
 
+    @overload
+    def query_first(
+        self, query: str, *, as_dict: Literal[False] = False
+    ) -> PyroFuture[tuple[Any, ...] | None]: ...
+    @overload
+    def query_first(
+        self, query: str, *, as_dict: Literal[True]
+    ) -> PyroFuture[dict[str, Any] | None]: ...
     def query_first(
         self, query: str, *, as_dict: bool = False
     ) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
@@ -77,6 +93,14 @@ class Transaction:
         """
         ...
 
+    @overload
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: Literal[False] = False
+    ) -> PyroFuture[list[tuple[Any, ...]]]: ...
+    @overload
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: Literal[True]
+    ) -> PyroFuture[list[dict[str, Any]]]: ...
     def exec(
         self, query: str, params: Params = None, *, as_dict: bool = False
     ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
@@ -93,6 +117,14 @@ class Transaction:
         """
         ...
 
+    @overload
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: Literal[False] = False
+    ) -> PyroFuture[tuple[Any, ...] | None]: ...
+    @overload
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: Literal[True]
+    ) -> PyroFuture[dict[str, Any] | None]: ...
     def exec_first(
         self, query: str, params: Params = None, *, as_dict: bool = False
     ) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
@@ -183,6 +215,14 @@ class Conn:
         """Ping the server to check connection."""
         ...
 
+    @overload
+    def query(
+        self, query: str, *, as_dict: Literal[False] = False
+    ) -> PyroFuture[list[tuple[Any, ...]]]: ...
+    @overload
+    def query(
+        self, query: str, *, as_dict: Literal[True]
+    ) -> PyroFuture[list[dict[str, Any]]]: ...
     def query(
         self, query: str, *, as_dict: bool = False
     ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
@@ -198,6 +238,14 @@ class Conn:
         """
         ...
 
+    @overload
+    def query_first(
+        self, query: str, *, as_dict: Literal[False] = False
+    ) -> PyroFuture[tuple[Any, ...] | None]: ...
+    @overload
+    def query_first(
+        self, query: str, *, as_dict: Literal[True]
+    ) -> PyroFuture[dict[str, Any] | None]: ...
     def query_first(
         self, query: str, *, as_dict: bool = False
     ) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
@@ -222,6 +270,14 @@ class Conn:
         """
         ...
 
+    @overload
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: Literal[False] = False
+    ) -> PyroFuture[list[tuple[Any, ...]]]: ...
+    @overload
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: Literal[True]
+    ) -> PyroFuture[list[dict[str, Any]]]: ...
     def exec(
         self, query: str, params: Params = None, *, as_dict: bool = False
     ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
@@ -238,6 +294,14 @@ class Conn:
         """
         ...
 
+    @overload
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: Literal[False] = False
+    ) -> PyroFuture[tuple[Any, ...] | None]: ...
+    @overload
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: Literal[True]
+    ) -> PyroFuture[dict[str, Any] | None]: ...
     def exec_first(
         self, query: str, params: Params = None, *, as_dict: bool = False
     ) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:

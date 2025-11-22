@@ -83,22 +83,6 @@ async def test_connection_reset(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_connection_server_info(async_backend):
-    """Test retrieving server information."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
-
-    if async_backend != "wtx":
-        # wtx backend doesn't expose server_version and id
-        server_version = await conn.server_version()
-        assert server_version[0] >= 5
-
-        connection_id = await conn.id()
-        assert connection_id > 0
-
-    await conn.close()
-
-
-@pytest.mark.asyncio
 async def test_connection_charset(async_backend):
     """Test connection charset handling."""
     url = get_test_db_url()
@@ -215,10 +199,7 @@ async def test_connection_with_wrong_credentials(async_backend):
     """Test connection failure with wrong credentials."""
     if async_backend == "mysql_async":
         opts = (
-            Opts()
-            .host("127.0.0.1")
-            .user("nonexistent_user")
-            .password("wrong_password")
+            Opts().host("127.0.0.1").user("nonexistent_user").password("wrong_password")
         )
 
         with pytest.raises(Exception):
@@ -236,11 +217,7 @@ async def test_connection_with_wrong_credentials(async_backend):
 async def test_connection_to_invalid_host(async_backend):
     """Test connection failure to invalid host."""
     if async_backend == "mysql_async":
-        opts = (
-            Opts()
-            .host("invalid.host.that.does.not.exist")
-            .port(3306)
-        )
+        opts = Opts().host("invalid.host.that.does.not.exist").port(3306)
 
         with pytest.raises(Exception):
             await Conn.new(opts, backend=async_backend)

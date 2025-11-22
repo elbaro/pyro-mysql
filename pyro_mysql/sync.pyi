@@ -1,7 +1,7 @@
 """Synchronous MySQL driver components."""
 
 from types import TracebackType
-from typing import Any, Self, Sequence
+from typing import Any, Literal, Self, Sequence, overload
 
 from pyro_mysql import IsolationLevel, Opts, Params
 
@@ -42,6 +42,14 @@ class Transaction:
         """Get the number of affected rows from the last operation."""
         ...
 
+    @overload
+    def query(
+        self, query: str, *, as_dict: Literal[False] = False
+    ) -> list[tuple[Any, ...]]: ...
+    @overload
+    def query(
+        self, query: str, *, as_dict: Literal[True]
+    ) -> list[dict[str, Any]]: ...
     def query(
         self, query: str, *, as_dict: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
@@ -57,6 +65,14 @@ class Transaction:
         """
         ...
 
+    @overload
+    def query_first(
+        self, query: str, *, as_dict: Literal[False] = False
+    ) -> tuple[Any, ...] | None: ...
+    @overload
+    def query_first(
+        self, query: str, *, as_dict: Literal[True]
+    ) -> dict[str, Any] | None: ...
     def query_first(
         self, query: str, *, as_dict: bool = False
     ) -> tuple[Any, ...] | dict[str, Any] | None:
@@ -93,6 +109,14 @@ class Transaction:
         """
         ...
 
+    @overload
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: Literal[False] = False
+    ) -> list[tuple[Any, ...]]: ...
+    @overload
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: Literal[True]
+    ) -> list[dict[str, Any]]: ...
     def exec(
         self, query: str, params: Params = None, *, as_dict: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
@@ -109,6 +133,14 @@ class Transaction:
         """
         ...
 
+    @overload
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: Literal[False] = False
+    ) -> tuple[Any, ...] | None: ...
+    @overload
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: Literal[True]
+    ) -> dict[str, Any] | None: ...
     def exec_first(
         self, query: str, params: Params = None, *, as_dict: bool = False
     ) -> tuple[Any, ...] | dict[str, Any] | None:
@@ -188,27 +220,49 @@ class Conn:
         """Ping the server to check connection."""
         ...
 
-    def query(self, query: str) -> list[Row]:
+    @overload
+    def query(
+        self, query: str, *, as_dict: Literal[False] = False
+    ) -> list[tuple[Any, ...]]: ...
+    @overload
+    def query(
+        self, query: str, *, as_dict: Literal[True]
+    ) -> list[dict[str, Any]]: ...
+    def query(
+        self, query: str, *, as_dict: bool = False
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         """
         Execute a query using text protocol and return all rows.
 
         Args:
             query: SQL query string.
+            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
 
         Returns:
-            List of Row objects.
+            List of tuples (default) or dictionaries.
         """
         ...
 
-    def query_first(self, query: str) -> Row | None:
+    @overload
+    def query_first(
+        self, query: str, *, as_dict: Literal[False] = False
+    ) -> tuple[Any, ...] | None: ...
+    @overload
+    def query_first(
+        self, query: str, *, as_dict: Literal[True]
+    ) -> dict[str, Any] | None: ...
+    def query_first(
+        self, query: str, *, as_dict: bool = False
+    ) -> tuple[Any, ...] | dict[str, Any] | None:
         """
         Execute a query using text protocol and return the first row.
 
         Args:
             query: SQL query string.
+            as_dict: If True, return row as dictionary. If False (default), return row as tuple.
 
         Returns:
-            First Row or None if no results.
+            First row as tuple (default) or dictionary, or None if no results.
         """
         ...
 
@@ -233,29 +287,51 @@ class Conn:
         """
         ...
 
-    def exec(self, query: str, params: Params = None) -> list[Row]:
+    @overload
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: Literal[False] = False
+    ) -> list[tuple[Any, ...]]: ...
+    @overload
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: Literal[True]
+    ) -> list[dict[str, Any]]: ...
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: bool = False
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         """
         Execute a query and return all rows.
 
         Args:
             query: SQL query string with '?' placeholders.
             params: Query parameters.
+            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
 
         Returns:
-            List of Row objects.
+            List of tuples (default) or dictionaries.
         """
         ...
 
-    def exec_first(self, query: str, params: Params = None) -> Row | None:
+    @overload
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: Literal[False] = False
+    ) -> tuple[Any, ...] | None: ...
+    @overload
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: Literal[True]
+    ) -> dict[str, Any] | None: ...
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: bool = False
+    ) -> tuple[Any, ...] | dict[str, Any] | None:
         """
         Execute a query and return the first row.
 
         Args:
             query: SQL query string with '?' placeholders.
             params: Query parameters.
+            as_dict: If True, return row as dictionary. If False (default), return row as tuple.
 
         Returns:
-            First Row or None if no results.
+            First row as tuple (default) or dictionary, or None if no results.
         """
         ...
 
