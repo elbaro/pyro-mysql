@@ -1,6 +1,6 @@
 use pyo3::{prelude::*, types::PyTuple};
 use zero_mysql::error::Result;
-use zero_mysql::protocol::connection::{ColumnDefinitionBytes, ColumnTypeAndFlags};
+use zero_mysql::protocol::connection::{ColumnDefinitionBytes, ColumnDefinitionTail};
 use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
@@ -13,7 +13,7 @@ enum RawRow {
 }
 
 pub struct TupleHandler {
-    cols: Vec<ColumnTypeAndFlags>,
+    cols: Vec<ColumnDefinitionTail>,
     rows: Vec<RawRow>,
     affected_rows: u64,
     last_insert_id: u64,
@@ -115,7 +115,7 @@ impl<'a> BinaryResultSetHandler<'a> for TupleHandler {
     }
 
     fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        self.cols.push(col.tail()?.type_and_flags()?);
+        self.cols.push(col.tail()?.clone());
         Ok(())
     }
 
@@ -155,7 +155,7 @@ impl<'a> TextResultSetHandler<'a> for TupleHandler {
     }
 
     fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        self.cols.push(col.tail()?.type_and_flags()?);
+        self.cols.push(col.tail()?.clone());
         Ok(())
     }
 

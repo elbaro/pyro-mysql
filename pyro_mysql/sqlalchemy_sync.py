@@ -8,6 +8,7 @@ integrating pyro-mysql with SQLAlchemy.
 from types import ModuleType
 from typing import Any, cast, override
 
+from pyro_mysql.dbapi import Error
 from sqlalchemy import PoolProxiedConnection, sql, util
 from sqlalchemy.dialects.mysql import types as mysql_types
 from sqlalchemy.dialects.mysql.base import (
@@ -27,8 +28,6 @@ from sqlalchemy.engine.interfaces import (
 )
 from sqlalchemy.engine.url import URL
 from sqlalchemy.sql import sqltypes
-
-from pyro_mysql.dbapi import Error
 
 
 class PyroMySQLNumeric(mysql_types.NUMERIC):

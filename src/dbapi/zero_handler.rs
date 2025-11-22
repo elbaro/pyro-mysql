@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyList;
 use zero_mysql::constant::ColumnFlags;
 use zero_mysql::error::Result;
-use zero_mysql::protocol::connection::{ColumnDefinition, ColumnDefinitionBytes, ColumnTypeAndFlags};
+use zero_mysql::protocol::connection::{ColumnDefinition, ColumnDefinitionBytes, ColumnDefinitionTail};
 use zero_mysql::protocol::r#trait::BinaryResultSetHandler;
 use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::BinaryRowPayload;
@@ -24,7 +24,7 @@ struct ColumnInfo {
 /// Handler that collects rows and column metadata for DB-API
 pub struct DbApiHandler<'a> {
     py: Python<'a>,
-    cols: Vec<ColumnTypeAndFlags>,
+    cols: Vec<ColumnDefinitionTail>,
     col_infos: Vec<ColumnInfo>,
     rows: Vec<DbApiRow>,
     affected_rows: u64,
@@ -111,9 +111,6 @@ impl<'a> BinaryResultSetHandler<'a> for DbApiHandler<'a> {
         let col_def = ColumnDefinition::try_from(col)?;
         let tail = col_def.tail;
 
-        let type_and_flags = tail.type_and_flags()?;
-        self.cols.push(type_and_flags);
-
         // Extract column info for description
         let name = String::from_utf8_lossy(col_def.name).to_string();
         let flags = tail.flags()?;
@@ -121,10 +118,13 @@ impl<'a> BinaryResultSetHandler<'a> for DbApiHandler<'a> {
 
         self.col_infos.push(ColumnInfo {
             name,
-            type_code: type_and_flags.column_type as u8,
+            type_code: tail.type_and_flags()?.column_type as u8,
             column_length: tail.column_length(),
             null_ok,
         });
+
+        // Store the full tail for charset info during decoding
+        self.cols.push(tail.clone());
 
         Ok(())
     }

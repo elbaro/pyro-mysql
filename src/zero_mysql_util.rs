@@ -1,11 +1,16 @@
 /// Utilities for converting zero-mysql values to Python objects
-use crate::py_imports::{get_date_class, get_datetime_class, get_decimal_class, get_timedelta_class};
-use pyo3::{IntoPyObjectExt, prelude::*};
+use crate::py_imports::{
+    get_date_class, get_datetime_class, get_decimal_class, get_timedelta_class,
+};
+use pyo3::{prelude::*, IntoPyObjectExt};
 use zero_mysql::constant::{ColumnFlags, ColumnType};
-use zero_mysql::protocol::connection::ColumnTypeAndFlags;
+use zero_mysql::protocol::connection::ColumnDefinitionTail;
 use zero_mysql::protocol::primitive::*;
 use zero_mysql::protocol::value::Value;
 use zerocopy::FromBytes;
+
+/// MySQL binary charset number - indicates binary/non-text data
+const BINARY_CHARSET: u16 = 63;
 
 /// Parse MySQL server version string into (major, minor, patch) tuple
 ///
@@ -156,11 +161,14 @@ pub fn zero_mysql_value_to_python<'py>(
 /// Returns the Python object and the remaining bytes.
 pub fn decode_binary_bytes_to_python<'py, 'data>(
     py: Python<'py>,
-    type_and_flags: &ColumnTypeAndFlags,
+    col: &ColumnDefinitionTail,
     data: &'data [u8],
 ) -> PyResult<(Bound<'py, PyAny>, &'data [u8])> {
+    let type_and_flags = col
+        .type_and_flags()
+        .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>("Failed to get type_and_flags"))?;
     let is_unsigned = type_and_flags.flags.contains(ColumnFlags::UNSIGNED_FLAG);
-    let is_binary = type_and_flags.flags.contains(ColumnFlags::BINARY_FLAG);
+    let is_binary_charset = col.charset() == BINARY_CHARSET;
 
     match type_and_flags.column_type {
         ColumnType::MYSQL_TYPE_NULL => Ok((py.None().into_bound(py), data)),
@@ -367,39 +375,34 @@ pub fn decode_binary_bytes_to_python<'py, 'data>(
             }
         }
 
-        // String and BLOB types - length-encoded
-        ColumnType::MYSQL_TYPE_VARCHAR
-        | ColumnType::MYSQL_TYPE_VAR_STRING
-        | ColumnType::MYSQL_TYPE_STRING
+        // TEXT_TYPES: charset 63 = binary -> bytes, otherwise decode as str
+        ColumnType::MYSQL_TYPE_BIT
         | ColumnType::MYSQL_TYPE_BLOB
-        | ColumnType::MYSQL_TYPE_TINY_BLOB
+        | ColumnType::MYSQL_TYPE_LONG_BLOB
         | ColumnType::MYSQL_TYPE_MEDIUM_BLOB
-        | ColumnType::MYSQL_TYPE_LONG_BLOB => {
+        | ColumnType::MYSQL_TYPE_STRING
+        | ColumnType::MYSQL_TYPE_TINY_BLOB
+        | ColumnType::MYSQL_TYPE_VAR_STRING
+        | ColumnType::MYSQL_TYPE_VARCHAR
+        | ColumnType::MYSQL_TYPE_GEOMETRY => {
             let (bytes, rest) = read_string_lenenc(data).map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyException, _>("Failed to read string")
+                PyErr::new::<pyo3::exceptions::PyException, _>("Failed to read text/blob")
             })?;
 
-            let py_val = if is_binary {
+            let py_val = if is_binary_charset {
                 pyo3::types::PyBytes::new(py, bytes).into_any()
             } else {
-                // TODO: handle unwrap()
-                pyo3::types::PyString::from_bytes(py, bytes)
-                    .unwrap()
-                    .into_any()
+                pyo3::types::PyString::from_bytes(py, bytes)?.into_any()
             };
             Ok((py_val, rest))
         }
 
+        // JSON: always decode as str (connection encoding, regardless of charset)
         ColumnType::MYSQL_TYPE_JSON => {
             let (bytes, rest) = read_string_lenenc(data).map_err(|_| {
                 PyErr::new::<pyo3::exceptions::PyException, _>("Failed to read JSON")
             })?;
-            Ok((
-                pyo3::types::PyString::from_bytes(py, bytes)
-                    .unwrap()
-                    .into_any(),
-                rest,
-            ))
+            Ok((pyo3::types::PyString::from_bytes(py, bytes)?.into_any(), rest))
         }
 
         // Decimal types
@@ -407,32 +410,19 @@ pub fn decode_binary_bytes_to_python<'py, 'data>(
             let (bytes, rest) = read_string_lenenc(data).map_err(|_| {
                 PyErr::new::<pyo3::exceptions::PyException, _>("Failed to read DECIMAL")
             })?;
-
-            let py_val = match pyo3::types::PyString::from_bytes(py, bytes) {
-                Ok(decimal_str) => {
-                    let decimal_class = get_decimal_class(py)?;
-                    decimal_class.call1((decimal_str,))?
-                }
-                Err(_) => pyo3::types::PyBytes::new(py, bytes).into_any(),
-            };
-            Ok((py_val, rest))
+            let decimal_str = pyo3::types::PyString::from_bytes(py, bytes)?;
+            let decimal_class = get_decimal_class(py)?;
+            Ok((decimal_class.call1((decimal_str,))?, rest))
         }
 
-        // Other types (ENUM, SET, BIT, GEOMETRY, TYPED_ARRAY)
-        ColumnType::MYSQL_TYPE_GEOMETRY
-        | ColumnType::MYSQL_TYPE_ENUM
+        // ENUM, SET, TYPED_ARRAY: always decode as str (ascii)
+        ColumnType::MYSQL_TYPE_ENUM
         | ColumnType::MYSQL_TYPE_SET
-        | ColumnType::MYSQL_TYPE_BIT
         | ColumnType::MYSQL_TYPE_TYPED_ARRAY => {
             let (bytes, rest) = read_string_lenenc(data).map_err(|_| {
                 PyErr::new::<pyo3::exceptions::PyException, _>("Failed to read value")
             })?;
-
-            let py_val = match simdutf8::basic::from_utf8(bytes) {
-                Ok(s) => pyo3::types::PyString::new(py, s).into_any(),
-                Err(_) => pyo3::types::PyBytes::new(py, bytes).into_any(),
-            };
-            Ok((py_val, rest))
+            Ok((pyo3::types::PyString::from_bytes(py, bytes)?.into_any(), rest))
         }
     }
 }
@@ -445,11 +435,14 @@ pub fn decode_binary_bytes_to_python<'py, 'data>(
 /// Returns the Python object.
 pub fn decode_text_value_to_python<'py>(
     py: Python<'py>,
-    type_and_flags: &ColumnTypeAndFlags,
+    col: &ColumnDefinitionTail,
     text_value: &[u8],
 ) -> PyResult<Bound<'py, PyAny>> {
+    let type_and_flags = col
+        .type_and_flags()
+        .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>("Failed to get type_and_flags"))?;
     let is_unsigned = type_and_flags.flags.contains(ColumnFlags::UNSIGNED_FLAG);
-    let is_binary = type_and_flags.flags.contains(ColumnFlags::BINARY_FLAG);
+    let is_binary_charset = col.charset() == BINARY_CHARSET;
 
     match type_and_flags.column_type {
         ColumnType::MYSQL_TYPE_NULL => Ok(py.None().into_bound(py)),
@@ -484,9 +477,9 @@ pub fn decode_text_value_to_python<'py>(
             let text_str = std::str::from_utf8(text_value).map_err(|_| {
                 PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in float value")
             })?;
-            let val: f32 = text_str.parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid float")
-            })?;
+            let val: f32 = text_str
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid float"))?;
             // Convert f32 to f64 via string to maintain precision
             let mut buffer = ryu::Buffer::new();
             let f64_val = buffer.format(val).parse::<f64>().unwrap();
@@ -497,15 +490,14 @@ pub fn decode_text_value_to_python<'py>(
             let text_str = std::str::from_utf8(text_value).map_err(|_| {
                 PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in double value")
             })?;
-            let val: f64 = text_str.parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid double")
-            })?;
+            let val: f64 = text_str
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid double"))?;
             Ok(val.into_bound_py_any(py)?)
         }
 
         // Temporal types - parse from string
-        ColumnType::MYSQL_TYPE_DATE
-        | ColumnType::MYSQL_TYPE_NEWDATE => {
+        ColumnType::MYSQL_TYPE_DATE | ColumnType::MYSQL_TYPE_NEWDATE => {
             // Format: YYYY-MM-DD
             let text_str = std::str::from_utf8(text_value).map_err(|_| {
                 PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in date value")
@@ -516,17 +508,19 @@ pub fn decode_text_value_to_python<'py>(
             }
             let parts: Vec<&str> = text_str.split('-').collect();
             if parts.len() != 3 {
-                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid date format"));
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "Invalid date format",
+                ));
             }
-            let year: u16 = parts[0].parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid year")
-            })?;
-            let month: u8 = parts[1].parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid month")
-            })?;
-            let day: u8 = parts[2].parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid day")
-            })?;
+            let year: u16 = parts[0]
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid year"))?;
+            let month: u8 = parts[1]
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid month"))?;
+            let day: u8 = parts[2]
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid day"))?;
             let date_class = get_date_class(py)?;
             date_class.call1((year, month, day))
         }
@@ -546,41 +540,47 @@ pub fn decode_text_value_to_python<'py>(
 
             let parts: Vec<&str> = text_str.split(' ').collect();
             if parts.len() < 2 {
-                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid datetime format"));
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "Invalid datetime format",
+                ));
             }
 
             // Parse date part
             let date_parts: Vec<&str> = parts[0].split('-').collect();
             if date_parts.len() != 3 {
-                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid date format"));
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "Invalid date format",
+                ));
             }
-            let year: u16 = date_parts[0].parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid year")
-            })?;
-            let month: u8 = date_parts[1].parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid month")
-            })?;
-            let day: u8 = date_parts[2].parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid day")
-            })?;
+            let year: u16 = date_parts[0]
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid year"))?;
+            let month: u8 = date_parts[1]
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid month"))?;
+            let day: u8 = date_parts[2]
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid day"))?;
 
             // Parse time part
             let time_parts: Vec<&str> = parts[1].split(':').collect();
             if time_parts.len() != 3 {
-                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid time format"));
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "Invalid time format",
+                ));
             }
-            let hour: u8 = time_parts[0].parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid hour")
-            })?;
-            let minute: u8 = time_parts[1].parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid minute")
-            })?;
+            let hour: u8 = time_parts[0]
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid hour"))?;
+            let minute: u8 = time_parts[1]
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid minute"))?;
 
             // Handle seconds with optional microseconds
             let second_parts: Vec<&str> = time_parts[2].split('.').collect();
-            let second: u8 = second_parts[0].parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid second")
-            })?;
+            let second: u8 = second_parts[0]
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid second"))?;
 
             let datetime_class = get_datetime_class(py)?;
             if second_parts.len() > 1 {
@@ -605,33 +605,53 @@ pub fn decode_text_value_to_python<'py>(
             }
 
             let is_negative = text_str.starts_with('-');
-            let time_str = if is_negative { &text_str[1..] } else { text_str };
+            let time_str = if is_negative {
+                &text_str[1..]
+            } else {
+                text_str
+            };
 
             let parts: Vec<&str> = time_str.split(':').collect();
             if parts.len() != 3 {
-                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid time format"));
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "Invalid time format",
+                ));
             }
 
-            let hours: u32 = parts[0].parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid hour")
-            })?;
-            let minutes: u8 = parts[1].parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid minute")
-            })?;
+            let hours: u32 = parts[0]
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid hour"))?;
+            let minutes: u8 = parts[1]
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid minute"))?;
 
             let second_parts: Vec<&str> = parts[2].split('.').collect();
-            let seconds: u8 = second_parts[0].parse().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid second")
-            })?;
+            let seconds: u8 = second_parts[0]
+                .parse()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid second"))?;
 
             let timedelta_class = get_timedelta_class(py)?;
             let timedelta = if second_parts.len() > 1 {
                 let microsecond: u32 = second_parts[1].parse().map_err(|_| {
                     PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid microsecond")
                 })?;
-                timedelta_class.call1((0, (hours * 3600 + minutes as u32 * 60 + seconds as u32) as i32, microsecond, 0, 0, 0))?
+                timedelta_class.call1((
+                    0,
+                    (hours * 3600 + minutes as u32 * 60 + seconds as u32) as i32,
+                    microsecond,
+                    0,
+                    0,
+                    0,
+                ))?
             } else {
-                timedelta_class.call1((0, (hours * 3600 + minutes as u32 * 60 + seconds as u32) as i32, 0, 0, 0, 0))?
+                timedelta_class.call1((
+                    0,
+                    (hours * 3600 + minutes as u32 * 60 + seconds as u32) as i32,
+                    0,
+                    0,
+                    0,
+                    0,
+                ))?
             };
 
             if is_negative {
@@ -644,46 +664,39 @@ pub fn decode_text_value_to_python<'py>(
         // Decimal types - parse with Decimal class
         ColumnType::MYSQL_TYPE_DECIMAL | ColumnType::MYSQL_TYPE_NEWDECIMAL => {
             let decimal_class = get_decimal_class(py)?;
-            let py_str = pyo3::types::PyString::from_bytes(py, text_value)
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in decimal value"))?;
+            let py_str = pyo3::types::PyString::from_bytes(py, text_value).map_err(|_| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in decimal value")
+            })?;
             decimal_class.call1((py_str,))
         }
 
-        // String/BLOB types
-        ColumnType::MYSQL_TYPE_VARCHAR
-        | ColumnType::MYSQL_TYPE_VAR_STRING
-        | ColumnType::MYSQL_TYPE_STRING
-        | ColumnType::MYSQL_TYPE_JSON => {
-            if is_binary {
-                Ok(pyo3::types::PyBytes::new(py, text_value).into_any())
-            } else {
-                match pyo3::types::PyString::from_bytes(py, text_value) {
-                    Ok(s) => Ok(s.into_any()),
-                    Err(_) => Ok(pyo3::types::PyBytes::new(py, text_value).into_any()),
-                }
-            }
-        }
-
-        ColumnType::MYSQL_TYPE_BLOB
-        | ColumnType::MYSQL_TYPE_TINY_BLOB
+        // TEXT_TYPES: charset 63 = binary -> bytes, otherwise decode as str
+        ColumnType::MYSQL_TYPE_BIT
+        | ColumnType::MYSQL_TYPE_BLOB
+        | ColumnType::MYSQL_TYPE_LONG_BLOB
         | ColumnType::MYSQL_TYPE_MEDIUM_BLOB
-        | ColumnType::MYSQL_TYPE_LONG_BLOB => {
-            if is_binary {
+        | ColumnType::MYSQL_TYPE_STRING
+        | ColumnType::MYSQL_TYPE_TINY_BLOB
+        | ColumnType::MYSQL_TYPE_VAR_STRING
+        | ColumnType::MYSQL_TYPE_VARCHAR
+        | ColumnType::MYSQL_TYPE_GEOMETRY => {
+            if is_binary_charset {
                 Ok(pyo3::types::PyBytes::new(py, text_value).into_any())
             } else {
-                match pyo3::types::PyString::from_bytes(py, text_value) {
-                    Ok(s) => Ok(s.into_any()),
-                    Err(_) => Ok(pyo3::types::PyBytes::new(py, text_value).into_any()),
-                }
+                Ok(pyo3::types::PyString::from_bytes(py, text_value)?.into_any())
             }
         }
 
-        // Other types (ENUM, SET, BIT, GEOMETRY, TYPED_ARRAY)
-        _ => {
-            match pyo3::types::PyString::from_bytes(py, text_value) {
-                Ok(s) => Ok(s.into_any()),
-                Err(_) => Ok(pyo3::types::PyBytes::new(py, text_value).into_any()),
-            }
+        // JSON: always decode as str (connection encoding, regardless of charset)
+        ColumnType::MYSQL_TYPE_JSON => {
+            Ok(pyo3::types::PyString::from_bytes(py, text_value)?.into_any())
+        }
+
+        // ENUM, SET, TYPED_ARRAY: always decode as str (ascii)
+        ColumnType::MYSQL_TYPE_ENUM
+        | ColumnType::MYSQL_TYPE_SET
+        | ColumnType::MYSQL_TYPE_TYPED_ARRAY => {
+            Ok(pyo3::types::PyString::from_bytes(py, text_value)?.into_any())
         }
     }
 }

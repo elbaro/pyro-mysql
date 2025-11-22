@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 use zero_mysql::error::Result;
-use zero_mysql::protocol::connection::{ColumnDefinitionBytes, ColumnTypeAndFlags};
+use zero_mysql::protocol::connection::{ColumnDefinitionBytes, ColumnDefinitionTail};
 use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
@@ -11,7 +11,7 @@ use crate::zero_mysql_util::{decode_binary_bytes_to_python, decode_text_value_to
 
 pub struct TupleHandler<'a> {
     py: Python<'a>,
-    cols: Vec<ColumnTypeAndFlags>,
+    cols: Vec<ColumnDefinitionTail>,
     rows: Py<PyList>,
     affected_rows: u64,
     last_insert_id: u64,
@@ -56,7 +56,7 @@ impl<'a> BinaryResultSetHandler<'a> for TupleHandler<'a> {
     }
 
     fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        self.cols.push(col.tail()?.type_and_flags()?);
+        self.cols.push(col.tail()?.clone());
         Ok(())
     }
 
@@ -105,7 +105,7 @@ impl<'a> TextResultSetHandler<'a> for TupleHandler<'a> {
     }
 
     fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        self.cols.push(col.tail()?.type_and_flags()?);
+        self.cols.push(col.tail()?.clone());
         Ok(())
     }
 
