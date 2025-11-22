@@ -194,45 +194,30 @@ class MySQLDialect_sync(MySQLDialect):
     @override
     def create_connect_args(self, url: URL) -> ConnectArgsType:
         """Convert SQLAlchemy URL to connection arguments for pyro-mysql."""
+        from pyro_mysql import Opts
 
-        dic: dict[str, Any] = (
-            url.translate_connect_args(
-                database="db_name",
-                username="user",
-                password="password",
-                host="host",
-                port="port",
-            )
-            | url.query
-        )
+        opts = Opts()
 
-        if capabilities := dic.get("capabilities"):
-            del dic["capabilities"]
+        if url.host:
+            opts = opts.host(url.host)
+        if url.port:
+            opts = opts.port(url.port)
+        if url.username:
+            opts = opts.user(url.username)
+        if url.password:
+            opts = opts.password(url.password)
+        if url.database:
+            opts = opts.db(url.database)
+
+        # Handle query parameters
+        query = dict(url.query)
+        if "capabilities" in query:
+            caps = query.pop("capabilities")
+            if isinstance(caps, str):
+                opts = opts.capabilities(int(caps))
         else:
-            capabilities = 2  # for compatibility with other mysql dialects
-
-        str_dic: dict[str, str] = {}
-        for k, v in dic.items():
-            if isinstance(v, str):
-                str_dic[k] = v
-            elif isinstance(v, int):
-                str_dic[k] = str(v)
-            elif isinstance(v, bool):
-                str_dic[k] = "true" if v else "false"
-            else:
-                raise Error("the connection argument should be str, int, or bool")
-
-        # https://docs.rs/mysql/latest/src/mysql/conn/opts/mod.rs.html#593-595
-        from pyro_mysql.sync import OptsBuilder
-
-        try:
-            opts = (
-                OptsBuilder.from_map(str_dic)
-                .additional_capabilities(capabilities)
-                .build()
-            )
-        except Exception as e:
-            raise Error("wrong connection argument") from e
+            # Default capabilities for compatibility with other mysql dialects
+            opts = opts.capabilities(2)
 
         return cast(ConnectArgsType, ((opts,), {}))
 

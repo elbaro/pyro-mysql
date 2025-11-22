@@ -7,7 +7,7 @@ use zero_mysql::sync::Conn;
 
 pub struct ZeroMysqlConn {
     pub inner: Conn,
-    stmt_cache: std::collections::HashMap<String, u32>,
+    pub stmt_cache: std::collections::HashMap<String, u32>,
     affected_rows: u64,
     last_insert_id: u64,
 }

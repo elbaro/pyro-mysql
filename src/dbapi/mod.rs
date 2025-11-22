@@ -5,6 +5,7 @@ pub mod cursor;
 pub mod error;
 pub mod type_constructor;
 pub mod type_object;
+pub mod zero_handler;
 
 use std::sync::Arc;
 
@@ -35,73 +36,31 @@ pub fn connect(
 }
 
 #[pyfunction()]
-#[pyo3(name = "connect", signature = (url_or_opts, autocommit=Some(false), wtx=false))]
+#[pyo3(name = "connect", signature = (url_or_opts, autocommit=Some(false)))]
 pub fn connect_async(
     py: Python,
     url_or_opts: Either<String, PyRef<Opts>>,
     autocommit: Option<bool>,
-    wtx: bool,
 ) -> DbApiResult<Py<PyroFuture>> {
-    if wtx {
-        // Use wtx backend
-        let url = match url_or_opts {
-            Either::Left(url) => url,
-            Either::Right(_) => {
-                return Err(error::InterfaceError::new_err(
-                    "Opts is not supported for wtx connections, use URL string instead",
-                )
-                .into());
-            }
-        };
-
-        Ok(rust_future_into_py(py, async move {
-            let mut multi_conn = MultiAsyncConn::new_wtx(&url, None, None).await?;
-
-            // Set autocommit if specified
-            if let Some(on) = autocommit {
-                use wtx::database::Executor;
-                let query = if on {
-                    "SET autocommit=1"
-                } else {
-                    "SET autocommit=0"
-                };
-
-                match &mut multi_conn {
-                    MultiAsyncConn::Wtx(wtx_conn) => {
-                        wtx_conn.executor
-                            .execute(query, |_| Ok(()))
-                            .await
-                            .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
-                    }
-                    _ => unreachable!(),
-                }
-            }
-
-            Ok(AsyncDbApiConn(Arc::new(tokio::sync::RwLock::new(Some(
-                multi_conn,
-            )))))
-        })?)
-    } else {
-        // Use mysql_async backend
-        let opts = match url_or_opts {
-            Either::Left(url) => mysql_async::Opts::from_url(&url).map_err(url_error_to_pyerr)?,
-            Either::Right(opts) => opts.to_mysql_async_opts(),
-        };
-        Ok(rust_future_into_py(py, async move {
-            let mut conn = mysql_async::Conn::new(opts).await?;
-            if let Some(on) = autocommit {
-                let query = if on {
-                    "SET autocommit=1"
-                } else {
-                    "SET autocommit=0"
-                };
-                conn.exec_drop(query, Params::default())
-                    .await
-                    .map_err(Error::from)?;
-            }
-            Ok(AsyncDbApiConn(Arc::new(tokio::sync::RwLock::new(Some(
-                MultiAsyncConn::MysqlAsync(conn),
-            )))))
-        })?)
-    }
+    // Use mysql_async backend
+    let opts = match url_or_opts {
+        Either::Left(url) => mysql_async::Opts::from_url(&url).map_err(url_error_to_pyerr)?,
+        Either::Right(opts) => opts.to_mysql_async_opts(),
+    };
+    Ok(rust_future_into_py(py, async move {
+        let mut conn = mysql_async::Conn::new(opts).await?;
+        if let Some(on) = autocommit {
+            let query = if on {
+                "SET autocommit=1"
+            } else {
+                "SET autocommit=0"
+            };
+            conn.exec_drop(query, Params::default())
+                .await
+                .map_err(Error::from)?;
+        }
+        Ok(AsyncDbApiConn(Arc::new(tokio::sync::RwLock::new(Some(
+            MultiAsyncConn::MysqlAsync(conn),
+        )))))
+    })?)
 }

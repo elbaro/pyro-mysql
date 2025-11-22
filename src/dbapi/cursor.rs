@@ -7,18 +7,19 @@ use pyo3::{
 
 use crate::{
     dbapi::{
-        conn::{DbApiConn, DbApiExecResult},
+        conn::{DbApiConn, DbApiExecResult, DbApiRow},
         error::{DbApiError, DbApiResult},
     },
     error::Error,
     params::Params,
-    row::Row,
 };
+
+// Re-export for convenience
 
 #[pyclass(module = "pyro_mysql.dbapi", name = "Cursor")]
 pub struct Cursor {
     conn: Option<Py<DbApiConn>>,
-    result: Option<VecDeque<Row>>, // TODO: add a lock
+    result: Option<VecDeque<DbApiRow>>, // TODO: add a lock
 
     #[pyo3(get, set)]
     arraysize: usize,
@@ -80,11 +81,11 @@ impl Cursor {
                 self.result = Some(rows.into());
                 self.lastrowid = None;
             }
-            DbApiExecResult::NoDescription { affected_rows } => {
+            DbApiExecResult::NoDescription { affected_rows, last_insert_id } => {
                 self.description = None;
                 self.rowcount = affected_rows as i64;
                 self.result = None;
-                self.lastrowid = conn.last_insert_id()?; // TODO: in multi-threads, exec and last_insert_id() should be called at once
+                self.lastrowid = if last_insert_id == 0 { None } else { Some(last_insert_id) };
             }
         }
 

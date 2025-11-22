@@ -3,10 +3,20 @@ import os
 
 import pytest
 from pyro_mysql import Opts
+from sqlalchemy.dialects import registry
 
 
 def pytest_configure(config):
     logging.getLogger("pyro_mysql").setLevel(logging.DEBUG)
+
+    # Register pyro_mysql dialects explicitly since we're using a local directory
+    # instead of pip install (entry points from pyproject.toml aren't available)
+    registry.register("mysql.pyro_mysql", "pyro_mysql.sqlalchemy_sync", "MySQLDialect_sync")
+    registry.register("mariadb.pyro_mysql", "pyro_mysql.sqlalchemy_sync", "MariaDBDialect_sync")
+    registry.register("mysql.pyro_mysql_async", "pyro_mysql.sqlalchemy_async", "MySQLDialect_async")
+    registry.register("mariadb.pyro_mysql_async", "pyro_mysql.sqlalchemy_async", "MariaDBDialect_async")
+    # Also register with pyro_mysql:// URL scheme
+    registry.register("pyro_mysql", "pyro_mysql.sqlalchemy_sync", "MySQLDialect_sync")
 
 
 def get_test_db_url() -> str:

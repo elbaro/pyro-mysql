@@ -24,13 +24,14 @@ class NotSupportedError(DatabaseError): ...
 
 # ─── Connection ───────────────────────────────────────────────────────────────
 
-def connect(url_or_opts: str | Opts) -> Awaitable[Connection]:
+def connect(url_or_opts: str | Opts, autocommit: bool | None = False) -> Awaitable[Connection]:
     """
     Create an async DB-API 2.0 compliant connection to a MySQL server.
 
     Args:
         url_or_opts: MySQL connection URL (e.g., 'mysql://user:password@host:port/database')
             or Opts object with connection configuration.
+        autocommit: If True, enable autocommit mode. If None, use server default. Defaults to False.
 
     Returns:
         An awaitable that resolves to a DB-API 2.0 compliant Connection object.

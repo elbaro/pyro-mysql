@@ -72,7 +72,13 @@ impl From<crate::error::Error> for DbApiError {
             crate::error::Error::PythonObjectCreationError(e) => Error::new_err(e.to_string()),
             crate::error::Error::IoError(s) => Error::new_err(format!("IO Error: {}", s)),
             crate::error::Error::WtxError(s) => Error::new_err(format!("Wtx Error: {}", s)),
-            crate::error::Error::ZeroMysqlError(e) => Error::new_err(e.to_string()),
+            crate::error::Error::ZeroMysqlError(e) => {
+                if let zero_mysql::error::Error::ServerError(ref err_payload) = e {
+                    map_server_error_to_dbapi(&err_payload.sql_state, err_payload.error_code, e.to_string())
+                } else {
+                    Error::new_err(e.to_string())
+                }
+            }
         })
     }
 }

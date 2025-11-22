@@ -1,111 +1,121 @@
 // PEP 249 – Python Database API Specification v2.0
 
 use either::Either;
-use mysql::{
-    Opts,
-    prelude::{AsStatement, Queryable},
-};
 use parking_lot::RwLock;
 use pyo3::{prelude::*, types::PyList};
 
 use crate::{
-    dbapi::{cursor::Cursor, error::DbApiResult},
+    dbapi::{cursor::Cursor, error::DbApiResult, zero_handler::DbApiHandler},
     error::Error,
     opts::Opts as PyroOpts,
     params::Params,
-    row::Row,
+    sync::backend::zero_mysql::params_adapter::ParamsAdapter,
+    sync::backend::ZeroMysqlConn,
 };
 
+use pyo3::types::PyTuple;
+
 #[pyclass(module = "pyro_mysql.dbapi", name = "Connection")]
-pub struct DbApiConn(RwLock<Option<mysql::Conn>>);
+pub struct DbApiConn {
+    conn: RwLock<Option<ZeroMysqlConn>>,
+}
+
+/// A row from zero_mysql backend (already a Python tuple)
+pub struct DbApiRow(pub Py<PyTuple>);
+
+impl DbApiRow {
+    pub fn to_tuple<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        Ok(self.0.bind(py).clone())
+    }
+}
 
 pub enum DbApiExecResult {
     WithDescription {
-        rows: Vec<Row>,
+        rows: Vec<DbApiRow>,
         description: Py<PyList>,
         affected_rows: u64,
     },
     NoDescription {
         affected_rows: u64,
+        last_insert_id: u64,
     },
 }
 
 impl DbApiConn {
     pub fn new(url_or_opts: Either<String, PyRef<PyroOpts>>) -> DbApiResult<Self> {
-        let opts = match url_or_opts {
-            Either::Left(url) => Opts::from_url(&url).map_err(Error::from)?,
-            Either::Right(opts) => opts.to_mysql_opts(),
+        let conn = match url_or_opts {
+            Either::Left(url) => ZeroMysqlConn::new(&url)?,
+            Either::Right(opts) => ZeroMysqlConn::new_with_opts(opts.inner.clone())?,
         };
-        let conn = mysql::Conn::new(opts).map_err(Error::from)?;
-        Ok(Self(RwLock::new(Some(conn))))
+        Ok(Self {
+            conn: RwLock::new(Some(conn)),
+        })
+    }
+
+    fn with_conn<T, F>(&self, f: F) -> DbApiResult<T>
+    where
+        F: FnOnce(&mut ZeroMysqlConn) -> DbApiResult<T>,
+    {
+        let mut guard = self.conn.write();
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        f(conn)
     }
 
     pub fn exec(&self, query: &str, params: Params) -> DbApiResult<DbApiExecResult> {
-        let mut guard = self.0.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        log::debug!("execute {query}");
+        self.with_conn(|conn| {
+            log::debug!("execute {query}");
 
-        let mut query_result = conn.exec_iter(query, params).map_err(Error::from)?;
-        let affected_rows = query_result.affected_rows();
-        if query_result.columns().as_ref().iter().count() > 0 {
-            let description = Python::attach(|py| {
-                PyList::new(
-                    py,
-                    query_result.columns().as_ref().iter().map(|col|
-                        // tuple of 7 items
-                        (
-                            col.name_str(),          // name
-                            col.column_type() as u8, // type_code
-                            col.column_length(),     // display_size
-                            None::<Option<()>>,      // internal_size
-                            None::<Option<()>>,      // precision
-                            None::<Option<()>>,      // scale
-                            None::<Option<()>>,      // null_ok
-                        )
-                        .into_pyobject(py).unwrap()),
-                )
-                .map(|bound| bound.unbind())
+            // Prepare the statement (with caching)
+            let stmt_id = if let Some(&cached_id) = conn.stmt_cache.get(query) {
+                cached_id
+            } else {
+                let stmt_id = conn
+                    .inner
+                    .prepare(query)
+                    .map_err(Error::ZeroMysqlError)?;
+                conn.stmt_cache.insert(query.to_string(), stmt_id);
+                stmt_id
+            };
+
+            // Execute with custom handler that captures description
+            let result: DbApiExecResult = Python::attach(|py| {
+                let mut handler = DbApiHandler::new(py);
+                let params_adapter = ParamsAdapter::new(&params);
+
+                log::debug!("About to call conn.inner.exec with stmt_id={}", stmt_id);
+                let exec_result = conn.inner
+                    .exec(stmt_id, params_adapter, &mut handler);
+                log::debug!("conn.inner.exec returned: {:?}", exec_result.is_ok());
+                exec_result.map_err(|e| {
+                    log::debug!("exec error: {:?}", e);
+                    Error::ZeroMysqlError(e)
+                })?;
+
+                Ok::<_, Error>(handler.into_result())
             })?;
 
-            let rows = query_result
-                .try_fold(Vec::new(), |mut vec, row| {
-                    row.map(|row| {
-                        vec.push(mysql::from_row(row));
-                        vec
-                    })
-                })
-                .map_err(Error::from)?;
-
-            Ok(DbApiExecResult::WithDescription {
-                rows,
-                description,
-                affected_rows,
-            })
-        } else {
-            // no result set (different from empty set)
-            Ok(DbApiExecResult::NoDescription { affected_rows })
-        }
+            Ok(result)
+        })
     }
 
     fn exec_drop(&self, query: &str, params: Params) -> DbApiResult<()> {
-        let mut guard = self.0.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        log::debug!("execute {query}");
-        Ok(conn.exec_drop(query, params).map_err(Error::from)?)
+        self.with_conn(|conn| {
+            log::debug!("execute {query}");
+            conn.exec_drop(query.to_string(), params)?;
+            Ok(())
+        })
     }
 
     pub fn exec_batch(&self, query: &str, params: Vec<Params>) -> DbApiResult<u64> {
-        let mut guard = self.0.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        log::debug!("execute {query}");
-
-        let mut affected = 0;
-        let stmt = query.as_statement(conn).map_err(Error::from)?;
-        for params in params {
-            conn.exec_drop(stmt.as_ref(), params).map_err(Error::from)?;
-            affected += conn.affected_rows();
-        }
-        Ok(affected)
+        self.with_conn(|conn| {
+            log::debug!("execute {query}");
+            let mut affected = 0;
+            for params in params {
+                conn.exec_drop(query.to_string(), params)?;
+                affected += conn.affected_rows();
+            }
+            Ok(affected)
+        })
     }
 }
 
@@ -114,8 +124,8 @@ impl DbApiConn {
     // ─── Pep249 ──────────────────────────────────────────────────────────
 
     pub fn close(&self) {
-        // TODO: consdier raising if already closed
-        *self.0.write() = None;
+        // TODO: consider raising if already closed
+        *self.conn.write() = None;
     }
 
     fn commit(&self) -> DbApiResult<()> {
@@ -142,21 +152,20 @@ impl DbApiConn {
     }
 
     fn ping(&self) -> DbApiResult<()> {
-        let mut guard = self.0.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        Ok(conn.ping().map_err(Error::from)?)
+        self.with_conn(|conn| {
+            conn.ping()?;
+            Ok(())
+        })
     }
 
     pub fn last_insert_id(&self) -> DbApiResult<Option<u64>> {
-        let guard = self.0.read();
+        let guard = self.conn.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
-
         let id = conn.last_insert_id();
         Ok(if id == 0 { None } else { Some(id) })
     }
 
     pub fn is_closed(&self) -> bool {
-        let guard = self.0.read();
-        guard.is_some()
+        self.conn.read().is_some()
     }
 }
