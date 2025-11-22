@@ -1,20 +1,23 @@
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+
 use either::Either;
 use pyo3::prelude::*;
 use pyo3::pybacked::PyBackedStr;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 
+use crate::error::{Error, PyroResult};
+use crate::isolation_level::IsolationLevel;
 use crate::opts::Opts;
 use crate::r#async::multi_conn::MultiAsyncConn;
 use crate::r#async::queryable::Queryable;
 use crate::r#async::transaction::AsyncTransaction;
-use crate::error::{Error, PyroResult};
-use crate::isolation_level::IsolationLevel;
-use crate::util::{PyroFuture, rust_future_into_py, url_error_to_pyerr};
+use crate::util::{rust_future_into_py, url_error_to_pyerr, PyroFuture};
 
 #[pyclass(module = "pyro_mysql.async_", name = "Conn")]
 pub struct AsyncConn {
     pub inner: Arc<RwLock<Option<MultiAsyncConn>>>,
+    pub in_transaction: AtomicBool,
 }
 
 #[pymethods]
@@ -45,6 +48,7 @@ impl AsyncConn {
                     let conn = mysql_async::Conn::new(opts).await?;
                     Ok(Self {
                         inner: Arc::new(RwLock::new(Some(MultiAsyncConn::MysqlAsync(conn)))),
+                        in_transaction: AtomicBool::new(false),
                     })
                 })
             }
@@ -61,6 +65,7 @@ impl AsyncConn {
                     let multi_conn = MultiAsyncConn::new_wtx(&url, None, None).await?;
                     Ok(Self {
                         inner: Arc::new(RwLock::new(Some(multi_conn))),
+                        in_transaction: AtomicBool::new(false),
                     })
                 })
             }
@@ -76,6 +81,7 @@ impl AsyncConn {
                     let multi_conn = MultiAsyncConn::new_zero_mysql_with_opts(opts).await?;
                     Ok(Self {
                         inner: Arc::new(RwLock::new(Some(multi_conn))),
+                        in_transaction: AtomicBool::new(false),
                     })
                 })
             }
@@ -87,18 +93,13 @@ impl AsyncConn {
 
     #[pyo3(signature = (consistent_snapshot=false, isolation_level=None, readonly=None))]
     fn start_transaction(
-        &self,
+        slf: Py<Self>,
         consistent_snapshot: bool,
         isolation_level: Option<PyRef<IsolationLevel>>,
         readonly: Option<bool>,
     ) -> AsyncTransaction {
-        let isolation_level: Option<mysql_async::IsolationLevel> =
-            isolation_level.map(|l| mysql_async::IsolationLevel::from(&*l));
-        let mut opts = mysql_async::TxOpts::new();
-        opts.with_consistent_snapshot(consistent_snapshot)
-            .with_isolation_level(isolation_level)
-            .with_readonly(readonly);
-        AsyncTransaction::new(self.inner.clone(), opts)
+        let isolation_level_str: Option<String> = isolation_level.map(|l| l.as_str().to_string());
+        AsyncTransaction::new(slf, consistent_snapshot, isolation_level_str, readonly)
     }
 
     async fn id(&self) -> PyResult<u64> {

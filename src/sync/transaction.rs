@@ -1,35 +1,38 @@
-use std::pin::Pin;
+use std::sync::atomic::Ordering;
 
-use either::Either;
-use mysql::prelude::Queryable;
-use mysql::{Transaction, TxOpts};
 use pyo3::prelude::*;
 
 use crate::error::{Error, PyroResult};
-use crate::sync::backend::MysqlConn;
-use crate::sync::iterator::ResultSetIterator;
-use crate::sync::multi_conn::MultiSyncConn;
 use crate::sync::conn::SyncConn;
-use crate::{params::Params, row::Row};
 
+/// Transaction is a lightweight wrapper that only holds a reference to the Python Conn object.
+/// It does not use the backend's Transaction API. Instead, it uses SQL commands:
+/// - `__enter__`: Executes `START TRANSACTION` (with options)
+/// - `commit()`: Executes `COMMIT`
+/// - `rollback()`: Executes `ROLLBACK`
+///
+/// The user should use `conn.exec*` and `conn.query*` methods directly while the transaction
+/// is active. The Transaction object is only used for `commit()` and `rollback()`.
 #[pyclass(module = "pyro_mysql.sync", name = "Transaction")]
 pub struct SyncTransaction {
-    // Hold a reference to the connection Python object to prevent it from being GC-ed
     conn: Py<SyncConn>,
-    opts: TxOpts,
-
-    // initialized and reset in __enter__ and __exit__
-    inner: Option<mysql::Transaction<'static>>,
-    conn_inner: Option<Pin<Box<MysqlConn>>>, // Transaction takes the ownership of the Rust Conn struct from the Python Conn object
+    consistent_snapshot: bool,
+    isolation_level: Option<String>,
+    readonly: Option<bool>,
 }
 
 impl SyncTransaction {
-    pub fn new(conn: Py<SyncConn>, opts: TxOpts) -> Self {
+    pub fn new(
+        conn: Py<SyncConn>,
+        consistent_snapshot: bool,
+        isolation_level: Option<String>,
+        readonly: Option<bool>,
+    ) -> Self {
         SyncTransaction {
             conn,
-            opts,
-            inner: None,
-            conn_inner: None,
+            consistent_snapshot,
+            isolation_level,
+            readonly,
         }
     }
 }
@@ -38,40 +41,47 @@ impl SyncTransaction {
 impl SyncTransaction {
     pub fn __enter__<'py>(slf: Bound<'py, Self>, py: Python<'py>) -> PyroResult<Bound<'py, Self>> {
         let slf_ref = slf.borrow();
-        let py_conn = &slf_ref.conn;
-        let mut conn = {
-            let conn_mut: PyRefMut<SyncConn> = py_conn.borrow_mut(py);
-            let inner = &conn_mut.inner;
-            let multi_conn = py.detach(|| inner.write())
-                .take()
-                .ok_or_else(|| Error::ConnectionClosedError)?;
-            // Extract inner mysql::Conn from MultiSyncConn
-            let mysql_conn = match multi_conn {
-                MultiSyncConn::Mysql(conn) => conn,
-                MultiSyncConn::Diesel(_) => {
-                    return Err(Error::IncorrectApiUsageError(
-                        "Transactions are not supported for Diesel backend",
-                    ))
-                }
-                MultiSyncConn::ZeroMysql(_) => {
-                    return Err(Error::IncorrectApiUsageError(
-                        "Transactions are not supported for Zero-MySQL backend",
-                    ))
-                }
-            };
-            Box::pin(mysql_conn)
+        let conn = &slf_ref.conn;
+
+        // Check if already in transaction
+        {
+            let conn_ref = conn.borrow(py);
+            if conn_ref.in_transaction.load(Ordering::SeqCst) {
+                return Err(Error::IncorrectApiUsageError(
+                    "Connection is already in a transaction",
+                ));
+            }
+            // Set in_transaction flag
+            conn_ref.in_transaction.store(true, Ordering::SeqCst);
+        }
+
+        // Set isolation level if specified (must be done before START TRANSACTION)
+        if let Some(ref level) = slf_ref.isolation_level {
+            let conn_ref = conn.borrow(py);
+            conn_ref.query_drop_internal(format!("SET TRANSACTION ISOLATION LEVEL {}", level))?;
+        }
+
+        // Set access mode if specified
+        if let Some(ro) = slf_ref.readonly {
+            let conn_ref = conn.borrow(py);
+            let mode = if ro { "READ ONLY" } else { "READ WRITE" };
+            conn_ref.query_drop_internal(format!("SET TRANSACTION {}", mode))?;
+        }
+
+        // Build START TRANSACTION statement
+        let sql = if slf_ref.consistent_snapshot {
+            "START TRANSACTION WITH CONSISTENT SNAPSHOT".to_string()
+        } else {
+            "START TRANSACTION".to_string()
         };
 
-        let tx = conn.inner.start_transaction(slf_ref.opts)?;
-        let tx =
-            unsafe { std::mem::transmute::<Transaction<'_>, Transaction<'static>>(tx) };
+        // Execute START TRANSACTION
+        {
+            let conn_ref = conn.borrow(py);
+            conn_ref.query_drop_internal(sql)?;
+        }
 
         drop(slf_ref);
-        {
-            let mut slf_mut = slf.borrow_mut();
-            slf_mut.inner = Some(tx);
-            slf_mut.conn_inner = Some(conn);
-        }
         Ok(slf)
     }
 
@@ -82,216 +92,56 @@ impl SyncTransaction {
         _exc_value: Option<&Bound<'_, PyAny>>,
         _traceback: Option<&Bound<'_, PyAny>>,
     ) -> PyroResult<bool> {
-        // Check reference count of the transaction object
-        let refcnt = slf.get_refcnt();
-        if refcnt != 2 {
-            return Err(Error::IncorrectApiUsageError(
-                "The transaction is still referenced in __exit__. Make sure not to store the transaction outside the with-clause",
-            ));
-        }
+        let slf_ref = slf.borrow();
+        let conn = &slf_ref.conn;
 
-        let mut slf_mut = slf.borrow_mut();
-        // If there's an uncaught exception or transaction wasn't explicitly committed/rolled back, roll back
-        if slf_mut.inner.is_some() {
-            log::warn!("commit() or 1() is not called. rolling back.");
-            slf_mut.rollback()?;
-            slf_mut.inner.take();
+        // Only rollback if transaction is still active (not yet committed/rolled back)
+        let should_rollback = {
+            let conn_ref = conn.borrow(py);
+            conn_ref.in_transaction.load(Ordering::SeqCst)
+        };
+
+        if should_rollback {
+            log::warn!("commit() or rollback() was not called. Rolling back.");
+            let conn_ref = conn.borrow(py);
+            conn_ref.query_drop_internal("ROLLBACK".to_string())?;
+            conn_ref.in_transaction.store(false, Ordering::SeqCst);
         }
-        let conn_inner = slf_mut.conn_inner.take();
-        let py_conn = &slf_mut.conn;
-        let conn_mut: PyRefMut<SyncConn> = py_conn.borrow_mut(py);
-        let inner = &conn_mut.inner;
-        let mysql_conn = *Pin::into_inner(conn_inner.unwrap());
-        *py.detach(|| inner.write()) = Some(MultiSyncConn::Mysql(mysql_conn));
 
         Ok(false) // Don't suppress exceptions
     }
 
-    fn commit(&mut self) -> PyroResult<()> {
-        let inner = self
-            .inner
-            .take()
-            .ok_or_else(|| Error::ConnectionClosedError)?;
-        log::debug!("commit");
-        Ok(inner.commit()?)
-    }
+    fn commit(&self, py: Python) -> PyroResult<()> {
+        let conn_ref = self.conn.borrow(py);
 
-    fn rollback(&mut self) -> PyroResult<()> {
-        let inner = self
-            .inner
-            .take()
-            .ok_or_else(|| Error::ConnectionClosedError)?;
-        log::debug!("rollback");
-        Ok(inner.rollback()?)
-    }
-
-    fn affected_rows(&self) -> PyResult<u64> {
-        let inner = self.inner.as_ref().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Connection is not available")
-        })?;
-        Ok(inner.affected_rows())
-    }
-
-    // ─── Text Protocol ───────────────────────────────────────────────────
-
-    #[pyo3(signature = (query, *, as_dict=false))]
-    fn query<'py>(&mut self, py: Python<'py>, query: String, as_dict: bool) -> PyroResult<Vec<Py<PyAny>>> {
-        let rows: Vec<Row> = self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::TransactionClosedError)?
-            .query(query)?;
-
-        // Convert rows to either tuples or dicts
-        let result: Vec<Py<PyAny>> = if as_dict {
-            rows.iter()
-                .map(|row| row.to_dict(py).map(|d| d.into_any().unbind()))
-                .collect::<PyResult<_>>()?
-        } else {
-            rows.iter()
-                .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
-                .collect::<PyResult<_>>()?
-        };
-        Ok(result)
-    }
-
-    #[pyo3(signature = (query, *, as_dict=false))]
-    fn query_first<'py>(&mut self, py: Python<'py>, query: String, as_dict: bool) -> PyroResult<Option<Py<PyAny>>> {
-        let row: Option<Row> = self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::TransactionClosedError)?
-            .query_first(query)?;
-
-        // Convert row to either tuple or dict
-        match row {
-            Some(r) => {
-                let result: Py<PyAny> = if as_dict {
-                    r.to_dict(py)?.into_any().unbind()
-                } else {
-                    r.to_tuple(py)?.into_any().unbind()
-                };
-                Ok(Some(result))
-            }
-            None => Ok(None)
+        // Check if in transaction
+        if !conn_ref.in_transaction.load(Ordering::SeqCst) {
+            return Err(Error::TransactionClosedError);
         }
+
+        // Execute COMMIT
+        conn_ref.query_drop_internal("COMMIT".to_string())?;
+
+        // Clear in_transaction flag
+        conn_ref.in_transaction.store(false, Ordering::SeqCst);
+
+        Ok(())
     }
 
-    fn query_drop(&mut self, query: String) -> PyroResult<()> {
-        Ok(self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::TransactionClosedError)?
-            .query_drop(query)?)
-    }
+    fn rollback(&self, py: Python) -> PyroResult<()> {
+        let conn_ref = self.conn.borrow(py);
 
-    fn query_iter(slf: Py<Self>, py: Python, query: String) -> PyroResult<ResultSetIterator> {
-        let mut slf_ref = slf.borrow_mut(py);
-        let query_result = slf_ref
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::TransactionClosedError)?
-            .query_iter(query)?;
-
-        Ok(ResultSetIterator {
-            owner: slf.clone_ref(py).into_any(),
-            inner: Either::Left(unsafe {
-                std::mem::transmute::<
-                    mysql::QueryResult<'_, '_, '_, mysql::Text>,
-                    mysql::QueryResult<'_, '_, '_, mysql::Text>,
-                >(query_result)
-            }),
-        })
-    }
-
-    // ─── Binary Protocol ─────────────────────────────────────────────────
-
-    #[pyo3(signature = (query, params=Params::default(), *, as_dict=false))]
-    fn exec<'py>(&mut self, py: Python<'py>, query: String, params: Params, as_dict: bool) -> PyroResult<Vec<Py<PyAny>>> {
-        log::debug!("exec {query}");
-        let rows: Vec<Row> = self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::TransactionClosedError)?
-            .exec(query, params.to_mysql_params())?;
-
-        // Convert rows to either tuples or dicts
-        let result: Vec<Py<PyAny>> = if as_dict {
-            rows.iter()
-                .map(|row| row.to_dict(py).map(|d| d.into_any().unbind()))
-                .collect::<PyResult<_>>()?
-        } else {
-            rows.iter()
-                .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
-                .collect::<PyResult<_>>()?
-        };
-        Ok(result)
-    }
-    #[pyo3(signature = (query, params=Params::default(), *, as_dict=false))]
-    fn exec_first<'py>(&mut self, py: Python<'py>, query: String, params: Params, as_dict: bool) -> PyroResult<Option<Py<PyAny>>> {
-        log::debug!("exec_first {query}");
-        let row: Option<Row> = self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::TransactionClosedError)?
-            .exec_first(query, params.to_mysql_params())?;
-
-        // Convert row to either tuple or dict
-        match row {
-            Some(r) => {
-                let result: Py<PyAny> = if as_dict {
-                    r.to_dict(py)?.into_any().unbind()
-                } else {
-                    r.to_tuple(py)?.into_any().unbind()
-                };
-                Ok(Some(result))
-            }
-            None => Ok(None)
+        // Check if in transaction
+        if !conn_ref.in_transaction.load(Ordering::SeqCst) {
+            return Err(Error::TransactionClosedError);
         }
-    }
-    #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
-        log::debug!("exec_drop {query} {params:?}");
-        Ok(self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::TransactionClosedError)?
-            .exec_drop(query, params.to_mysql_params())?)
-    }
-    #[pyo3(signature = (query, params_list=vec![]))]
-    fn exec_batch(&mut self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
-        log::debug!("exec_batch {query}");
-        Ok(self
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::TransactionClosedError)?
-            .exec_batch(query, params_list)?)
-    }
 
-    #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_iter(
-        slf: Py<Self>,
-        py: Python,
-        query: String,
-        params: Params,
-    ) -> PyroResult<ResultSetIterator> {
-        log::debug!("exec_iter {query}");
+        // Execute ROLLBACK
+        conn_ref.query_drop_internal("ROLLBACK".to_string())?;
 
-        let mut slf_ref = slf.borrow_mut(py);
-        let query_result = slf_ref
-            .inner
-            .as_mut()
-            .ok_or_else(|| Error::TransactionClosedError)?
-            .exec_iter(query, params)?;
+        // Clear in_transaction flag
+        conn_ref.in_transaction.store(false, Ordering::SeqCst);
 
-        Ok(ResultSetIterator {
-            owner: slf.clone_ref(py).into_any(),
-            inner: Either::Right(unsafe {
-                std::mem::transmute::<
-                    mysql::QueryResult<'_, '_, '_, mysql::Binary>,
-                    mysql::QueryResult<'_, '_, '_, mysql::Binary>,
-                >(query_result)
-            }),
-        })
+        Ok(())
     }
 }

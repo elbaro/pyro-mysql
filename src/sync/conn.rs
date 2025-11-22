@@ -1,5 +1,7 @@
+use std::sync::atomic::AtomicBool;
+
 use either::Either;
-use mysql::{AccessMode, Opts as MysqlOpts, prelude::*};
+use mysql::{Opts as MysqlOpts, prelude::*};
 use parking_lot::RwLock;
 use pyo3::prelude::*;
 use pyo3::types::PyList;
@@ -16,6 +18,7 @@ use crate::sync::transaction::SyncTransaction;
 #[pyclass(module = "pyro_mysql.sync", name = "Conn")]
 pub struct SyncConn {
     pub inner: RwLock<Option<MultiSyncConn>>,
+    pub in_transaction: AtomicBool,
 }
 
 #[pymethods]
@@ -33,6 +36,7 @@ impl SyncConn {
 
                 Ok(Self {
                     inner: RwLock::new(Some(MultiSyncConn::Mysql(conn))),
+                    in_transaction: AtomicBool::new(false),
                 })
             }
             "diesel" => {
@@ -48,6 +52,7 @@ impl SyncConn {
 
                 Ok(Self {
                     inner: RwLock::new(Some(MultiSyncConn::Diesel(conn))),
+                    in_transaction: AtomicBool::new(false),
                 })
             }
             "zero" => {
@@ -62,6 +67,7 @@ impl SyncConn {
 
                 Ok(Self {
                     inner: RwLock::new(Some(MultiSyncConn::ZeroMysql(conn))),
+                    in_transaction: AtomicBool::new(false),
                 })
             }
             _ => Err(crate::error::Error::IncorrectApiUsageError(
@@ -73,25 +79,12 @@ impl SyncConn {
     #[pyo3(signature=(consistent_snapshot=false, isolation_level=None, readonly=None))]
     fn start_transaction(
         slf: Py<Self>,
-        py: Python,
         consistent_snapshot: bool,
         isolation_level: Option<IsolationLevel>,
         readonly: Option<bool>,
-    ) -> PyroResult<SyncTransaction> {
-        let isolation_level: Option<mysql::IsolationLevel> =
-            isolation_level.map(|l| mysql::IsolationLevel::from(&l));
-        let opts = mysql::TxOpts::default()
-            .set_with_consistent_snapshot(consistent_snapshot)
-            .set_isolation_level(isolation_level)
-            .set_access_mode(readonly.map(|flag| {
-                if flag {
-                    AccessMode::ReadOnly
-                } else {
-                    AccessMode::ReadWrite
-                }
-            }));
-
-        Ok(SyncTransaction::new(slf.clone_ref(py), opts))
+    ) -> SyncTransaction {
+        let isolation_level_str: Option<String> = isolation_level.map(|l| l.as_str().to_string());
+        SyncTransaction::new(slf, consistent_snapshot, isolation_level_str, readonly)
     }
 
     fn id(&self) -> PyroResult<u64> {
@@ -407,5 +400,25 @@ impl SyncConn {
         let guard = self.inner.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
         Ok(conn.server_version())
+    }
+}
+
+// Public methods for internal use (not exposed to Python via #[pymethods])
+impl SyncConn {
+    /// Execute a query and discard results. Used internally by Transaction.
+    pub fn query_drop_internal(&self, query: String) -> PyroResult<()> {
+        let mut guard = self.inner.write();
+        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        match multi_conn {
+            MultiSyncConn::Mysql(conn) => Ok(conn.inner.query_drop(query)?),
+            MultiSyncConn::Diesel(conn) => conn.query_drop(query),
+            MultiSyncConn::ZeroMysql(conn) => {
+                // Execute query and discard results
+                Python::attach(|py| {
+                    conn.query(py, query)?;
+                    Ok(())
+                })
+            }
+        }
     }
 }

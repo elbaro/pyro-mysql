@@ -1,247 +1,212 @@
-use pyo3::{prelude::*, pybacked::PyBackedStr};
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tokio::sync::{RwLock, RwLockWriteGuard};
 
-use crate::{
-    r#async::multi_conn::MultiAsyncConn,
-    r#async::queryable::Queryable,
-    error::Error,
-    util::{PyroFuture, rust_future_into_py},
-};
+use pyo3::prelude::*;
+use tokio::sync::RwLock;
 
-// struct fields are dropped in the same order as declared in the struct
+use crate::error::{Error, PyroResult};
+use crate::r#async::conn::AsyncConn;
+use crate::r#async::multi_conn::MultiAsyncConn;
+use crate::util::{rust_future_into_py, PyroFuture};
+
+// Import the mysql_async Queryable trait for its methods
+use mysql_async::prelude::Queryable as MysqlAsyncQueryable;
+
+/// Transaction is a lightweight wrapper that only holds a reference to the Python Conn object.
+/// It does not use the backend's Transaction API. Instead, it uses SQL commands:
+/// - `__aenter__`: Executes `START TRANSACTION` (with options)
+/// - `commit()`: Executes `COMMIT`
+/// - `rollback()`: Executes `ROLLBACK`
+///
+/// The user should use `conn.exec*` and `conn.query*` methods directly while the transaction
+/// is active. The Transaction object is only used for `commit()` and `rollback()`.
 #[pyclass(module = "pyro_mysql.async_", name = "Transaction")]
 pub struct AsyncTransaction {
-    opts: mysql_async::TxOpts,
-
-    /// `Option<Transaction>` is initialized in __aenter__.
-    /// It is reset on commit(), rollback(), or __aexit__.
-    inner: Arc<RwLock<Option<mysql_async::Transaction<'static>>>>,
-
-    /// Holding this guard prevents other concurrent calls of Conn::some_method(&mutable self).
-    /// guard is initialized in __aenter__.
-    /// It is reset on commit(), rollback(), or __aexit__.
-    guard: Arc<RwLock<Option<tokio::sync::RwLockWriteGuard<'static, Option<MultiAsyncConn>>>>>,
-
-    conn: Arc<RwLock<Option<MultiAsyncConn>>>,
+    conn: Py<AsyncConn>,
+    consistent_snapshot: bool,
+    isolation_level: Option<String>,
+    readonly: Option<bool>,
 }
 
 impl AsyncTransaction {
-    pub fn new(conn: Arc<RwLock<Option<MultiAsyncConn>>>, opts: mysql_async::TxOpts) -> Self {
+    pub fn new(
+        conn: Py<AsyncConn>,
+        consistent_snapshot: bool,
+        isolation_level: Option<String>,
+        readonly: Option<bool>,
+    ) -> Self {
         AsyncTransaction {
-            opts,
             conn,
-            guard: Default::default(),
-            inner: Default::default(),
+            consistent_snapshot,
+            isolation_level,
+            readonly,
         }
     }
 }
 
-// Order or lock: conn -> conn guard -> inner
+/// Helper function to execute a query_drop on a MultiAsyncConn
+async fn multi_conn_query_drop(
+    inner: &Arc<RwLock<Option<MultiAsyncConn>>>,
+    query: String,
+) -> PyroResult<()> {
+    let mut guard = inner.write().await;
+    let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+    match conn {
+        MultiAsyncConn::MysqlAsync(mysql_conn) => {
+            mysql_conn.query_drop(query).await?;
+            Ok(())
+        }
+        MultiAsyncConn::Wtx(wtx_conn) => {
+            use wtx::database::Executor;
+            wtx_conn
+                .executor
+                .execute(&query, |_affected: u64| -> Result<(), wtx::Error> { Ok(()) })
+                .await
+                .map_err(|e| Error::WtxError(e.to_string()))?;
+            Ok(())
+        }
+        MultiAsyncConn::ZeroMysql(zero_conn) => {
+            let _ = zero_conn.query_drop(query).await?;
+            Ok(())
+        }
+    }
+}
+
 #[pymethods]
 impl AsyncTransaction {
     fn __aenter__<'py>(slf: PyRef<'py, Self>, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
-        let opts = slf.opts.clone();
-        let conn = slf.conn.clone();
-        let guard = slf.guard.clone();
-        let inner = slf.inner.clone();
-        let slf: Py<AsyncTransaction> = slf.into();
+        let conn = slf.conn.clone_ref(py);
+        let consistent_snapshot = slf.consistent_snapshot;
+        let isolation_level = slf.isolation_level.clone();
+        let readonly = slf.readonly;
+        let slf_py: Py<AsyncTransaction> = slf.into();
+
+        // Get the inner connection Arc before entering the async block
+        let inner: Arc<RwLock<Option<MultiAsyncConn>>> =
+            Python::attach(|py| conn.borrow(py).inner.clone());
 
         rust_future_into_py(py, async move {
-            let mut conn = conn.write().await;
-            let mut guard = guard.write().await;
-            let mut inner = inner.write().await;
+            Python::attach(|py| -> PyResult<()> {
+                let conn_ref = conn.borrow(py);
+                // Check if already in transaction
+                if conn_ref.in_transaction.load(Ordering::SeqCst) {
+                    return Err(Error::IncorrectApiUsageError(
+                        "Connection is already in a transaction",
+                    )
+                    .into());
+                }
+                // Set in_transaction flag
+                conn_ref.in_transaction.store(true, Ordering::SeqCst);
+                Ok(())
+            })?;
 
-            // check if transaction is already inflight
-            if inner.is_some() {
-                panic!("panic");
+            // Set isolation level if specified (must be done before START TRANSACTION)
+            if let Some(ref level) = isolation_level {
+                multi_conn_query_drop(
+                    &inner,
+                    format!("SET TRANSACTION ISOLATION LEVEL {}", level),
+                )
+                .await?;
             }
 
-            // Check if connection is wtx and panic
-            let conn_ref = conn.as_mut().unwrap(); // Conn is already non-None
-            if matches!(conn_ref, MultiAsyncConn::Wtx(_)) {
-                panic!("Transactions are not supported for wtx connections");
+            // Set access mode if specified
+            if let Some(ro) = readonly {
+                let mode = if ro { "READ ONLY" } else { "READ WRITE" };
+                multi_conn_query_drop(&inner, format!("SET TRANSACTION {}", mode)).await?;
             }
 
-            // Only mysql_async supports transactions
-            let mysql_conn = match conn_ref {
-                MultiAsyncConn::MysqlAsync(c) => c,
-                MultiAsyncConn::Wtx(_) => unreachable!(),
-                MultiAsyncConn::ZeroMysql(_) => todo!("zero_mysql does not support transactions yet"),
+            // Build START TRANSACTION statement
+            let sql = if consistent_snapshot {
+                "START TRANSACTION WITH CONSISTENT SNAPSHOT".to_string()
+            } else {
+                "START TRANSACTION".to_string()
             };
 
-            let tx = mysql_conn
-                .start_transaction(opts)
-                .await
-                .map_err(Error::from)?;
+            // Execute START TRANSACTION
+            multi_conn_query_drop(&inner, sql).await?;
 
-            // As long as we hold Arc<Conn>, mysql_async::Transaction is valid.
-            // inner is declared before conn so that Arc<Transaction> drops first.
-            *inner = Some(unsafe {
-                std::mem::transmute::<mysql_async::Transaction<'_>, mysql_async::Transaction<'static>>(
-                    tx,
-                )
-            });
-
-            // As long as we hold Arc<Conn>, RwLockWriteGuard is valid.
-            // guard is declared before conn so that Arc<Guard> drops first.
-            *guard = Some(unsafe {
-                std::mem::transmute::<
-                    RwLockWriteGuard<'_, _>,
-                    RwLockWriteGuard<'static, Option<MultiAsyncConn>>,
-                >(conn)
-            });
-
-            Ok(slf)
+            Ok(slf_py)
         })
     }
+
     fn __aexit__<'py>(
         slf: &Bound<'py, Self>,
         py: Python<'py>,
-        _exc_type: &crate::Bound<'py, crate::PyAny>,
-        _exc_value: &crate::Bound<'py, crate::PyAny>,
-        _traceback: &crate::Bound<'py, crate::PyAny>,
+        _exc_type: &Bound<'py, PyAny>,
+        _exc_value: &Bound<'py, PyAny>,
+        _traceback: &Bound<'py, PyAny>,
     ) -> PyResult<Py<PyroFuture>> {
-        // Check reference count of the transaction object
-        let refcnt = slf.get_refcnt();
-        if refcnt != 2 {
-            log::error!(
-                "AsyncTransaction reference count is {} (expected 2) in __aexit__. Transaction may be referenced elsewhere.",
-                refcnt
-            );
-        }
+        let conn = slf.borrow().conn.clone_ref(py);
+        let inner: Arc<RwLock<Option<MultiAsyncConn>>> = conn.borrow(py).inner.clone();
 
-        let guard = slf.borrow().guard.clone();
-        let inner = slf.borrow().inner.clone();
         rust_future_into_py(py, async move {
-            // TODO: check if  is not called and normally exiting without exception
+            // Only rollback if transaction is still active (not yet committed/rolled back)
+            let should_rollback =
+                Python::attach(|py| conn.borrow(py).in_transaction.load(Ordering::SeqCst));
 
-            let mut guard = guard.write().await;
-            let mut inner = inner.write().await;
+            if should_rollback {
+                log::warn!("commit() or rollback() was not called. Rolling back.");
+                multi_conn_query_drop(&inner, "ROLLBACK".to_string()).await?;
 
-            if let Some(inner) = inner.take() {
-                log::warn!("commit() or rollback() is not called. rolling back.");
-                inner.rollback().await.map_err(Error::from)?;
+                // Clear in_transaction flag
+                Python::attach(|py| {
+                    conn.borrow(py).in_transaction.store(false, Ordering::SeqCst);
+                });
             }
-            *guard = None;
+
             Ok(())
         })
     }
 
     fn commit<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
-        let guard = self.guard.clone();
+        let conn = self.conn.clone_ref(py);
+        let inner: Arc<RwLock<Option<MultiAsyncConn>>> = conn.borrow(py).inner.clone();
+
         rust_future_into_py(py, async move {
-            let inner = inner
-                .write()
-                .await
-                .take()
-                .ok_or_else(|| Error::TransactionClosedError)?;
-            // At this point, no new operation on Transaction can be started
+            // Check if in transaction
+            Python::attach(|py| -> PyroResult<()> {
+                let conn_ref = conn.borrow(py);
+                if !conn_ref.in_transaction.load(Ordering::SeqCst) {
+                    return Err(Error::TransactionClosedError);
+                }
+                Ok(())
+            })?;
 
-            // TODO: wait for other concurrent ops
-            // Transaction is not yet thread-safe due to this
+            // Execute COMMIT
+            multi_conn_query_drop(&inner, "COMMIT".to_string()).await?;
 
-            // Drop the RwLockGuard on conn
-            guard.write().await.take();
+            // Clear in_transaction flag
+            Python::attach(|py| {
+                conn.borrow(py).in_transaction.store(false, Ordering::SeqCst);
+            });
 
-            Ok(inner.commit().await?)
+            Ok(())
         })
     }
+
     fn rollback<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
-        let guard = self.guard.clone();
+        let conn = self.conn.clone_ref(py);
+        let inner: Arc<RwLock<Option<MultiAsyncConn>>> = conn.borrow(py).inner.clone();
+
         rust_future_into_py(py, async move {
-            let inner = inner
-                .write()
-                .await
-                .take()
-                .ok_or_else(|| Error::TransactionClosedError)?;
+            // Check if in transaction
+            Python::attach(|py| -> PyroResult<()> {
+                let conn_ref = conn.borrow(py);
+                if !conn_ref.in_transaction.load(Ordering::SeqCst) {
+                    return Err(Error::TransactionClosedError);
+                }
+                Ok(())
+            })?;
 
-            // Drop the RwLockGuard on conn
-            guard.write().await.take();
+            // Execute ROLLBACK
+            multi_conn_query_drop(&inner, "ROLLBACK".to_string()).await?;
 
-            Ok(inner.rollback().await?)
+            // Clear in_transaction flag
+            Python::attach(|py| {
+                conn.borrow(py).in_transaction.store(false, Ordering::SeqCst);
+            });
+
+            Ok(())
         })
-    }
-
-    fn affected_rows<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
-        rust_future_into_py(py, async move {
-            Ok(inner
-                .read()
-                .await
-                .as_ref()
-                .ok_or_else(|| Error::TransactionClosedError)?
-                .affected_rows())
-        })
-    }
-
-    // ─── Queryable ───────────────────────────────────────────────────────
-    fn close_prepared_statement<'py>(
-        &self,
-        _py: Python<'py>,
-        _stmt: String,
-    ) -> PyResult<Py<PyroFuture>> {
-        todo!()
-    }
-    fn ping<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
-        self.inner.ping(py)
-    }
-
-    // ─── Text Protocol ───────────────────────────────────────────────────
-    #[pyo3(signature = (query, *, as_dict=false))]
-    fn query<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
-        self.inner.query(py, query, as_dict)
-    }
-    #[pyo3(signature = (query, *, as_dict=false))]
-    fn query_first<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
-        self.inner.query_first(py, query, as_dict)
-    }
-    fn query_drop<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
-        self.inner.query_drop(py, query)
-    }
-
-    // ─── Binary Protocol ─────────────────────────────────────────────────
-    #[pyo3(signature = (query, params=None, *, as_dict=false))]
-    fn exec<'py>(
-        &self,
-        py: Python<'py>,
-        query: PyBackedStr,
-        params: Option<Py<PyAny>>,
-        as_dict: bool,
-    ) -> PyResult<Py<PyroFuture>> {
-        let params = params.unwrap_or_else(|| py.None());
-        self.inner.exec(py, query, params, as_dict)
-    }
-    #[pyo3(signature = (query, params=None, *, as_dict=false))]
-    fn exec_first<'py>(
-        &self,
-        py: Python<'py>,
-        query: PyBackedStr,
-        params: Option<Py<PyAny>>,
-        as_dict: bool,
-    ) -> PyResult<Py<PyroFuture>> {
-        let params = params.unwrap_or_else(|| py.None());
-        self.inner.exec_first(py, query, params, as_dict)
-    }
-    #[pyo3(signature = (query, params=None))]
-    fn exec_drop<'py>(
-        &self,
-        py: Python<'py>,
-        query: PyBackedStr,
-        params: Option<Py<PyAny>>,
-    ) -> PyResult<Py<PyroFuture>> {
-        let params = params.unwrap_or_else(|| py.None());
-        self.inner.exec_drop(py, query, params)
-    }
-    #[pyo3(signature = (query, params=vec![]))]
-    fn exec_batch<'py>(
-        &self,
-        py: Python<'py>,
-        query: PyBackedStr,
-        params: Vec<Py<PyAny>>,
-    ) -> PyResult<Py<PyroFuture>> {
-        self.inner.exec_batch(py, query, params)
     }
 }

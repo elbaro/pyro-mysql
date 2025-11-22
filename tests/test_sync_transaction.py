@@ -11,10 +11,10 @@ class TestSyncTransaction:
         conn = SyncConn(get_test_db_url(), backend=backend)
 
         # First create a test table outside of transaction
-        conn.exec("CREATE TEMPORARY TABLE test_tx_rollback (id INT, value VARCHAR(50))")
+        conn.exec_drop("CREATE TEMPORARY TABLE test_tx_rollback (id INT, value VARCHAR(50))")
 
         with conn.start_transaction() as tx:
-            rows = tx.exec("SELECT 42 as answer")
+            rows = conn.exec("SELECT 42 as answer")
             tx.commit()
             result = rows[0][0]
         assert result == 42
@@ -22,32 +22,20 @@ class TestSyncTransaction:
         # Test auto-rollback on exception
         with pytest.raises(ValueError):
             with conn.start_transaction() as tx:
-                tx.exec("INSERT INTO test_tx_rollback VALUES (1, 'should_rollback')")
+                conn.exec_drop("INSERT INTO test_tx_rollback VALUES (1, 'should_rollback')")
                 raise ValueError("Intentional failure")
 
         # Verify insert was rolled back
         rows = conn.exec("SELECT * FROM test_tx_rollback")
         assert len(rows) == 0
 
-    def test_transaction_reference_count_warning(self, backend):
-        """Test that keeping a reference to transaction shows warning"""
-        conn = SyncConn(get_test_db_url(), backend=backend)
-
-        with pytest.raises(pyro_mysql.error.IncorrectApiUsageError):
-            _tx_ref = None
-            with conn.start_transaction() as tx:
-                _tx_ref = tx  # Keep a reference
-                tx.exec("SELECT 1")
-                tx.commit()
-
-    def test_using_conn_while_transaction_active(self, backend):
-        """Test that we can use Conn while a Transaction is active"""
+    def test_nested_transaction_not_allowed(self, backend):
+        """Test that nested transactions are not allowed"""
         conn = SyncConn(get_test_db_url(), backend=backend)
 
         with conn.start_transaction() as tx:
-            tx_rows = tx.exec("SELECT 1 as n")
-            assert tx_rows[0][0] == 1
-            with pytest.raises(pyro_mysql.error.ConnectionClosedError):
-                conn.exec("SELECT 2 as n")
-
+            # Trying to start a second transaction should fail
+            with pytest.raises(pyro_mysql.error.IncorrectApiUsageError):
+                with conn.start_transaction() as tx2:
+                    pass
             tx.commit()

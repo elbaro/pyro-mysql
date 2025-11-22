@@ -3,7 +3,12 @@ import asyncio
 import pytest
 from pyro_mysql import IsolationLevel
 
-from .conftest import cleanup_test_table_async, get_async_conn_with_backend, get_test_db_url, setup_test_table_async
+from .conftest import (
+    cleanup_test_table_async,
+    get_async_conn_with_backend,
+    get_test_db_url,
+    setup_test_table_async,
+)
 
 
 @pytest.mark.asyncio
@@ -13,12 +18,14 @@ async def test_basic_transaction(async_backend):
 
     await setup_test_table_async(conn)
 
+    print("---")
+
     async with conn.start_transaction() as tx:
-        await tx.exec_drop(
+        await conn.exec_drop(
             "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
         )
 
-        count = await tx.query_first("SELECT COUNT(*) FROM test_table")
+        count = await conn.query_first("SELECT COUNT(*) FROM test_table")
         assert count
         assert count[0] == 1
 
@@ -40,11 +47,11 @@ async def test_transaction_rollback(async_backend):
     await setup_test_table_async(conn)
 
     async with conn.start_transaction() as tx:
-        await tx.exec_drop(
+        await conn.exec_drop(
             "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
         )
 
-        count = await tx.query_first("SELECT COUNT(*) FROM test_table")
+        count = await conn.query_first("SELECT COUNT(*) FROM test_table")
         assert count
         assert count[0] == 1
 
@@ -74,9 +81,9 @@ async def test_transaction_isolation_levels(async_backend):
 
     for isolation_level in isolation_levels:
         async with conn.start_transaction(isolation_level=isolation_level) as tx:
-            await tx.exec_drop(
+            await conn.exec_drop(
                 "INSERT INTO test_table (name, age) VALUES (?, ?)",
-                (f"Test_{isolation_level.as_str()}", 25),
+                (f"Test_{isolation_level.name}", 25),
             )
 
             await tx.commit()
@@ -99,23 +106,23 @@ async def test_nested_transactions(async_backend):
     await setup_test_table_async(conn)
 
     async with conn.start_transaction() as tx:
-        await tx.exec_drop(
+        await conn.exec_drop(
             "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
         )
 
-        await tx.exec_drop("SAVEPOINT sp1")
+        await conn.exec_drop("SAVEPOINT sp1")
 
-        await tx.exec_drop(
+        await conn.exec_drop(
             "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Bob", 25)
         )
 
-        count = await tx.query_first("SELECT COUNT(*) FROM test_table")
+        count = await conn.query_first("SELECT COUNT(*) FROM test_table")
         assert count
         assert count[0] == 2
 
-        await tx.exec_drop("ROLLBACK TO SAVEPOINT sp1")
+        await conn.exec_drop("ROLLBACK TO SAVEPOINT sp1")
 
-        count = await tx.query_first("SELECT COUNT(*) FROM test_table")
+        count = await conn.query_first("SELECT COUNT(*) FROM test_table")
         assert count
         assert count[0] == 1
 
@@ -141,13 +148,13 @@ async def test_transaction_with_error(async_backend):
     )
 
     async with conn.start_transaction() as tx:
-        await tx.exec_drop(
+        await conn.exec_drop(
             "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Bob", 25)
         )
 
         # Try to insert with duplicate primary key
         with pytest.raises(Exception):
-            await tx.exec_drop(
+            await conn.exec_drop(
                 "INSERT INTO test_table (id, name, age) VALUES (?, ?, ?)",
                 (1, "Charlie", 35),
             )
@@ -177,7 +184,7 @@ async def test_transaction_concurrent_read(async_backend):
     async with conn1.start_transaction(
         isolation_level=IsolationLevel.ReadCommitted
     ) as tx:
-        await tx.exec_drop(
+        await conn1.exec_drop(
             "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
         )
 
@@ -210,12 +217,12 @@ async def test_transaction_read_only(async_backend):
     )
 
     async with conn.start_transaction(readonly=True) as tx:
-        result = await tx.query("SELECT name, age FROM test_table")
+        result = await conn.query("SELECT name, age FROM test_table")
         assert len(result) == 1
 
         # Write operations should fail in read-only transaction
         with pytest.raises(Exception):
-            await tx.exec_drop(
+            await conn.exec_drop(
                 "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Bob", 25)
             )
 
@@ -239,7 +246,7 @@ async def test_transaction_consistent_snapshot(async_backend):
     async with conn.start_transaction(
         consistent_snapshot=True, isolation_level=IsolationLevel.RepeatableRead
     ) as tx:
-        count = await tx.query_first("SELECT COUNT(*) FROM test_table")
+        count = await conn.query_first("SELECT COUNT(*) FROM test_table")
         assert count
         assert count[0] == 1
 
@@ -258,7 +265,7 @@ async def test_transaction_auto_rollback_on_drop(async_backend):
 
     # Create and drop transaction without explicit commit/rollback
     async with conn.start_transaction() as tx:
-        await tx.exec_drop(
+        await conn.exec_drop(
             "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
         )
         # Transaction will auto-rollback when exiting context without commit

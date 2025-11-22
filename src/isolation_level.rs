@@ -9,15 +9,22 @@ pub enum IsolationLevel {
     Serializable,
 }
 
+impl IsolationLevel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            IsolationLevel::ReadUncommitted => "READ UNCOMMITTED",
+            IsolationLevel::ReadCommitted => "READ COMMITTED",
+            IsolationLevel::RepeatableRead => "REPEATABLE READ",
+            IsolationLevel::Serializable => "SERIALIZABLE",
+        }
+    }
+}
+
 #[pymethods]
 impl IsolationLevel {
-    fn as_str(&self) -> &'static str {
-        match self {
-            IsolationLevel::ReadUncommitted => "READ_UNCOMMITTED",
-            IsolationLevel::ReadCommitted => "READ_COMMITTED",
-            IsolationLevel::RepeatableRead => "REPEATABLE_READ",
-            IsolationLevel::Serializable => "SERIALIZBLE",
-        }
+    #[getter]
+    fn name(&self) -> &'static str {
+        self.as_str()
     }
 }
 
