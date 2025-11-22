@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::error::Error;
 use super::conn::WtxMysqlExecutor;
+use crate::error::Error;
 
 /// Helper function to get or prepare a statement with client-side caching
 pub async fn get_or_prepare_stmt(

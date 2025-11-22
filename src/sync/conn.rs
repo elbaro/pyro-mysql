@@ -57,7 +57,8 @@ impl SyncConn {
             "zero" => {
                 let opts = match url_or_opts {
                     Either::Left(url) => {
-                        let inner: zero_mysql::Opts = url.as_str().try_into().map_err(Error::from)?;
+                        let inner: zero_mysql::Opts =
+                            url.as_str().try_into().map_err(Error::from)?;
                         inner
                     }
                     Either::Right(opts) => opts.inner.clone(),
@@ -146,7 +147,8 @@ impl SyncConn {
             MultiSyncConn::ZeroMysql(conn) => {
                 let tuples = conn.query(py, query)?;
                 // ZeroMysql returns PyList, convert to Vec<Py<PyAny>>
-                let result: Vec<Py<PyAny>> = tuples.bind(py).iter().map(|item| item.unbind()).collect();
+                let result: Vec<Py<PyAny>> =
+                    tuples.bind(py).iter().map(|item| item.unbind()).collect();
                 Ok(result)
             }
         }
@@ -293,9 +295,7 @@ impl SyncConn {
                 // Diesel handles as_dict internally
                 conn.exec_first(query, params, as_dict)
             }
-            MultiSyncConn::ZeroMysql(conn) => {
-                conn.exec_first(py, query, params)
-            }
+            MultiSyncConn::ZeroMysql(conn) => conn.exec_first(py, query, params),
         }
     }
 
@@ -309,9 +309,7 @@ impl SyncConn {
                 Ok(conn.inner.exec_drop(query, params)?)
             }
             MultiSyncConn::Diesel(conn) => conn.exec_drop(query, params),
-            MultiSyncConn::ZeroMysql(conn) => {
-                conn.exec_drop(query, params)
-            }
+            MultiSyncConn::ZeroMysql(conn) => conn.exec_drop(query, params),
         }
     }
 
@@ -334,7 +332,6 @@ impl SyncConn {
             }
         }
     }
-
 
     pub fn close(&self) {
         *self.inner.write() = None;

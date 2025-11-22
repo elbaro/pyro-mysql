@@ -1,4 +1,7 @@
-use pyo3::{prelude::*, types::{PyDict, PyTuple}};
+use pyo3::{
+    prelude::*,
+    types::{PyDict, PyTuple},
+};
 
 /// Async Row type that stores Python objects directly
 /// Supports both wtx (stores Python objects) and mysql_async (converts from mysql_common::Row)
@@ -12,7 +15,10 @@ pub struct Row {
 impl Row {
     /// Create a new Row from Python objects and column names (for wtx)
     pub fn new(values: Vec<Py<PyAny>>, column_names: Vec<String>) -> Self {
-        Self { values, column_names }
+        Self {
+            values,
+            column_names,
+        }
     }
 }
 
@@ -49,7 +55,10 @@ impl Row {
                 values.push(py_obj.unbind());
             }
 
-            Ok(Self { values, column_names })
+            Ok(Self {
+                values,
+                column_names,
+            })
         })
     }
 }
@@ -57,9 +66,7 @@ impl Row {
 #[pymethods]
 impl Row {
     pub fn to_tuple<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        let vec: Vec<_> = self.values.iter()
-            .map(|obj| obj.clone_ref(py))
-            .collect();
+        let vec: Vec<_> = self.values.iter().map(|obj| obj.clone_ref(py)).collect();
         PyTuple::new(py, vec)
     }
 

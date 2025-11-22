@@ -25,11 +25,7 @@ impl MysqlConn {
     /// Get the last insert ID
     pub fn last_insert_id(&self) -> Option<u64> {
         let id = self.inner.last_insert_id();
-        if id == 0 {
-            None
-        } else {
-            Some(id)
-        }
+        if id == 0 { None } else { Some(id) }
     }
 
     /// Get the server version

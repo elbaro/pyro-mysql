@@ -4,10 +4,12 @@ use pyo3::prelude::*;
 use pyo3::types::PyList;
 use zero_mysql::constant::ColumnFlags;
 use zero_mysql::error::Result;
-use zero_mysql::protocol::connection::{ColumnDefinition, ColumnDefinitionBytes, ColumnDefinitionTail};
-use zero_mysql::protocol::r#trait::BinaryResultSetHandler;
-use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::BinaryRowPayload;
+use zero_mysql::protocol::connection::{
+    ColumnDefinition, ColumnDefinitionBytes, ColumnDefinitionTail,
+};
+use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
+use zero_mysql::protocol::r#trait::BinaryResultSetHandler;
 
 use crate::dbapi::conn::{DbApiExecResult, DbApiRow};
 use crate::util::PyTupleBuilder;
@@ -46,8 +48,12 @@ impl<'a> DbApiHandler<'a> {
     }
 
     pub fn into_result(self) -> DbApiExecResult {
-        log::debug!("DbApiHandler::into_result: has_result_set={}, rows={}, cols={}",
-            self.has_result_set, self.rows.len(), self.col_infos.len());
+        log::debug!(
+            "DbApiHandler::into_result: has_result_set={}, rows={}, cols={}",
+            self.has_result_set,
+            self.rows.len(),
+            self.col_infos.len()
+        );
         if self.has_result_set {
             // Build description as PyList
             let description = Python::attach(|py| {
@@ -55,13 +61,17 @@ impl<'a> DbApiHandler<'a> {
                     py,
                     self.col_infos.iter().map(|info| {
                         (
-                            info.name.as_str(),                        // name
-                            info.type_code,                            // type_code
-                            info.column_length,                        // display_size
-                            None::<Option<()>>,                        // internal_size
-                            None::<Option<()>>,                        // precision
-                            None::<Option<()>>,                        // scale
-                            if info.null_ok { Some(true) } else { Some(false) }, // null_ok
+                            info.name.as_str(), // name
+                            info.type_code,     // type_code
+                            info.column_length, // display_size
+                            None::<Option<()>>, // internal_size
+                            None::<Option<()>>, // precision
+                            None::<Option<()>>, // scale
+                            if info.null_ok {
+                                Some(true)
+                            } else {
+                                Some(false)
+                            }, // null_ok
                         )
                             .into_pyobject(py)
                             .unwrap()
@@ -96,7 +106,10 @@ impl<'a> BinaryResultSetHandler<'a> for DbApiHandler<'a> {
     }
 
     fn resultset_start(&mut self, num_columns: usize) -> Result<()> {
-        log::debug!("DbApiHandler::resultset_start called with {} columns", num_columns);
+        log::debug!(
+            "DbApiHandler::resultset_start called with {} columns",
+            num_columns
+        );
         self.cols.clear();
         self.cols.reserve(num_columns);
         self.col_infos.clear();

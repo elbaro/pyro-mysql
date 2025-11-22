@@ -7,7 +7,7 @@ pub mod transaction;
 
 use pyo3::prelude::*;
 
-use crate::{opts::Opts, r#async::conn::AsyncConn, util::PyroFuture};
+use crate::{r#async::conn::AsyncConn, opts::Opts, util::PyroFuture};
 
 #[pyfunction]
 #[pyo3(signature = (url_or_opts, backend="mysql_async"))]

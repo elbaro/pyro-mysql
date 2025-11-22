@@ -39,7 +39,9 @@ impl TokioThread {
             let handle = Arc::new(rt.handle().clone());
 
             // Send the handle to the main thread
-            handle_tx.send(handle).expect("Failed to send runtime handle");
+            handle_tx
+                .send(handle)
+                .expect("Failed to send runtime handle");
 
             // Block on shutdown signal
             rt.block_on(async {

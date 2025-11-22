@@ -26,10 +26,8 @@ impl Params {
         match self {
             Params::Empty => mysql_common::params::Params::Empty,
             Params::Positional(values) => {
-                let mysql_values: Vec<mysql_async::Value> = values
-                    .into_iter()
-                    .map(|v| v.to_mysql_value())
-                    .collect();
+                let mysql_values: Vec<mysql_async::Value> =
+                    values.into_iter().map(|v| v.to_mysql_value()).collect();
                 mysql_common::params::Params::Positional(mysql_values)
             }
         }

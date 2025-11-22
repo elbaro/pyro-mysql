@@ -1,8 +1,8 @@
 use pyo3::{prelude::*, types::PyTuple};
 use zero_mysql::error::Result;
 use zero_mysql::protocol::connection::{ColumnDefinitionBytes, ColumnDefinitionTail};
-use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
+use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
 
 use crate::zero_mysql_util::{decode_binary_bytes_to_python, decode_text_value_to_python};

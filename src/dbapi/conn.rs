@@ -9,8 +9,8 @@ use crate::{
     error::Error,
     opts::Opts as PyroOpts,
     params::Params,
-    sync::backend::zero_mysql::params_adapter::ParamsAdapter,
     sync::backend::ZeroMysqlConn,
+    sync::backend::zero_mysql::params_adapter::ParamsAdapter,
 };
 
 use pyo3::types::PyTuple;
@@ -69,10 +69,7 @@ impl DbApiConn {
             let stmt_id = if let Some(&cached_id) = conn.stmt_cache.get(query) {
                 cached_id
             } else {
-                let stmt_id = conn
-                    .inner
-                    .prepare(query)
-                    .map_err(Error::ZeroMysqlError)?;
+                let stmt_id = conn.inner.prepare(query).map_err(Error::ZeroMysqlError)?;
                 conn.stmt_cache.insert(query.to_string(), stmt_id);
                 stmt_id
             };
@@ -83,8 +80,7 @@ impl DbApiConn {
                 let params_adapter = ParamsAdapter::new(&params);
 
                 log::debug!("About to call conn.inner.exec with stmt_id={}", stmt_id);
-                let exec_result = conn.inner
-                    .exec(stmt_id, params_adapter, &mut handler);
+                let exec_result = conn.inner.exec(stmt_id, params_adapter, &mut handler);
                 log::debug!("conn.inner.exec returned: {:?}", exec_result.is_ok());
                 exec_result.map_err(|e| {
                     log::debug!("exec error: {:?}", e);

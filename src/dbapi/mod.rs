@@ -10,10 +10,10 @@ pub mod zero_handler;
 use std::sync::Arc;
 
 use crate::{
-    opts::Opts,
     r#async::multi_conn::MultiAsyncConn,
     dbapi::{async_conn::AsyncDbApiConn, conn::DbApiConn, error::DbApiResult},
     error::Error,
+    opts::Opts,
     params::Params,
     util::{PyroFuture, rust_future_into_py, url_error_to_pyerr},
 };

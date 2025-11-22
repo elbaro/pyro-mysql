@@ -3,7 +3,8 @@ use mysql::{TxOpts, prelude::Queryable};
 use pyo3::{ffi::c_str, prelude::*};
 
 fn setup_db() {
-    let mut conn = mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false").unwrap();
+    let mut conn =
+        mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false").unwrap();
     conn.exec_drop("DROP TABLE IF EXISTS benchmark_test", ())
         .unwrap();
     conn.exec_drop(
@@ -21,12 +22,14 @@ fn setup_db() {
 }
 
 fn clear_table() {
-    let mut conn = mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false").unwrap();
+    let mut conn =
+        mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false").unwrap();
     conn.exec_drop("TRUNCATE TABLE benchmark_test", ()).unwrap();
 }
 
 fn populate_table(n: usize) {
-    let mut conn = mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false").unwrap();
+    let mut conn =
+        mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false").unwrap();
     conn.exec_drop("TRUNCATE TABLE benchmark_test", ()).unwrap();
     {
         let mut tx = conn.start_transaction(TxOpts::default()).unwrap();

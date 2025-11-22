@@ -1,7 +1,7 @@
 use mysql_async::prelude::Queryable;
 
-use crate::error::PyroResult;
 use crate::r#async::backend::{WtxConn, ZeroMysqlConn};
+use crate::error::PyroResult;
 
 /// Multi-backend async connection enum
 pub enum MultiAsyncConn {

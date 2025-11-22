@@ -1,18 +1,18 @@
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use either::Either;
 use pyo3::prelude::*;
 use pyo3::pybacked::PyBackedStr;
 use tokio::sync::RwLock;
 
-use crate::error::{Error, PyroResult};
-use crate::isolation_level::IsolationLevel;
-use crate::opts::Opts;
 use crate::r#async::multi_conn::MultiAsyncConn;
 use crate::r#async::queryable::Queryable;
 use crate::r#async::transaction::AsyncTransaction;
-use crate::util::{rust_future_into_py, url_error_to_pyerr, PyroFuture};
+use crate::error::{Error, PyroResult};
+use crate::isolation_level::IsolationLevel;
+use crate::opts::Opts;
+use crate::util::{PyroFuture, rust_future_into_py, url_error_to_pyerr};
 
 #[pyclass(module = "pyro_mysql.async_", name = "Conn")]
 pub struct AsyncConn {
@@ -41,7 +41,9 @@ impl AsyncConn {
         match backend {
             "mysql_async" => {
                 let opts = match url_or_opts {
-                    Either::Left(url) => mysql_async::Opts::from_url(&url).map_err(url_error_to_pyerr)?,
+                    Either::Left(url) => {
+                        mysql_async::Opts::from_url(&url).map_err(url_error_to_pyerr)?
+                    }
                     Either::Right(opts) => opts.to_mysql_async_opts(),
                 };
                 rust_future_into_py(py, async move {
@@ -58,7 +60,8 @@ impl AsyncConn {
                     Either::Right(_opts) => {
                         return Err(Error::IncorrectApiUsageError(
                             "WTX backend currently only supports URL strings",
-                        ).into());
+                        )
+                        .into());
                     }
                 };
                 rust_future_into_py(py, async move {
@@ -72,7 +75,8 @@ impl AsyncConn {
             "zero" => {
                 let opts = match url_or_opts {
                     Either::Left(url) => {
-                        let inner: zero_mysql::Opts = url.as_str().try_into().map_err(Error::from)?;
+                        let inner: zero_mysql::Opts =
+                            url.as_str().try_into().map_err(Error::from)?;
                         inner
                     }
                     Either::Right(opts) => opts.inner.clone(),
@@ -87,7 +91,8 @@ impl AsyncConn {
             }
             _ => Err(Error::IncorrectApiUsageError(
                 "Unknown backend. Supported backends: 'mysql_async', 'wtx', 'zero'",
-            ).into()),
+            )
+            .into()),
         }
     }
 
@@ -165,11 +170,21 @@ impl AsyncConn {
 
     // ─── Text Protocol ───────────────────────────────────────────────────
     #[pyo3(signature = (query, *, as_dict=false))]
-    fn query<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
+    fn query<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        as_dict: bool,
+    ) -> PyResult<Py<PyroFuture>> {
         self.inner.query(py, query, as_dict)
     }
     #[pyo3(signature = (query, *, as_dict=false))]
-    fn query_first<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
+    fn query_first<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        as_dict: bool,
+    ) -> PyResult<Py<PyroFuture>> {
         self.inner.query_first(py, query, as_dict)
     }
     fn query_drop<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {

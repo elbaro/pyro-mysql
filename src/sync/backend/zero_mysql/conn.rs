@@ -13,11 +13,8 @@ pub struct ZeroMysqlConn {
 }
 
 impl ZeroMysqlConn {
-    /// Create a new Zero-MySQL connection from URL
     pub fn new(url: &str) -> PyroResult<Self> {
-        let conn = Conn::new(url)
-            .map_err(|_e| Error::IncorrectApiUsageError("Failed to connect with zero-mysql"))?;
-
+        let conn = Conn::new(url)?;
         Ok(ZeroMysqlConn {
             inner: conn,
             stmt_cache: std::collections::HashMap::new(),
@@ -77,12 +74,7 @@ impl ZeroMysqlConn {
 
     pub fn query<'py>(&mut self, py: Python<'py>, query: String) -> PyroResult<Py<PyList>> {
         let mut handler = TupleHandler::new(py);
-
-        self.inner.query(&query, &mut handler).map_err(|e| {
-            println!("error in query: {:?}", e);
-            Error::IncorrectApiUsageError("Failed to execute query")
-        })?;
-
+        self.inner.query(&query, &mut handler)?;
         self.affected_rows = handler.affected_rows();
         self.last_insert_id = handler.last_insert_id();
         Ok(handler.into_rows())
@@ -91,9 +83,7 @@ impl ZeroMysqlConn {
     pub fn query_drop(&mut self, query: String) -> PyroResult<()> {
         let mut handler = DropHandler::new();
 
-        self.inner.query(&query, &mut handler).map_err(|_e| {
-            Error::IncorrectApiUsageError("Failed to execute query")
-        })?;
+        self.inner.query(&query, &mut handler)?;
 
         self.affected_rows = handler.affected_rows;
         self.last_insert_id = handler.last_insert_id;
@@ -121,10 +111,7 @@ impl ZeroMysqlConn {
 
         let mut handler = TupleHandler::new(py);
         let params_adapter = ParamsAdapter::new(&params);
-        self.inner
-            .exec(stmt_id, params_adapter, &mut handler)
-            .map_err(|_e| Error::IncorrectApiUsageError("Failed to execute query"))?;
-
+        self.inner.exec(stmt_id, params_adapter, &mut handler)?;
         self.affected_rows = handler.affected_rows();
         self.last_insert_id = handler.last_insert_id();
         Ok(handler.into_rows())
@@ -152,11 +139,7 @@ impl ZeroMysqlConn {
         let mut handler = TupleHandler::new(py);
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
-            .exec_first(stmt_id, params_adapter, &mut handler)
-            .map_err(|e| {
-                println!("error from zero: {:?}", e);
-                Error::IncorrectApiUsageError("Failed to execute query")
-            })?;
+            .exec_first(stmt_id, params_adapter, &mut handler)?;
 
         self.affected_rows = handler.affected_rows();
         self.last_insert_id = handler.last_insert_id();
@@ -184,9 +167,7 @@ impl ZeroMysqlConn {
 
         let mut handler = DropHandler::new();
         let params_adapter = ParamsAdapter::new(&params);
-        self.inner
-            .exec(stmt_id, params_adapter, &mut handler)
-            .map_err(|_e| Error::IncorrectApiUsageError("Failed to execute query"))?;
+        self.inner.exec(stmt_id, params_adapter, &mut handler)?;
 
         self.affected_rows = handler.affected_rows;
         self.last_insert_id = handler.last_insert_id;

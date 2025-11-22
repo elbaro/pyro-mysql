@@ -81,11 +81,18 @@ impl Cursor {
                 self.result = Some(rows.into());
                 self.lastrowid = None;
             }
-            DbApiExecResult::NoDescription { affected_rows, last_insert_id } => {
+            DbApiExecResult::NoDescription {
+                affected_rows,
+                last_insert_id,
+            } => {
                 self.description = None;
                 self.rowcount = affected_rows as i64;
                 self.result = None;
-                self.lastrowid = if last_insert_id == 0 { None } else { Some(last_insert_id) };
+                self.lastrowid = if last_insert_id == 0 {
+                    None
+                } else {
+                    Some(last_insert_id)
+                };
             }
         }
 

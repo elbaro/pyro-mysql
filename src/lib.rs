@@ -18,10 +18,10 @@ pub mod zero_mysql_util;
 use pyo3::prelude::*;
 
 use crate::{
-    opts::Opts,
     r#async::{conn::AsyncConn, transaction::AsyncTransaction},
     capability_flags::CapabilityFlags,
     isolation_level::IsolationLevel,
+    opts::Opts,
     sync::conn::SyncConn,
     util::PyroFuture,
 };

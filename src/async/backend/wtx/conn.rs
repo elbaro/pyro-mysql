@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::error::{Error, PyroResult};
+use std::collections::HashMap;
 
 // Type alias for wtx MySQL executor with tokio runtime
 pub type WtxMysqlExecutor = wtx::database::client::mysql::MysqlExecutor<
@@ -22,8 +22,8 @@ impl WtxConn {
         max_statements: Option<usize>,
         buffer_size: Option<(usize, usize, usize, usize, usize)>,
     ) -> PyroResult<Self> {
-        use wtx::misc::Uri;
         use wtx::database::client::mysql::{Config, ExecutorBuffer, MysqlExecutor};
+        use wtx::misc::Uri;
         use wtx::rng::SeedableRng;
 
         // Parse URL
@@ -37,12 +37,8 @@ impl WtxConn {
         let max_capacity = max_statements.unwrap_or(usize::MAX);
         let eb = if let Some(buffer_caps) = buffer_size {
             // Use with_capacity when buffer sizes are specified
-            ExecutorBuffer::with_capacity(
-                buffer_caps,
-                max_capacity,
-                &mut rng,
-            )
-            .map_err(|e| Error::WtxError(e.to_string()))?
+            ExecutorBuffer::with_capacity(buffer_caps, max_capacity, &mut rng)
+                .map_err(|e| Error::WtxError(e.to_string()))?
         } else {
             // Use default constructor
             ExecutorBuffer::new(max_capacity, &mut rng)
@@ -55,7 +51,8 @@ impl WtxConn {
             .map_err(|e| Error::IoError(e.to_string()))?;
 
         // Set TCP_NODELAY for better performance
-        stream.set_nodelay(true)
+        stream
+            .set_nodelay(true)
             .map_err(|e| Error::IoError(e.to_string()))?;
 
         // Connect
@@ -105,7 +102,10 @@ impl WtxConn {
         // Reset connection using MySQL RESET CONNECTION statement (MySQL 5.7.3+)
         // This clears temporary tables, user variables, prepared statements, etc.
         use wtx::database::Executor;
-        self.executor.execute("RESET CONNECTION", |_: u64| -> Result<(), wtx::Error> { Ok(()) })
+        self.executor
+            .execute("RESET CONNECTION", |_: u64| -> Result<(), wtx::Error> {
+                Ok(())
+            })
             .await
             .map_err(|e| Error::WtxError(e.to_string()))?;
         // Clear statement cache as RESET CONNECTION invalidates prepared statements
@@ -117,7 +117,8 @@ impl WtxConn {
     pub async fn ping(&mut self) -> PyroResult<()> {
         // Use COM_PING or just a simple query
         use wtx::database::Executor;
-        self.executor.execute("SELECT 1", |_: u64| -> Result<(), wtx::Error> { Ok(()) })
+        self.executor
+            .execute("SELECT 1", |_: u64| -> Result<(), wtx::Error> { Ok(()) })
             .await
             .map_err(|e| Error::WtxError(e.to_string()))?;
         Ok(())

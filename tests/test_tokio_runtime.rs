@@ -1,6 +1,6 @@
 use pyro_mysql::tokio_thread::TokioThread;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
 #[test]

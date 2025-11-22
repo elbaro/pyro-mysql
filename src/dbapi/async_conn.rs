@@ -6,10 +6,10 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::{
+    r#async::multi_conn::MultiAsyncConn,
     dbapi::{async_cursor::AsyncCursor, error::DbApiResult},
     error::{Error, PyroResult},
     params::Params,
-    r#async::multi_conn::MultiAsyncConn,
     row::Row,
     util::tokio_spawn_as_abort_on_drop,
 };
@@ -101,7 +101,8 @@ impl AsyncDbApiConn {
                 MultiAsyncConn::MysqlAsync(c) => c,
                 MultiAsyncConn::Wtx(wtx_conn) => {
                     use wtx::database::Executor;
-                    wtx_conn.executor
+                    wtx_conn
+                        .executor
                         .execute("COMMIT", |_: u64| Ok(()))
                         .await
                         .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
@@ -129,7 +130,8 @@ impl AsyncDbApiConn {
                 MultiAsyncConn::MysqlAsync(c) => c,
                 MultiAsyncConn::Wtx(wtx_conn) => {
                     use wtx::database::Executor;
-                    wtx_conn.executor
+                    wtx_conn
+                        .executor
                         .execute("ROLLBACK", |_: u64| Ok(()))
                         .await
                         .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
@@ -168,7 +170,8 @@ impl AsyncDbApiConn {
                 } else {
                     "SET autocommit=0"
                 };
-                wtx_conn.executor
+                wtx_conn
+                    .executor
                     .execute(query, |_: u64| Ok(()))
                     .await
                     .map_err(|e: wtx::Error| Error::WtxError(e.to_string()))?;
@@ -176,7 +179,7 @@ impl AsyncDbApiConn {
             }
             MultiAsyncConn::ZeroMysql(_) => {
                 return Err(Error::IncorrectApiUsageError(
-                    "zero_mysql connections are not supported with DB-API. Use the async API (pyro_mysql.AsyncConn) instead."
+                    "zero_mysql connections are not supported with DB-API. Use the async API (pyro_mysql.AsyncConn) instead.",
                 ));
             }
         };

@@ -9,13 +9,13 @@ use pyo3::{
 use tokio::sync::RwLock;
 
 use crate::{
+    r#async::{multi_conn::MultiAsyncConn, row::Row},
     dbapi::{
         async_conn::AsyncDbApiConn,
         error::{DbApiError, DbApiResult},
     },
     error::{Error, PyroResult},
     params::Params,
-    r#async::{multi_conn::MultiAsyncConn, row::Row},
     util::tokio_spawn_as_abort_on_drop,
 };
 

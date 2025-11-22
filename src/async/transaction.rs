@@ -1,13 +1,13 @@
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 
 use pyo3::prelude::*;
 use tokio::sync::RwLock;
 
-use crate::error::{Error, PyroResult};
 use crate::r#async::conn::AsyncConn;
 use crate::r#async::multi_conn::MultiAsyncConn;
-use crate::util::{rust_future_into_py, PyroFuture};
+use crate::error::{Error, PyroResult};
+use crate::util::{PyroFuture, rust_future_into_py};
 
 // Import the mysql_async Queryable trait for its methods
 use mysql_async::prelude::Queryable as MysqlAsyncQueryable;
@@ -60,7 +60,9 @@ async fn multi_conn_query_drop(
             use wtx::database::Executor;
             wtx_conn
                 .executor
-                .execute(&query, |_affected: u64| -> Result<(), wtx::Error> { Ok(()) })
+                .execute(&query, |_affected: u64| -> Result<(), wtx::Error> {
+                    Ok(())
+                })
                 .await
                 .map_err(|e| Error::WtxError(e.to_string()))?;
             Ok(())
@@ -102,11 +104,8 @@ impl AsyncTransaction {
 
             // Set isolation level if specified (must be done before START TRANSACTION)
             if let Some(ref level) = isolation_level {
-                multi_conn_query_drop(
-                    &inner,
-                    format!("SET TRANSACTION ISOLATION LEVEL {}", level),
-                )
-                .await?;
+                multi_conn_query_drop(&inner, format!("SET TRANSACTION ISOLATION LEVEL {}", level))
+                    .await?;
             }
 
             // Set access mode if specified
@@ -150,7 +149,9 @@ impl AsyncTransaction {
 
                 // Clear in_transaction flag
                 Python::attach(|py| {
-                    conn.borrow(py).in_transaction.store(false, Ordering::SeqCst);
+                    conn.borrow(py)
+                        .in_transaction
+                        .store(false, Ordering::SeqCst);
                 });
             }
 
@@ -177,7 +178,9 @@ impl AsyncTransaction {
 
             // Clear in_transaction flag
             Python::attach(|py| {
-                conn.borrow(py).in_transaction.store(false, Ordering::SeqCst);
+                conn.borrow(py)
+                    .in_transaction
+                    .store(false, Ordering::SeqCst);
             });
 
             Ok(())
@@ -203,7 +206,9 @@ impl AsyncTransaction {
 
             // Clear in_transaction flag
             Python::attach(|py| {
-                conn.borrow(py).in_transaction.store(false, Ordering::SeqCst);
+                conn.borrow(py)
+                    .in_transaction
+                    .store(false, Ordering::SeqCst);
             });
 
             Ok(())

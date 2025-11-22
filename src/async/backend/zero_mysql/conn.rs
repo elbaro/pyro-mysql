@@ -1,5 +1,5 @@
 use crate::r#async::backend::zero_mysql::handler::{DropHandler, TupleHandler};
-use crate::error::{Error, PyroResult};
+use crate::error::PyroResult;
 use crate::params::Params;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
@@ -16,9 +16,7 @@ pub struct ZeroMysqlConn {
 impl ZeroMysqlConn {
     /// Create a new Zero-MySQL connection from URL
     pub async fn new(url: &str) -> PyroResult<Self> {
-        let conn = Conn::new(url)
-            .await
-            .map_err(|_e| Error::IncorrectApiUsageError("Failed to connect with zero-mysql"))?;
+        let conn = Conn::new(url).await?;
 
         Ok(ZeroMysqlConn {
             inner: conn,
@@ -30,9 +28,7 @@ impl ZeroMysqlConn {
     }
 
     pub async fn new_with_opts(opts: zero_mysql::Opts) -> PyroResult<Self> {
-        let conn = Conn::new(opts)
-            .await
-            .map_err(|_e| Error::IncorrectApiUsageError("Failed to connect with zero-mysql"))?;
+        let conn = Conn::new(opts).await?;
 
         Ok(ZeroMysqlConn {
             inner: conn,
@@ -90,30 +86,17 @@ impl ZeroMysqlConn {
     pub async fn query(&mut self, query: String) -> PyroResult<Vec<Py<PyTuple>>> {
         self.handler.clear();
 
-        self.inner
-            .query(&query, &mut self.handler)
-            .await
-            .map_err(|e| {
-                println!("error in query: {:?}", e);
-                Error::IncorrectApiUsageError("Failed to execute query")
-            })?;
+        self.inner.query(&query, &mut self.handler).await?;
 
         self.affected_rows = self.handler.affected_rows();
         self.last_insert_id = self.handler.last_insert_id();
 
-        Python::attach(|py| {
-            self.handler.rows_to_python(py).map_err(|_e| {
-                Error::IncorrectApiUsageError("Failed to convert rows to Python objects")
-            })
-        })
+        Python::attach(|py| Ok(self.handler.rows_to_python(py)?))
     }
 
     pub async fn query_drop(&mut self, query: String) -> PyroResult<()> {
         let mut handler = DropHandler::new();
-        self.inner
-            .query(&query, &mut handler)
-            .await
-            .map_err(|_e| Error::IncorrectApiUsageError("Failed to execute query"))?;
+        self.inner.query(&query, &mut handler).await?;
 
         self.affected_rows = handler.affected_rows;
         self.last_insert_id = handler.last_insert_id;
@@ -126,11 +109,7 @@ impl ZeroMysqlConn {
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
-            let stmt_id = self
-                .inner
-                .prepare(&query)
-                .await
-                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
+            let stmt_id = self.inner.prepare(&query).await?;
             self.stmt_cache.insert(query.clone(), stmt_id);
             stmt_id
         };
@@ -140,20 +119,12 @@ impl ZeroMysqlConn {
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
             .exec(stmt_id, params_adapter, &mut self.handler)
-            .await
-            .map_err(|e| {
-                println!("error from zero: {:?}", e);
-                Error::IncorrectApiUsageError("Failed to execute query")
-            })?;
+            .await?;
 
         self.affected_rows = self.handler.affected_rows();
         self.last_insert_id = self.handler.last_insert_id();
 
-        Python::attach(|py| {
-            self.handler.rows_to_python(py).map_err(|_e| {
-                Error::IncorrectApiUsageError("Failed to convert rows to Python objects")
-            })
-        })
+        Python::attach(|py| Ok(self.handler.rows_to_python(py)?))
     }
 
     pub async fn exec_first(
@@ -166,11 +137,7 @@ impl ZeroMysqlConn {
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
-            let stmt_id = self
-                .inner
-                .prepare(&query)
-                .await
-                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
+            let stmt_id = self.inner.prepare(&query).await?;
             self.stmt_cache.insert(query.clone(), stmt_id);
             stmt_id
         };
@@ -180,19 +147,13 @@ impl ZeroMysqlConn {
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
             .exec_first(stmt_id, params_adapter, &mut self.handler)
-            .await
-            .map_err(|e| {
-                println!("error from zero: {:?}", e);
-                Error::IncorrectApiUsageError("Failed to execute query")
-            })?;
+            .await?;
 
         self.affected_rows = self.handler.affected_rows();
         self.last_insert_id = self.handler.last_insert_id();
 
         Python::attach(|py| {
-            let rows = self.handler.rows_to_python(py).map_err(|_e| {
-                Error::IncorrectApiUsageError("Failed to convert rows to Python objects")
-            })?;
+            let rows = self.handler.rows_to_python(py)?;
             Ok(rows.into_iter().next())
         })
     }
@@ -203,11 +164,7 @@ impl ZeroMysqlConn {
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
-            let stmt_id = self
-                .inner
-                .prepare(&query)
-                .await
-                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
+            let stmt_id = self.inner.prepare(&query).await?;
             self.stmt_cache.insert(query.clone(), stmt_id);
             stmt_id
         };
@@ -216,11 +173,7 @@ impl ZeroMysqlConn {
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
             .exec(stmt_id, params_adapter, &mut handler)
-            .await
-            .map_err(|e| {
-                println!("error from zero: {:?}", e);
-                Error::IncorrectApiUsageError("Failed to execute query")
-            })?;
+            .await?;
 
         self.affected_rows = handler.affected_rows;
         self.last_insert_id = handler.last_insert_id;

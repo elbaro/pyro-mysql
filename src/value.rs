@@ -1,5 +1,7 @@
 use crate::error::Error;
-use crate::py_imports::{get_date_class, get_datetime_class, get_decimal_class, get_json_module, get_timedelta_class};
+use crate::py_imports::{
+    get_date_class, get_datetime_class, get_decimal_class, get_json_module, get_timedelta_class,
+};
 use mysql_common::Value as MySqlValue;
 use mysql_common::constants::ColumnType;
 use mysql_common::packets::Column;

@@ -5,7 +5,7 @@ use wtx::database::Records;
 
 use crate::{
     r#async::{
-        backend::wtx::{queryable::get_or_prepare_stmt, row::wtx_record_to_row, WtxParams},
+        backend::wtx::{WtxParams, queryable::get_or_prepare_stmt, row::wtx_record_to_row},
         multi_conn::MultiAsyncConn,
         row::Row,
     },
@@ -28,8 +28,14 @@ pub trait Queryable {
     ) -> PyResult<Py<PyroFuture>>;
 
     // ─── Text Protocol ───────────────────────────────────────────────────
-    fn query<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>>;
-    fn query_first<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>>;
+    fn query<'py>(&self, py: Python<'py>, query: String, as_dict: bool)
+    -> PyResult<Py<PyroFuture>>;
+    fn query_first<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        as_dict: bool,
+    ) -> PyResult<Py<PyroFuture>>;
     fn query_drop<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>>;
 
     // ─── Binary Protocol ─────────────────────────────────────────────────
@@ -94,7 +100,12 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
-    fn query<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
+    fn query<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        as_dict: bool,
+    ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
         rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut inner = inner.write().await;
@@ -120,7 +131,12 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
         })
     }
 
-    fn query_first<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
+    fn query_first<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        as_dict: bool,
+    ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
         rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut inner = inner.write().await;
@@ -131,18 +147,16 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
                 .await?;
 
             // Convert row to either tuple or dict
-            Python::attach(|py| {
-                match row {
-                    Some(r) => {
-                        let result: Py<PyAny> = if as_dict {
-                            r.to_dict(py)?.into_any().unbind()
-                        } else {
-                            r.to_tuple(py)?.into_any().unbind()
-                        };
-                        Ok(Some(result))
-                    }
-                    None => Ok(None)
+            Python::attach(|py| match row {
+                Some(r) => {
+                    let result: Py<PyAny> = if as_dict {
+                        r.to_dict(py)?.into_any().unbind()
+                    } else {
+                        r.to_tuple(py)?.into_any().unbind()
+                    };
+                    Ok(Some(result))
                 }
+                None => Ok(None),
             })
         })
     }
@@ -216,18 +230,16 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
                 .await?;
 
             // Convert row to either tuple or dict
-            Python::attach(|py| {
-                match row {
-                    Some(r) => {
-                        let result: Py<PyAny> = if as_dict {
-                            r.to_dict(py)?.into_any().unbind()
-                        } else {
-                            r.to_tuple(py)?.into_any().unbind()
-                        };
-                        Ok(Some(result))
-                    }
-                    None => Ok(None)
+            Python::attach(|py| match row {
+                Some(r) => {
+                    let result: Py<PyAny> = if as_dict {
+                        r.to_dict(py)?.into_any().unbind()
+                    } else {
+                        r.to_tuple(py)?.into_any().unbind()
+                    };
+                    Ok(Some(result))
                 }
+                None => Ok(None),
             })
         })
     }
@@ -306,7 +318,8 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                 MultiAsyncConn::Wtx(wtx_conn) => {
                     use wtx::database::Executor;
                     // Use COM_PING or just a simple query
-                    wtx_conn.executor
+                    wtx_conn
+                        .executor
                         .execute("SELECT 1", |_: u64| -> Result<(), wtx::Error> { Ok(()) })
                         .await
                         .map_err(|e| Error::WtxError(e.to_string()))?;
@@ -345,7 +358,12 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
-    fn query<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
+    fn query<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        as_dict: bool,
+    ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
         rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut inner = inner.write().await;
@@ -356,10 +374,16 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     use wtx::database::Executor;
 
                     // Get or prepare statement with caching
-                    let stmt_id = get_or_prepare_stmt(&mut wtx_conn.executor, &mut wtx_conn.stmt_cache, &query).await?;
+                    let stmt_id = get_or_prepare_stmt(
+                        &mut wtx_conn.executor,
+                        &mut wtx_conn.stmt_cache,
+                        &query,
+                    )
+                    .await?;
 
                     // Fetch all records with empty params for text query
-                    let records = wtx_conn.executor
+                    let records = wtx_conn
+                        .executor
                         .fetch_many_with_stmt(stmt_id, (), |_| Ok(()))
                         .await
                         .map_err(|e| Error::WtxError(e.to_string()))?;
@@ -390,11 +414,13 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                             // For as_dict=true, we need to convert tuples to dicts
                             // However, zero_mysql doesn't provide column names easily
                             // For now, return tuples (this is a limitation)
-                            py_tuples.iter()
+                            py_tuples
+                                .iter()
                                 .map(|t| Ok(t.clone_ref(py).into_any()))
                                 .collect::<PyResult<_>>()?
                         } else {
-                            py_tuples.iter()
+                            py_tuples
+                                .iter()
                                 .map(|t| Ok(t.clone_ref(py).into_any()))
                                 .collect::<PyResult<_>>()?
                         };
@@ -419,7 +445,12 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
         })
     }
 
-    fn query_first<'py>(&self, py: Python<'py>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
+    fn query_first<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        as_dict: bool,
+    ) -> PyResult<Py<PyroFuture>> {
         let inner = self.clone();
         rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut inner = inner.write().await;
@@ -430,9 +461,15 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     use wtx::database::Executor;
 
                     // Get or prepare statement with caching
-                    let stmt_id = get_or_prepare_stmt(&mut wtx_conn.executor, &mut wtx_conn.stmt_cache, &query).await?;
+                    let stmt_id = get_or_prepare_stmt(
+                        &mut wtx_conn.executor,
+                        &mut wtx_conn.stmt_cache,
+                        &query,
+                    )
+                    .await?;
 
-                    let record = wtx_conn.executor
+                    let record = wtx_conn
+                        .executor
                         .fetch_with_stmt(stmt_id, ())
                         .await
                         .map_err(|e| Error::WtxError(e.to_string()))?;
@@ -467,18 +504,16 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
             };
 
             // Convert row to either tuple or dict
-            Python::attach(|py| {
-                match row {
-                    Some(r) => {
-                        let result: Py<PyAny> = if as_dict {
-                            r.to_dict(py)?.into_any().unbind()
-                        } else {
-                            r.to_tuple(py)?.into_any().unbind()
-                        };
-                        Ok(Some(result))
-                    }
-                    None => Ok(None)
+            Python::attach(|py| match row {
+                Some(r) => {
+                    let result: Py<PyAny> = if as_dict {
+                        r.to_dict(py)?.into_any().unbind()
+                    } else {
+                        r.to_tuple(py)?.into_any().unbind()
+                    };
+                    Ok(Some(result))
                 }
+                None => Ok(None),
             })
         })
     }
@@ -497,7 +532,8 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     use wtx::database::Executor;
 
                     // Use wtx execute() for non-SELECT queries (text protocol)
-                    wtx_conn.executor
+                    wtx_conn
+                        .executor
                         .execute(&query, |_affected: u64| -> Result<(), wtx::Error> {
                             Ok(())
                         })
@@ -543,10 +579,16 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     let wtx_params = Python::attach(|py| WtxParams::from_py(py, &params))?;
 
                     // Get or prepare statement with client-side caching
-                    let stmt_id = get_or_prepare_stmt(&mut wtx_conn.executor, &mut wtx_conn.stmt_cache, query).await?;
+                    let stmt_id = get_or_prepare_stmt(
+                        &mut wtx_conn.executor,
+                        &mut wtx_conn.stmt_cache,
+                        query,
+                    )
+                    .await?;
 
                     // Execute and fetch results
-                    let records = wtx_conn.executor
+                    let records = wtx_conn
+                        .executor
                         .fetch_many_with_stmt(stmt_id, wtx_params, |_| Ok(()))
                         .await
                         .map_err(|e| Error::WtxError(e.to_string()))?;
@@ -568,8 +610,12 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                 }
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
                     // zero_mysql returns Vec<Py<PyTuple>> directly
-                    let pyro_params = Python::attach(|py| params.extract::<crate::params::Params>(py))?;
-                    let tuples = zero_conn.exec(query.to_string(), pyro_params).await.map_err(Error::from)?;
+                    let pyro_params =
+                        Python::attach(|py| params.extract::<crate::params::Params>(py))?;
+                    let tuples = zero_conn
+                        .exec(query.to_string(), pyro_params)
+                        .await
+                        .map_err(Error::from)?;
 
                     // Return directly - zero_mysql already returns tuples
                     return Python::attach(|_py| {
@@ -625,10 +671,16 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     let wtx_params = Python::attach(|py| WtxParams::from_py(py, &params))?;
 
                     // Get or prepare statement with client-side caching
-                    let stmt_id = get_or_prepare_stmt(&mut wtx_conn.executor, &mut wtx_conn.stmt_cache, query).await?;
+                    let stmt_id = get_or_prepare_stmt(
+                        &mut wtx_conn.executor,
+                        &mut wtx_conn.stmt_cache,
+                        query,
+                    )
+                    .await?;
 
                     // Fetch first record
-                    let record = wtx_conn.executor
+                    let record = wtx_conn
+                        .executor
                         .fetch_with_stmt(stmt_id, wtx_params)
                         .await
                         .map_err(|e| Error::WtxError(e.to_string()))?;
@@ -642,8 +694,12 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                 }
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
                     // zero_mysql has a dedicated exec_first method
-                    let pyro_params = Python::attach(|py| params.extract::<crate::params::Params>(py))?;
-                    let first_tuple = zero_conn.exec_first(query.to_string(), pyro_params).await.map_err(Error::from)?;
+                    let pyro_params =
+                        Python::attach(|py| params.extract::<crate::params::Params>(py))?;
+                    let first_tuple = zero_conn
+                        .exec_first(query.to_string(), pyro_params)
+                        .await
+                        .map_err(Error::from)?;
 
                     // Return first tuple if available
                     return Python::attach(|_py| {
@@ -663,18 +719,16 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
             };
 
             // Convert row to either tuple or dict
-            Python::attach(|py| {
-                match row {
-                    Some(r) => {
-                        let result: Py<PyAny> = if as_dict {
-                            r.to_dict(py)?.into_any().unbind()
-                        } else {
-                            r.to_tuple(py)?.into_any().unbind()
-                        };
-                        Ok(Some(result))
-                    }
-                    None => Ok(None)
+            Python::attach(|py| match row {
+                Some(r) => {
+                    let result: Py<PyAny> = if as_dict {
+                        r.to_dict(py)?.into_any().unbind()
+                    } else {
+                        r.to_tuple(py)?.into_any().unbind()
+                    };
+                    Ok(Some(result))
                 }
+                None => Ok(None),
             })
         })
     }
@@ -703,10 +757,16 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     use wtx::database::Executor;
 
                     // Get or prepare statement with client-side caching
-                    let stmt_id = get_or_prepare_stmt(&mut wtx_conn.executor, &mut wtx_conn.stmt_cache, query).await?;
+                    let stmt_id = get_or_prepare_stmt(
+                        &mut wtx_conn.executor,
+                        &mut wtx_conn.stmt_cache,
+                        query,
+                    )
+                    .await?;
 
                     // Execute and drop results (don't fetch)
-                    wtx_conn.executor
+                    wtx_conn
+                        .executor
                         .execute_with_stmt(stmt_id, wtx_params)
                         .await
                         .map_err(|e| Error::WtxError(e.to_string()))?;
@@ -715,8 +775,12 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                 }
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
                     // Use dedicated exec_drop method
-                    let pyro_params = Python::attach(|py| params.extract::<crate::params::Params>(py))?;
-                    zero_conn.exec_drop(query.to_string(), pyro_params).await.map_err(Error::from)?;
+                    let pyro_params =
+                        Python::attach(|py| params.extract::<crate::params::Params>(py))?;
+                    zero_conn
+                        .exec_drop(query.to_string(), pyro_params)
+                        .await
+                        .map_err(Error::from)?;
                     Ok(())
                 }
             }
@@ -762,11 +826,17 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     })?;
 
                     // Get or prepare statement with client-side caching
-                    let stmt_id = get_or_prepare_stmt(&mut wtx_conn.executor, &mut wtx_conn.stmt_cache, query).await?;
+                    let stmt_id = get_or_prepare_stmt(
+                        &mut wtx_conn.executor,
+                        &mut wtx_conn.stmt_cache,
+                        query,
+                    )
+                    .await?;
 
                     // Execute for each set of params
                     for wtx_params in wtx_params_vec {
-                        wtx_conn.executor
+                        wtx_conn
+                            .executor
                             .execute_with_stmt(stmt_id, wtx_params)
                             .await
                             .map_err(|e| Error::WtxError(e.to_string()))?;
@@ -777,8 +847,12 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
                     // Execute batch with zero_mysql using exec_drop
                     for params_item in params {
-                        let pyro_params = Python::attach(|py| params_item.extract::<crate::params::Params>(py))?;
-                        zero_conn.exec_drop(query.to_string(), pyro_params).await.map_err(Error::from)?;
+                        let pyro_params =
+                            Python::attach(|py| params_item.extract::<crate::params::Params>(py))?;
+                        zero_conn
+                            .exec_drop(query.to_string(), pyro_params)
+                            .await
+                            .map_err(Error::from)?;
                     }
                     Ok(())
                 }
