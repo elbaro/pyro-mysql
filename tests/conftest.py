@@ -11,10 +11,20 @@ def pytest_configure(config):
 
     # Register pyro_mysql dialects explicitly since we're using a local directory
     # instead of pip install (entry points from pyproject.toml aren't available)
-    registry.register("mysql.pyro_mysql", "pyro_mysql.sqlalchemy_sync", "MySQLDialect_sync")
-    registry.register("mariadb.pyro_mysql", "pyro_mysql.sqlalchemy_sync", "MariaDBDialect_sync")
-    registry.register("mysql.pyro_mysql_async", "pyro_mysql.sqlalchemy_async", "MySQLDialect_async")
-    registry.register("mariadb.pyro_mysql_async", "pyro_mysql.sqlalchemy_async", "MariaDBDialect_async")
+    registry.register(
+        "mysql.pyro_mysql", "pyro_mysql.sqlalchemy_sync", "MySQLDialect_sync"
+    )
+    registry.register(
+        "mariadb.pyro_mysql", "pyro_mysql.sqlalchemy_sync", "MariaDBDialect_sync"
+    )
+    registry.register(
+        "mysql.pyro_mysql_async", "pyro_mysql.sqlalchemy_async", "MySQLDialect_async"
+    )
+    registry.register(
+        "mariadb.pyro_mysql_async",
+        "pyro_mysql.sqlalchemy_async",
+        "MariaDBDialect_async",
+    )
     # Also register with pyro_mysql:// URL scheme
     registry.register("pyro_mysql", "pyro_mysql.sqlalchemy_sync", "MySQLDialect_sync")
 
@@ -132,7 +142,7 @@ def backend(request):
     return request.param
 
 
-@pytest.fixture(params=["mysql_async", "wtx", "zero"])
+@pytest.fixture(params=["mysql", "wtx", "zero"])
 def async_backend(request):
     """Fixture that provides mysql_async, wtx, and zero backends for parameterized async tests."""
     return request.param
