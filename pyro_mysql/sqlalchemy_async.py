@@ -213,34 +213,30 @@ class MySQLDialect_async(MySQLDialect):
     def create_connect_args(self, url: URL) -> ConnectArgsType:
         """Convert SQLAlchemy URL to connection arguments for pyro-mysql."""
         from pyro_mysql import Opts
-        from pyro_mysql.dbapi import Error
 
-        # Extract capabilities from query params
-        query_dict = dict(url.query)
+        opts = Opts()
 
-        # Add client_found_rows for mysql_async backend
-        if "client_found_rows" not in query_dict:
-            query_dict["client_found_rows"] = "true"
+        if url.host:
+            opts = opts.host(url.host)
+        if url.port:
+            opts = opts.port(url.port)
+        if url.username:
+            opts = opts.user(url.username)
+        if url.password:
+            opts = opts.password(url.password)
+        if url.database:
+            opts = opts.db(url.database)
 
-        # Build MySQL URL with query parameters
-        mysql_url_parts = [
-            f"mysql://{url.username or ''}:{url.password or ''}@",
-            f"{url.host or 'localhost'}:{url.port or 3306}/",
-            url.database or "",
-        ]
-
-        # Add query parameters if present
-        if query_dict:
-            query_str = "&".join(f"{k}={v}" for k, v in query_dict.items())
-            mysql_url_parts.append(f"?{query_str}")
-
-        mysql_url = "".join(mysql_url_parts)
-
-        # Build Opts object from URL
-        try:
-            opts = Opts(mysql_url)
-        except Exception as e:
-            raise Error(f"wrong connection argument: {e}") from e
+        # Handle query parameters
+        query = dict(url.query)
+        if "capabilities" in query:
+            caps = query.pop("capabilities")
+            if isinstance(caps, str):
+                opts = opts.capabilities(int(caps))
+        else:
+            # Default capabilities for compatibility with other mysql dialects
+            # 2 = CLIENT_FOUND_ROWS: return matched rows instead of changed rows
+            opts = opts.capabilities(2)
 
         return ((opts,), {})
 

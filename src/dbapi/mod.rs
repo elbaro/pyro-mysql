@@ -1,5 +1,6 @@
 pub mod async_conn;
 pub mod async_cursor;
+pub mod async_zero_handler;
 pub mod conn;
 pub mod cursor;
 pub mod error;
@@ -10,16 +11,14 @@ pub mod zero_handler;
 use std::sync::Arc;
 
 use crate::{
-    r#async::multi_conn::MultiAsyncConn,
+    r#async::backend::ZeroMysqlConn,
     dbapi::{async_conn::AsyncDbApiConn, conn::DbApiConn, error::DbApiResult},
     error::Error,
     opts::Opts,
-    params::Params,
-    util::{PyroFuture, rust_future_into_py, url_error_to_pyerr},
+    util::{PyroFuture, rust_future_into_py},
 };
 use either::Either;
 
-use mysql_async::prelude::Queryable;
 use pyo3::prelude::*;
 
 #[pyfunction]
@@ -42,25 +41,26 @@ pub fn connect_async(
     url_or_opts: Either<String, PyRef<Opts>>,
     autocommit: Option<bool>,
 ) -> DbApiResult<Py<PyroFuture>> {
-    // Use mysql_async backend
+    // Use zero_mysql backend
     let opts = match url_or_opts {
-        Either::Left(url) => mysql_async::Opts::from_url(&url).map_err(url_error_to_pyerr)?,
-        Either::Right(opts) => opts.to_mysql_async_opts(),
+        Either::Left(url) => {
+            let inner: zero_mysql::Opts = url.as_str().try_into().map_err(Error::ZeroMysqlError)?;
+            inner
+        }
+        Either::Right(opts) => opts.inner.clone(),
     };
     Ok(rust_future_into_py(py, async move {
-        let mut conn = mysql_async::Conn::new(opts).await?;
+        let mut conn = ZeroMysqlConn::new_with_opts(opts).await?;
         if let Some(on) = autocommit {
             let query = if on {
                 "SET autocommit=1"
             } else {
                 "SET autocommit=0"
             };
-            conn.exec_drop(query, Params::default())
-                .await
-                .map_err(Error::from)?;
+            conn.query_drop(query.to_string()).await?;
         }
         Ok(AsyncDbApiConn(Arc::new(tokio::sync::RwLock::new(Some(
-            MultiAsyncConn::MysqlAsync(conn),
+            conn,
         )))))
     })?)
 }

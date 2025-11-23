@@ -7,7 +7,7 @@ use zero_mysql::tokio::Conn;
 
 pub struct ZeroMysqlConn {
     pub inner: Conn,
-    stmt_cache: std::collections::HashMap<String, u32>,
+    pub stmt_cache: std::collections::HashMap<String, u32>,
     tuple_handler: TupleHandler,
     dict_handler: DictHandler,
     affected_rows: u64,
