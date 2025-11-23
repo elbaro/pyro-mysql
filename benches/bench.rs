@@ -64,52 +64,52 @@ pub fn bench(c: &mut Criterion) {
 
         for (name, setup, statement) in [
             (
-                "mysqlclient",
+                "mysqlclient (sync)",
                 cr"mysqldb_conn = MySQLdb.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
                 c"select_sync(mysqldb_conn)",
             ),
             (
-                "pymysql",
+                "pymysql (sync)",
                 cr"pymysql_conn = pymysql.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
                 c"select_sync(pymysql_conn)",
             ),
             (
-                "pyro-sync",
+                "pyro/mysql (sync)",
                 cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false')",
                 c"select_pyro_sync(pyro_sync_conn)",
             ),
             (
-                "pyro-diesel",
+                "pyro/diesel (sync)",
                 cr"pyro_diesel_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='diesel')",
                 c"select_pyro_sync(pyro_diesel_conn)",
             ),
             (
-                "pyro-zero-sync",
+                "pyro/zero (sync)",
                 cr"pyro_zero_mysql_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='zero')",
                 c"select_pyro_sync(pyro_zero_mysql_conn)",
             ),
             (
-                "pyro-async",
+                "pyro/mysql (async)",
                 cr"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
                 c"loop.run_until_complete(select_pyro_async(pyro_async_conn))",
             ),
             (
-                "pyro-wtx",
+                "pyro/wtx (async)",
                 cr"pyro_wtx_conn = loop.run_until_complete(create_pyro_async_conn('wtx'))",
                 c"loop.run_until_complete(select_pyro_async(pyro_wtx_conn))",
             ),
             (
-                "pyro-zero-async",
+                "pyro/zero (async)",
                 cr"pyro_zero_mysql_async_conn = loop.run_until_complete(create_pyro_async_conn('zero'))",
                 c"loop.run_until_complete(select_pyro_async(pyro_zero_mysql_async_conn))",
             ),
             (
-                "asyncmy",
+                "asyncmy (async)",
                 cr"asyncmy_conn = loop.run_until_complete(create_asyncmy_conn())",
                 c"loop.run_until_complete(select_async(asyncmy_conn))",
             ),
             (
-                "aiomysql",
+                "aiomysql (async)",
                 cr"aiomysql_conn = loop.run_until_complete(create_aiomysql_conn())",
                 c"loop.run_until_complete(select_async(aiomysql_conn))",
             ),
@@ -127,52 +127,52 @@ pub fn bench(c: &mut Criterion) {
 
         for (name, setup, stmt_template) in [
             (
-                "mysqlclient",
+                "mysqlclient (sync)",
                 cr"mysqldb_conn = MySQLdb.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
                 "insert_sync(mysqldb_conn, {})",
             ),
             (
-                "pymysql",
+                "pymysql (sync)",
                 cr"pymysql_conn = pymysql.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
                 "insert_sync(pymysql_conn, {})",
             ),
             (
-                "pyro-sync",
+                "pyro/mysql (sync)",
                 cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false')",
                 "insert_pyro_sync(pyro_sync_conn, {})",
             ),
             (
-                "pyro-diesel",
+                "pyro/diesel (sync)",
                 cr"pyro_diesel_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='diesel')",
                 "insert_pyro_sync(pyro_diesel_conn, {})",
             ),
             (
-                "pyro-zero-sync",
+                "pyro/zero (sync)",
                 cr"pyro_zero_mysql_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='zero')",
                 "insert_pyro_sync(pyro_zero_mysql_conn, {})",
             ),
             (
-                "pyro-async",
+                "pyro/mysql (async)",
                 cr"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
                 "loop.run_until_complete(insert_pyro_async(pyro_async_conn, {}))",
             ),
             (
-                "pyro-wtx",
+                "pyro/wtx (async)",
                 cr"pyro_wtx_conn = loop.run_until_complete(create_pyro_async_conn('wtx'))",
                 "loop.run_until_complete(insert_pyro_async(pyro_wtx_conn, {}))",
             ),
             (
-                "pyro-zero-async",
+                "pyro/zero (async)",
                 cr"pyro_zero_mysql_async_conn = loop.run_until_complete(create_pyro_async_conn('zero'))",
                 "loop.run_until_complete(insert_pyro_async(pyro_zero_mysql_async_conn, {}))",
             ),
             (
-                "asyncmy",
+                "asyncmy (async)",
                 cr"asyncmy_conn = loop.run_until_complete(create_asyncmy_conn())",
                 "loop.run_until_complete(insert_async(asyncmy_conn, {}))",
             ),
             (
-                "aiomysql",
+                "aiomysql (async)",
                 cr"aiomysql_conn = loop.run_until_complete(create_aiomysql_conn())",
                 "loop.run_until_complete(insert_async(aiomysql_conn, {}))",
             ),

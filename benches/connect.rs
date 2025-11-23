@@ -10,9 +10,9 @@ pub fn bench(c: &mut Criterion) {
 
     // Sync drivers
     for (name, statement) in [
-        ("mysqlclient", c"connect_mysqldb()"),
-        ("pymysql", c"connect_pymysql()"),
-        ("pyro-sync", c"connect_pyro_sync()"),
+        ("mysqlclient (sync)", c"connect_mysqldb()"),
+        ("pymysql (sync)", c"connect_pymysql()"),
+        ("pyro/mysql (sync)", c"connect_pyro_sync()"),
     ] {
         group.bench_function(name, |b| {
             b.iter(|| {
@@ -26,12 +26,12 @@ pub fn bench(c: &mut Criterion) {
     // Async drivers
     for (name, statement) in [
         (
-            "pyro-async",
+            "pyro/mysql (async)",
             c"loop.run_until_complete(connect_pyro_async())",
         ),
-        ("pyro-wtx", c"loop.run_until_complete(connect_pyro_wtx())"),
-        ("asyncmy", c"loop.run_until_complete(connect_asyncmy())"),
-        ("aiomysql", c"loop.run_until_complete(connect_aiomysql())"),
+        ("pyro/wtx (async)", c"loop.run_until_complete(connect_pyro_wtx())"),
+        ("asyncmy (async)", c"loop.run_until_complete(connect_asyncmy())"),
+        ("aiomysql (async)", c"loop.run_until_complete(connect_aiomysql())"),
     ] {
         group.bench_function(name, |b| {
             b.iter(|| {

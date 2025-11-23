@@ -46,11 +46,11 @@ DATA = [
 
 def create_session(driver_name):
     """Create SQLAlchemy session with specified driver"""
-    if driver_name == "pyro_mysql":
+    if driver_name == "pyro/zero (sync)":
         url = f"mysql+pyro_mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
-    elif driver_name == "pymysql":
+    elif driver_name == "pymysql (sync)":
         url = f"mysql+pymysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
-    elif driver_name == "mysqldb":
+    elif driver_name == "mysqldb (sync)":
         url = f"mysql+mysqldb://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
     else:
         raise ValueError(f"Unknown driver: {driver_name}")

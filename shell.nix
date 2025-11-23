@@ -9,15 +9,19 @@ pkgs.mkShell {
       ps: with ps; [
         # Runtime dependencies
         greenlet
-        sqlalchemy
+        (sqlalchemy.overridePythonAttrs (old: rec {
+          version = "2.0.44";
+          src = pkgs.fetchPypi {
+            pname = "sqlalchemy";
+            inherit version;
+            hash = "sha256-CudFThqx14Cu5p/SqufWuGcKWB2IR/LR4Pfd+/R+WiI=";
+          };
+        }))
         typing-extensions
 
         # Development dependencies
-        # pip
         pytest
         pytest-asyncio
-        pytest-benchmark # broken in 3.14
-        rich # broken in 3.14
 
         # Comparisons
         asyncmy # broken in 3.14

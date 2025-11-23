@@ -143,9 +143,6 @@ class AsyncAdapt_pyro_mysql_dbapi:
         # Extract async_creator_fn if provided, otherwise use default
         async_creator_fn = kw.pop("async_creator_fn", None)
 
-        # Extract wtx parameter if provided
-        wtx = kw.pop("wtx", False)
-
         async def _create_connection() -> Any:
             """
             Async function that creates the connection.
@@ -162,7 +159,7 @@ class AsyncAdapt_pyro_mysql_dbapi:
                     # Create the async connection using dbapi_async.connect
                     # This returns a Connection object with cursor(), commit(), rollback()
                     # url_or_opts can be either an Opts object or a URL string
-                    return await connect(url_or_opts, wtx=wtx)
+                    return await connect(url_or_opts)
                 else:
                     raise self.InterfaceError("No connection options provided")
             else:
@@ -215,48 +212,37 @@ class MySQLDialect_async(MySQLDialect):
     @override
     def create_connect_args(self, url: URL) -> ConnectArgsType:
         """Convert SQLAlchemy URL to connection arguments for pyro-mysql."""
-        from pyro_mysql.async_ import OptsBuilder
+        from pyro_mysql import Opts
         from pyro_mysql.dbapi import Error
 
         # Extract capabilities from query params
         query_dict = dict(url.query)
 
-        # Extract wtx parameter before building URL
-        wtx = query_dict.pop("wtx", "false").lower() in ("true", "1", "yes")
-
-        # Add client_found_rows for mysql_async backend (wtx has it internally enabled)
-        if not wtx and "client_found_rows" not in query_dict:
+        # Add client_found_rows for mysql_async backend
+        if "client_found_rows" not in query_dict:
             query_dict["client_found_rows"] = "true"
 
-        # Build MySQL URL with remaining query parameters (wtx removed)
+        # Build MySQL URL with query parameters
         mysql_url_parts = [
             f"mysql://{url.username or ''}:{url.password or ''}@",
             f"{url.host or 'localhost'}:{url.port or 3306}/",
             url.database or "",
         ]
 
-        # Add remaining query parameters if present
+        # Add query parameters if present
         if query_dict:
             query_str = "&".join(f"{k}={v}" for k, v in query_dict.items())
             mysql_url_parts.append(f"?{query_str}")
 
         mysql_url = "".join(mysql_url_parts)
 
-        if wtx:
-            # For wtx connections, pass the URL string directly
-            # client_found_rows is internally enabled in wtx
-            return ((mysql_url,), {"wtx": wtx})
-        else:
-            # For mysql_async connections, build Opts object
-            try:
-                # Build opts from URL and add capabilities
-                # Note: async OptsBuilder doesn't have additional_capabilities method
-                # We need to build the URL with capabilities or use builder methods
-                opts = OptsBuilder.from_url(mysql_url).build()
-            except Exception as e:
-                raise Error(f"wrong connection argument: {e}") from e
+        # Build Opts object from URL
+        try:
+            opts = Opts(mysql_url)
+        except Exception as e:
+            raise Error(f"wrong connection argument: {e}") from e
 
-            return ((opts,), {"wtx": wtx})
+        return ((opts,), {})
 
     @override
     def do_terminate(self, dbapi_connection: DBAPIConnection) -> None:

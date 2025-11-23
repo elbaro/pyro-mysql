@@ -32,14 +32,14 @@ impl AsyncConn {
 
     #[allow(clippy::new_ret_no_self)]
     #[staticmethod]
-    #[pyo3(signature = (url_or_opts, backend="mysql_async"))]
+    #[pyo3(signature = (url_or_opts, backend="mysql"))]
     pub fn new<'py>(
         py: Python<'py>,
         url_or_opts: Either<String, PyRef<Opts>>,
         backend: &str,
     ) -> PyResult<Py<PyroFuture>> {
         match backend {
-            "mysql_async" => {
+            "mysql" => {
                 let opts = match url_or_opts {
                     Either::Left(url) => {
                         mysql_async::Opts::from_url(&url).map_err(url_error_to_pyerr)?
@@ -90,7 +90,7 @@ impl AsyncConn {
                 })
             }
             _ => Err(Error::IncorrectApiUsageError(
-                "Unknown backend. Supported backends: 'mysql_async', 'wtx', 'zero'",
+                "Unknown backend. Supported backends: 'mysql', 'wtx', 'zero'",
             )
             .into()),
         }

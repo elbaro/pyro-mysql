@@ -51,14 +51,11 @@ DATA = [
 
 def create_async_session(driver_name):
     """Create async SQLAlchemy session with specified driver"""
-    if driver_name == "pyro_mysql":
+    if driver_name == "pyro/zero (async)":
         url = f"mariadb+pyro_mysql_async://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
-    elif driver_name == "pyro_wtx":
-        # Pass wtx=true as query parameter to use wtx backend
-        url = f"mariadb+pyro_mysql_async://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}?wtx=true"
-    elif driver_name == "aiomysql":
+    elif driver_name == "aiomysql (async)":
         url = f"mysql+aiomysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
-    elif driver_name == "asyncmy":
+    elif driver_name == "asyncmy (async)":
         url = f"mysql+asyncmy://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
     else:
         raise ValueError(f"Unknown driver: {driver_name}")

@@ -67,7 +67,7 @@ pub fn bench_sqlalchemy_async(c: &mut Criterion) {
         let mut group = c.benchmark_group(format!("SQLAlchemy_Async_SELECT_{}", select_size));
         populate_table(select_size);
 
-        for name in ["pyro_mysql", "pyro_wtx", "aiomysql", "asyncmy"] {
+        for name in ["pyro/zero (async)", "aiomysql (async)", "asyncmy (async)"] {
             group.bench_function(name, |b| {
                 Python::attach(|py| {
                     Python::run(
@@ -103,9 +103,9 @@ pub fn bench_sqlalchemy_async(c: &mut Criterion) {
         let mut group = c.benchmark_group("SQLAlchemy_Async_INSERT");
 
         for (name, stmt_template) in [
-            ("pyro_mysql", "insert_individual(session, {})"),
-            ("aiomysql", "insert_individual(session, {})"),
-            ("asyncmy", "insert_individual(session, {})"),
+            ("pyro/zero (async)", "insert_individual(session, {})"),
+            ("aiomysql (async)", "insert_individual(session, {})"),
+            ("asyncmy (async)", "insert_individual(session, {})"),
         ] {
             group.bench_function(name, |b| {
                 Python::attach(|py| {
