@@ -2,9 +2,9 @@
 use crate::py_imports::{
     get_date_class, get_datetime_class, get_decimal_class, get_timedelta_class,
 };
-use pyo3::{IntoPyObjectExt, prelude::*};
+use pyo3::{prelude::*, IntoPyObjectExt};
 use zero_mysql::constant::{ColumnFlags, ColumnType};
-use zero_mysql::protocol::connection::ColumnDefinitionTail;
+use zero_mysql::protocol::command::ColumnDefinitionTail;
 use zero_mysql::protocol::primitive::*;
 use zerocopy::FromBytes;
 

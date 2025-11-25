@@ -1,11 +1,11 @@
 use pyo3::types::PyDict;
 use pyo3::{prelude::*, types::PyTuple};
 use zero_mysql::error::Result;
-use zero_mysql::protocol::connection::{
+use zero_mysql::protocol::command::{
     ColumnDefinition, ColumnDefinitionBytes, ColumnDefinitionTail,
 };
-use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
+use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
 
 use crate::zero_mysql_util::{decode_binary_bytes_to_python, decode_text_value_to_python};
@@ -103,7 +103,7 @@ impl TupleHandler {
     }
 }
 
-impl<'a> BinaryResultSetHandler<'a> for TupleHandler {
+impl<'a> BinaryResultSetHandler for TupleHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows = ok_payload.affected_rows;
@@ -143,7 +143,7 @@ impl<'a> BinaryResultSetHandler<'a> for TupleHandler {
     }
 }
 
-impl<'a> TextResultSetHandler<'a> for TupleHandler {
+impl<'a> TextResultSetHandler for TupleHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows += ok_payload.affected_rows;
@@ -190,7 +190,7 @@ impl DropHandler {
     }
 }
 
-impl<'a> BinaryResultSetHandler<'a> for DropHandler {
+impl<'a> BinaryResultSetHandler for DropHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows = ok_payload.affected_rows;
@@ -218,7 +218,7 @@ impl<'a> BinaryResultSetHandler<'a> for DropHandler {
     }
 }
 
-impl<'a> TextResultSetHandler<'a> for DropHandler {
+impl<'a> TextResultSetHandler for DropHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows += ok_payload.affected_rows;
@@ -339,7 +339,7 @@ impl DictHandler {
     }
 }
 
-impl<'a> BinaryResultSetHandler<'a> for DictHandler {
+impl<'a> BinaryResultSetHandler for DictHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows = ok_payload.affected_rows;
@@ -384,7 +384,7 @@ impl<'a> BinaryResultSetHandler<'a> for DictHandler {
     }
 }
 
-impl<'a> TextResultSetHandler<'a> for DictHandler {
+impl<'a> TextResultSetHandler for DictHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows += ok_payload.affected_rows;

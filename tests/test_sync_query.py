@@ -307,9 +307,7 @@ def test_sync_query_as_dict_with_nulls(backend):
         ("Alice", 30, "Bob"),
     )
 
-    results = conn.query(
-        "SELECT name, age FROM test_table ORDER BY name", as_dict=True
-    )
+    results = conn.query("SELECT name, age FROM test_table ORDER BY name", as_dict=True)
 
     assert len(results) == 2
     assert results[0]["name"] == "Alice"

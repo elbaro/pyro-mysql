@@ -5,12 +5,12 @@ use pyo3::prelude::*;
 use pyo3::types::{PyList, PyTuple};
 use zero_mysql::constant::ColumnFlags;
 use zero_mysql::error::Result;
-use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
-use zero_mysql::protocol::connection::{
+use zero_mysql::protocol::command::{
     ColumnDefinition, ColumnDefinitionBytes, ColumnDefinitionTail,
 };
-use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
+use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
+use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
 
 use crate::util::PyTupleBuilder;
 use crate::zero_mysql_util::{decode_binary_bytes_to_python, decode_text_value_to_python};
@@ -153,7 +153,7 @@ impl AsyncDbApiHandler {
     }
 }
 
-impl<'a> BinaryResultSetHandler<'a> for AsyncDbApiHandler {
+impl<'a> BinaryResultSetHandler for AsyncDbApiHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         log::debug!("AsyncDbApiHandler::no_result_set called");
         let ok_payload = OkPayload::try_from(ok)?;
@@ -221,7 +221,7 @@ impl<'a> BinaryResultSetHandler<'a> for AsyncDbApiHandler {
     }
 }
 
-impl<'a> TextResultSetHandler<'a> for AsyncDbApiHandler {
+impl<'a> TextResultSetHandler for AsyncDbApiHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         log::debug!("AsyncDbApiHandler::no_result_set (text) called");
         let ok_payload = OkPayload::try_from(ok)?;

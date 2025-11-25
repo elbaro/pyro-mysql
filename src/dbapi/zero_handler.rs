@@ -4,12 +4,12 @@ use pyo3::prelude::*;
 use pyo3::types::PyList;
 use zero_mysql::constant::ColumnFlags;
 use zero_mysql::error::Result;
-use zero_mysql::protocol::BinaryRowPayload;
-use zero_mysql::protocol::connection::{
+use zero_mysql::protocol::command::{
     ColumnDefinition, ColumnDefinitionBytes, ColumnDefinitionTail,
 };
-use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::r#trait::BinaryResultSetHandler;
+use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
+use zero_mysql::protocol::BinaryRowPayload;
 
 use crate::dbapi::conn::{DbApiExecResult, DbApiRow};
 use crate::util::PyTupleBuilder;
@@ -95,7 +95,7 @@ impl<'a> DbApiHandler<'a> {
     }
 }
 
-impl<'a> BinaryResultSetHandler<'a> for DbApiHandler<'a> {
+impl<'a> BinaryResultSetHandler for DbApiHandler<'a> {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         log::debug!("DbApiHandler::no_result_set called");
         let ok_payload = OkPayload::try_from(ok)?;
