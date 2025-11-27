@@ -1,7 +1,7 @@
 use crate::error::{Error, PyroResult};
 use crate::params::Params;
 use crate::sync::backend::zero_mysql::handler::{DictHandler, DropHandler, TupleHandler};
-use crate::zero_params_adapter::{ParamsAdapter, BulkParamsSetAdapter};
+use crate::zero_params_adapter::{BulkParamsSetAdapter, ParamsAdapter};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 use zero_mysql::sync::Conn;
@@ -94,7 +94,7 @@ impl ZeroMysqlConn {
     }
 
     pub fn query_drop(&mut self, query: String) -> PyroResult<()> {
-        let mut handler = DropHandler::new();
+        let mut handler = DropHandler::default();
 
         self.inner.query(&query, &mut handler)?;
 
@@ -110,7 +110,6 @@ impl ZeroMysqlConn {
         params: Params,
         as_dict: bool,
     ) -> PyroResult<Py<PyList>> {
-
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
@@ -145,7 +144,6 @@ impl ZeroMysqlConn {
         params: Params,
         as_dict: bool,
     ) -> PyroResult<Option<Py<PyAny>>> {
-
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
@@ -186,7 +184,6 @@ impl ZeroMysqlConn {
     }
 
     pub fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
-
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
@@ -198,7 +195,7 @@ impl ZeroMysqlConn {
             stmt_id
         };
 
-        let mut handler = DropHandler::new();
+        let mut handler = DropHandler::default();
         let params_adapter = ParamsAdapter::new(&params);
         self.inner.exec(stmt_id, params_adapter, &mut handler)?;
 
@@ -214,7 +211,6 @@ impl ZeroMysqlConn {
         params_list: Vec<Params>,
         as_dict: bool,
     ) -> PyroResult<Py<PyList>> {
-
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {

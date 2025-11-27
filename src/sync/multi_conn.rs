@@ -2,6 +2,7 @@ use crate::error::PyroResult;
 use crate::sync::backend::{DieselConn, MysqlConn, ZeroMysqlConn};
 
 /// Multi-backend sync connection enum
+#[allow(clippy::large_enum_variant)]
 pub enum MultiSyncConn {
     Mysql(MysqlConn),
     Diesel(DieselConn),

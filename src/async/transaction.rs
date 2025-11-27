@@ -68,7 +68,7 @@ async fn multi_conn_query_drop(
             Ok(())
         }
         MultiAsyncConn::ZeroMysql(zero_conn) => {
-            let _ = zero_conn.query_drop(query).await?;
+            zero_conn.query_drop(query).await?;
             Ok(())
         }
     }

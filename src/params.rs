@@ -4,20 +4,15 @@ use crate::value::Value;
 
 /// Parameter type for SQL queries
 /// Supports positional (tuple/list) parameters
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum Params {
     /// No parameters
+    #[default]
     Empty,
 
     /// Positional parameters (from tuple or list)
     /// Uses ? placeholders in SQL
     Positional(Vec<Value>),
-}
-
-impl Default for Params {
-    fn default() -> Self {
-        Self::Empty
-    }
 }
 
 impl Params {

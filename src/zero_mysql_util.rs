@@ -2,7 +2,7 @@
 use crate::py_imports::{
     get_date_class, get_datetime_class, get_decimal_class, get_timedelta_class,
 };
-use pyo3::{prelude::*, IntoPyObjectExt};
+use pyo3::{IntoPyObjectExt, prelude::*};
 use zero_mysql::constant::{ColumnFlags, ColumnType};
 use zero_mysql::protocol::command::ColumnDefinitionTail;
 use zero_mysql::protocol::primitive::*;
@@ -24,7 +24,7 @@ pub fn parse_server_version(version_str: &str) -> (u16, u16, u16) {
 
     let parts: Vec<&str> = version_str.split('.').collect();
 
-    let major = parts.get(0).and_then(|s| s.parse().ok()).unwrap_or(0);
+    let major = parts.first().and_then(|s| s.parse().ok()).unwrap_or(0);
     let minor = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
     let patch = parts
         .get(2)

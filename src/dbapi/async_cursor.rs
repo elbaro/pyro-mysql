@@ -8,7 +8,6 @@ use tokio::sync::RwLock;
 
 use crate::{
     r#async::backend::ZeroMysqlConn,
-    zero_params_adapter::ParamsAdapter,
     dbapi::{
         async_conn::AsyncDbApiConn,
         async_zero_handler::AsyncDbApiHandler,
@@ -17,6 +16,7 @@ use crate::{
     error::{Error, PyroResult},
     params::Params,
     util::tokio_spawn_as_abort_on_drop,
+    zero_params_adapter::ParamsAdapter,
 };
 
 #[pyclass(module = "pyro_mysql.dbapi_async", name = "Cursor")]
@@ -236,7 +236,7 @@ async fn execute_with_handler(
     query: &str,
     params: Params,
 ) -> PyroResult<AsyncDbApiHandler> {
-    let mut handler = AsyncDbApiHandler::new();
+    let mut handler = AsyncDbApiHandler::default();
 
     if params.is_empty() {
         // Use text protocol for queries without parameters
@@ -252,7 +252,9 @@ async fn execute_with_handler(
         };
 
         let params_adapter = ParamsAdapter::new(&params);
-        conn.inner.exec(stmt_id, params_adapter, &mut handler).await?;
+        conn.inner
+            .exec(stmt_id, params_adapter, &mut handler)
+            .await?;
     }
 
     Ok(handler)

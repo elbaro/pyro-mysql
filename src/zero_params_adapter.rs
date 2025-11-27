@@ -1,8 +1,8 @@
 use crate::params::Params as PyroParams;
 use zero_mysql::error::Result;
+use zero_mysql::protocol::command::bulk_exec::BulkParamsSet;
 use zero_mysql::protocol::r#trait::param::Param;
 use zero_mysql::protocol::r#trait::param::Params;
-use zero_mysql::protocol::command::bulk_exec::BulkParamsSet;
 
 /// Adapter to convert pyro-mysql Params to zero-mysql Params
 pub struct ParamsAdapter<'a> {
@@ -29,7 +29,7 @@ impl<'a> Params for ParamsAdapter<'a> {
             PyroParams::Empty => {}
             PyroParams::Positional(values) => {
                 // Calculate number of bytes needed for NULL bitmap
-                let num_bytes = (values.len() + 7) / 8;
+                let num_bytes = values.len().div_ceil(8);
                 let start_len = out.len();
                 out.resize(start_len + num_bytes, 0);
 

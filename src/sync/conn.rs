@@ -248,7 +248,7 @@ impl SyncConn {
                     .unwrap()
                     .unbind())
             }
-            MultiSyncConn::ZeroMysql(conn) => conn.exec(py, query, params, as_dict)
+            MultiSyncConn::ZeroMysql(conn) => conn.exec(py, query, params, as_dict),
         }
     }
 
@@ -348,9 +348,7 @@ impl SyncConn {
                 }
                 Ok(PyList::new(py, Vec::<Py<PyAny>>::new()).unwrap().unbind())
             }
-            MultiSyncConn::ZeroMysql(conn) => {
-                conn.exec_bulk(py, query, params_list, as_dict)
-            }
+            MultiSyncConn::ZeroMysql(conn) => conn.exec_bulk(py, query, params_list, as_dict),
         }
     }
 

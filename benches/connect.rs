@@ -29,9 +29,18 @@ pub fn bench(c: &mut Criterion) {
             "pyro/mysql (async)",
             c"loop.run_until_complete(connect_pyro_async())",
         ),
-        ("pyro/wtx (async)", c"loop.run_until_complete(connect_pyro_wtx())"),
-        ("asyncmy (async)", c"loop.run_until_complete(connect_asyncmy())"),
-        ("aiomysql (async)", c"loop.run_until_complete(connect_aiomysql())"),
+        (
+            "pyro/wtx (async)",
+            c"loop.run_until_complete(connect_pyro_wtx())",
+        ),
+        (
+            "asyncmy (async)",
+            c"loop.run_until_complete(connect_asyncmy())",
+        ),
+        (
+            "aiomysql (async)",
+            c"loop.run_until_complete(connect_aiomysql())",
+        ),
     ] {
         group.bench_function(name, |b| {
             b.iter(|| {

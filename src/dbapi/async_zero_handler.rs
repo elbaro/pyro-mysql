@@ -8,8 +8,8 @@ use zero_mysql::error::Result;
 use zero_mysql::protocol::command::{
     ColumnDefinition, ColumnDefinitionBytes, ColumnDefinitionTail,
 };
-use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
+use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
 
 use crate::util::PyTupleBuilder;
@@ -31,6 +31,7 @@ enum RawRow {
 
 /// Handler that collects rows and column metadata for async DB-API
 /// Stores raw bytes during async operation, converts to Python later
+#[derive(Default)]
 pub struct AsyncDbApiHandler {
     cols: Vec<ColumnDefinitionTail>,
     col_infos: Vec<ColumnInfo>,
@@ -41,17 +42,6 @@ pub struct AsyncDbApiHandler {
 }
 
 impl AsyncDbApiHandler {
-    pub fn new() -> Self {
-        Self {
-            cols: Vec::new(),
-            col_infos: Vec::new(),
-            rows: Vec::new(),
-            affected_rows: 0,
-            last_insert_id: 0,
-            has_result_set: false,
-        }
-    }
-
     pub fn clear(&mut self) {
         self.cols.clear();
         self.col_infos.clear();
@@ -110,8 +100,8 @@ impl AsyncDbApiHandler {
                 match raw_row {
                     RawRow::Binary { bytes, is_null } => {
                         let mut bytes_slice = &bytes[..];
-                        for i in 0..self.cols.len() {
-                            if is_null[i] {
+                        for (i, &is_null_val) in is_null.iter().enumerate() {
+                            if is_null_val {
                                 tuple.set(i, py.None().into_bound(py));
                             } else {
                                 let py_value;
@@ -153,7 +143,7 @@ impl AsyncDbApiHandler {
     }
 }
 
-impl<'a> BinaryResultSetHandler for AsyncDbApiHandler {
+impl BinaryResultSetHandler for AsyncDbApiHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         log::debug!("AsyncDbApiHandler::no_result_set called");
         let ok_payload = OkPayload::try_from(ok)?;
@@ -195,7 +185,7 @@ impl<'a> BinaryResultSetHandler for AsyncDbApiHandler {
         });
 
         // Store the full tail for charset info during decoding
-        self.cols.push(tail.clone());
+        self.cols.push(*tail);
 
         Ok(())
     }
@@ -221,7 +211,7 @@ impl<'a> BinaryResultSetHandler for AsyncDbApiHandler {
     }
 }
 
-impl<'a> TextResultSetHandler for AsyncDbApiHandler {
+impl TextResultSetHandler for AsyncDbApiHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         log::debug!("AsyncDbApiHandler::no_result_set (text) called");
         let ok_payload = OkPayload::try_from(ok)?;
@@ -263,7 +253,7 @@ impl<'a> TextResultSetHandler for AsyncDbApiHandler {
         });
 
         // Store the full tail for charset info during decoding
-        self.cols.push(tail.clone());
+        self.cols.push(*tail);
 
         Ok(())
     }

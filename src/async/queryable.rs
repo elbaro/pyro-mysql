@@ -539,7 +539,7 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                 }
                 MultiAsyncConn::ZeroMysql(zero_conn) => {
                     // zero_mysql uses prepared statements for all queries, drop the results
-                    let _ = zero_conn.query_drop(query).await?;
+                    zero_conn.query_drop(query).await?;
                     Ok(())
                 }
             }
@@ -609,8 +609,7 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                         Python::attach(|py| params.extract::<crate::params::Params>(py))?;
                     let py_rows = zero_conn
                         .exec(query.to_string(), pyro_params, as_dict)
-                        .await
-                        .map_err(Error::from)?;
+                        .await?;
 
                     return Python::attach(|py| {
                         Ok(py_rows.bind(py).extract::<Vec<Py<PyAny>>>()?)
@@ -686,8 +685,7 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                         Python::attach(|py| params.extract::<crate::params::Params>(py))?;
                     let first_row = zero_conn
                         .exec_first(query.to_string(), pyro_params, as_dict)
-                        .await
-                        .map_err(Error::from)?;
+                        .await?;
 
                     return Ok(first_row);
                 }
@@ -752,10 +750,7 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     // Use dedicated exec_drop method
                     let pyro_params =
                         Python::attach(|py| params.extract::<crate::params::Params>(py))?;
-                    zero_conn
-                        .exec_drop(query.to_string(), pyro_params)
-                        .await
-                        .map_err(Error::from)?;
+                    zero_conn.exec_drop(query.to_string(), pyro_params).await?;
                     Ok(())
                 }
             }
@@ -824,10 +819,7 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                     for params_item in params {
                         let pyro_params =
                             Python::attach(|py| params_item.extract::<crate::params::Params>(py))?;
-                        zero_conn
-                            .exec_drop(query.to_string(), pyro_params)
-                            .await
-                            .map_err(Error::from)?;
+                        zero_conn.exec_drop(query.to_string(), pyro_params).await?;
                     }
                     Ok(())
                 }
@@ -860,8 +852,8 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                                 mysql_conn.exec_drop(query, pyro_params).await?;
                             }
                             MultiAsyncConn::Wtx(wtx_conn) => {
-                                use wtx::database::Executor;
                                 use crate::r#async::backend::wtx::queryable::get_or_prepare_stmt;
+                                use wtx::database::Executor;
 
                                 let stmt_id = get_or_prepare_stmt(
                                     &mut wtx_conn.executor,
@@ -870,9 +862,8 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                                 )
                                 .await?;
 
-                                let wtx_params = Python::attach(|py| {
-                                    WtxParams::from_py(py, &params_item)
-                                })?;
+                                let wtx_params =
+                                    Python::attach(|py| WtxParams::from_py(py, &params_item))?;
 
                                 wtx_conn
                                     .executor
@@ -897,12 +888,9 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
 
                     let py_rows = zero_conn
                         .exec_bulk(query.to_string(), params_vec, as_dict)
-                        .await
-                        .map_err(Error::from)?;
+                        .await?;
 
-                    Python::attach(|py| {
-                        Ok(py_rows.bind(py).extract::<Vec<Py<PyAny>>>()?)
-                    })
+                    Python::attach(|py| Ok(py_rows.bind(py).extract::<Vec<Py<PyAny>>>()?))
                 }
             }
         })

@@ -17,17 +17,9 @@ use crate::error::PyroResult;
 /// opts = Opts().host("localhost").port(3306).user("root").password("secret").db("mydb")
 /// ```
 #[pyclass(module = "pyro_mysql", name = "Opts")]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Opts {
     pub(crate) inner: zero_mysql::Opts,
-}
-
-impl Default for Opts {
-    fn default() -> Self {
-        Self {
-            inner: zero_mysql::Opts::default(),
-        }
-    }
 }
 
 #[pymethods]

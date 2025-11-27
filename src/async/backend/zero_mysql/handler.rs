@@ -4,8 +4,8 @@ use zero_mysql::error::Result;
 use zero_mysql::protocol::command::{
     ColumnDefinition, ColumnDefinitionBytes, ColumnDefinitionTail,
 };
-use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
+use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
 
 use crate::zero_mysql_util::{decode_binary_bytes_to_python, decode_text_value_to_python};
@@ -15,6 +15,7 @@ enum RawRow {
     Text(Vec<u8>),
 }
 
+#[derive(Default)]
 pub struct TupleHandler {
     cols: Vec<ColumnDefinitionTail>,
     rows: Vec<RawRow>,
@@ -23,15 +24,6 @@ pub struct TupleHandler {
 }
 
 impl TupleHandler {
-    pub fn new() -> Self {
-        Self {
-            cols: Vec::new(),
-            rows: Vec::new(),
-            affected_rows: 0,
-            last_insert_id: 0,
-        }
-    }
-
     pub fn clear(&mut self) {
         self.cols.clear();
         self.rows.clear();
@@ -59,8 +51,8 @@ impl TupleHandler {
                     RawRow::Binary { bytes, is_null } => {
                         // Binary protocol: parse from continuous byte stream with null bitmap
                         let mut bytes_slice = &bytes[..];
-                        for i in 0..self.cols.len() {
-                            if is_null[i] {
+                        for (i, &is_null_val) in is_null.iter().enumerate() {
+                            if is_null_val {
                                 values.push(py.None().into_bound(py));
                             } else {
                                 let py_value;
@@ -103,7 +95,7 @@ impl TupleHandler {
     }
 }
 
-impl<'a> BinaryResultSetHandler for TupleHandler {
+impl BinaryResultSetHandler for TupleHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows = ok_payload.affected_rows;
@@ -118,7 +110,7 @@ impl<'a> BinaryResultSetHandler for TupleHandler {
     }
 
     fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        self.cols.push(col.tail()?.clone());
+        self.cols.push(*col.tail()?);
         Ok(())
     }
 
@@ -143,7 +135,7 @@ impl<'a> BinaryResultSetHandler for TupleHandler {
     }
 }
 
-impl<'a> TextResultSetHandler for TupleHandler {
+impl TextResultSetHandler for TupleHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows += ok_payload.affected_rows;
@@ -158,7 +150,7 @@ impl<'a> TextResultSetHandler for TupleHandler {
     }
 
     fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        self.cols.push(col.tail()?.clone());
+        self.cols.push(*col.tail()?);
         Ok(())
     }
 
@@ -176,21 +168,13 @@ impl<'a> TextResultSetHandler for TupleHandler {
     }
 }
 
+#[derive(Default)]
 pub struct DropHandler {
     pub affected_rows: u64,
     pub last_insert_id: u64,
 }
 
-impl DropHandler {
-    pub fn new() -> Self {
-        Self {
-            affected_rows: 0,
-            last_insert_id: 0,
-        }
-    }
-}
-
-impl<'a> BinaryResultSetHandler for DropHandler {
+impl BinaryResultSetHandler for DropHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows = ok_payload.affected_rows;
@@ -218,7 +202,7 @@ impl<'a> BinaryResultSetHandler for DropHandler {
     }
 }
 
-impl<'a> TextResultSetHandler for DropHandler {
+impl TextResultSetHandler for DropHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows += ok_payload.affected_rows;
@@ -246,6 +230,7 @@ impl<'a> TextResultSetHandler for DropHandler {
     }
 }
 
+#[derive(Default)]
 pub struct DictHandler {
     cols: Vec<ColumnDefinitionTail>,
     col_names: Vec<String>,
@@ -255,16 +240,6 @@ pub struct DictHandler {
 }
 
 impl DictHandler {
-    pub fn new() -> Self {
-        Self {
-            cols: Vec::new(),
-            col_names: Vec::new(),
-            rows: Vec::new(),
-            affected_rows: 0,
-            last_insert_id: 0,
-        }
-    }
-
     pub fn clear(&mut self) {
         self.cols.clear();
         self.col_names.clear();
@@ -293,8 +268,8 @@ impl DictHandler {
                     RawRow::Binary { bytes, is_null } => {
                         // Binary protocol: parse from continuous byte stream with null bitmap
                         let mut bytes_slice = &bytes[..];
-                        for i in 0..self.cols.len() {
-                            let py_value = if is_null[i] {
+                        for (i, &is_null_val) in is_null.iter().enumerate() {
+                            let py_value = if is_null_val {
                                 py.None().into_bound(py)
                             } else {
                                 let val;
@@ -339,7 +314,7 @@ impl DictHandler {
     }
 }
 
-impl<'a> BinaryResultSetHandler for DictHandler {
+impl BinaryResultSetHandler for DictHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows = ok_payload.affected_rows;
@@ -359,7 +334,7 @@ impl<'a> BinaryResultSetHandler for DictHandler {
         let col_def = ColumnDefinition::try_from(col)?;
         self.col_names
             .push(String::from_utf8_lossy(col_def.name_alias).to_string());
-        self.cols.push(col_def.tail.clone());
+        self.cols.push(*col_def.tail);
         Ok(())
     }
 
@@ -384,7 +359,7 @@ impl<'a> BinaryResultSetHandler for DictHandler {
     }
 }
 
-impl<'a> TextResultSetHandler for DictHandler {
+impl TextResultSetHandler for DictHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows += ok_payload.affected_rows;
@@ -404,7 +379,7 @@ impl<'a> TextResultSetHandler for DictHandler {
         let col_def = ColumnDefinition::try_from(col)?;
         self.col_names
             .push(String::from_utf8_lossy(col_def.name_alias).to_string());
-        self.cols.push(col_def.tail.clone());
+        self.cols.push(*col_def.tail);
         Ok(())
     }
 

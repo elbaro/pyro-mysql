@@ -1,7 +1,7 @@
 use crate::r#async::backend::zero_mysql::handler::{DictHandler, DropHandler, TupleHandler};
 use crate::error::PyroResult;
 use crate::params::Params;
-use crate::zero_params_adapter::{ParamsAdapter, BulkParamsSetAdapter};
+use crate::zero_params_adapter::{BulkParamsSetAdapter, ParamsAdapter};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
 use zero_mysql::tokio::Conn;
@@ -23,8 +23,8 @@ impl ZeroMysqlConn {
         Ok(ZeroMysqlConn {
             inner: conn,
             stmt_cache: std::collections::HashMap::new(),
-            tuple_handler: TupleHandler::new(),
-            dict_handler: DictHandler::new(),
+            tuple_handler: TupleHandler::default(),
+            dict_handler: DictHandler::default(),
             affected_rows: 0,
             last_insert_id: 0,
         })
@@ -36,8 +36,8 @@ impl ZeroMysqlConn {
         Ok(ZeroMysqlConn {
             inner: conn,
             stmt_cache: std::collections::HashMap::new(),
-            tuple_handler: TupleHandler::new(),
-            dict_handler: DictHandler::new(),
+            tuple_handler: TupleHandler::default(),
+            dict_handler: DictHandler::default(),
             affected_rows: 0,
             last_insert_id: 0,
         })
@@ -87,11 +87,7 @@ impl ZeroMysqlConn {
         Ok(())
     }
 
-    pub async fn query(
-        &mut self,
-        query: String,
-        as_dict: bool,
-    ) -> PyroResult<Py<PyAny>> {
+    pub async fn query(&mut self, query: String, as_dict: bool) -> PyroResult<Py<PyAny>> {
         if as_dict {
             self.dict_handler.clear();
             self.inner.query(&query, &mut self.dict_handler).await?;
@@ -114,7 +110,7 @@ impl ZeroMysqlConn {
     }
 
     pub async fn query_drop(&mut self, query: String) -> PyroResult<()> {
-        let mut handler = DropHandler::new();
+        let mut handler = DropHandler::default();
         self.inner.query(&query, &mut handler).await?;
 
         self.affected_rows = handler.affected_rows;
@@ -211,7 +207,7 @@ impl ZeroMysqlConn {
             stmt_id
         };
 
-        let mut handler = DropHandler::new();
+        let mut handler = DropHandler::default();
         let params_adapter = ParamsAdapter::new(&params);
         self.inner
             .exec(stmt_id, params_adapter, &mut handler)

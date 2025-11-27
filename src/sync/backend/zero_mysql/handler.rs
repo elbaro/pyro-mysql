@@ -4,8 +4,8 @@ use zero_mysql::error::Result;
 use zero_mysql::protocol::command::{
     ColumnDefinition, ColumnDefinitionBytes, ColumnDefinitionTail,
 };
-use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
+use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
 
 use crate::util::PyTupleBuilder;
@@ -58,7 +58,7 @@ impl<'a> BinaryResultSetHandler for TupleHandler<'a> {
     }
 
     fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        self.cols.push(col.tail()?.clone());
+        self.cols.push(*col.tail()?);
         Ok(())
     }
 
@@ -107,7 +107,7 @@ impl<'a> TextResultSetHandler for TupleHandler<'a> {
     }
 
     fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        self.cols.push(col.tail()?.clone());
+        self.cols.push(*col.tail()?);
         Ok(())
     }
 
@@ -147,21 +147,13 @@ impl<'a> TextResultSetHandler for TupleHandler<'a> {
     }
 }
 
+#[derive(Default)]
 pub struct DropHandler {
     pub affected_rows: u64,
     pub last_insert_id: u64,
 }
 
-impl DropHandler {
-    pub fn new() -> Self {
-        Self {
-            affected_rows: 0,
-            last_insert_id: 0,
-        }
-    }
-}
-
-impl<'a> BinaryResultSetHandler for DropHandler {
+impl BinaryResultSetHandler for DropHandler {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows = ok_payload.affected_rows;
@@ -271,7 +263,7 @@ impl<'a> BinaryResultSetHandler for DictHandler<'a> {
         let col_def = ColumnDefinition::try_from(col)?;
         self.col_names
             .push(String::from_utf8_lossy(col_def.name_alias).to_string());
-        self.cols.push(col_def.tail.clone());
+        self.cols.push(*col_def.tail);
         Ok(())
     }
 
@@ -323,7 +315,7 @@ impl<'a> TextResultSetHandler for DictHandler<'a> {
         let col_def = ColumnDefinition::try_from(col)?;
         self.col_names
             .push(String::from_utf8_lossy(col_def.name_alias).to_string());
-        self.cols.push(col_def.tail.clone());
+        self.cols.push(*col_def.tail);
         Ok(())
     }
 
