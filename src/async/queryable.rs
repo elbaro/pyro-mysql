@@ -65,6 +65,13 @@ pub trait Queryable {
         query: PyBackedStr,
         params: Vec<Py<PyAny>>,
     ) -> PyResult<Py<PyroFuture>>;
+    fn exec_bulk<'py>(
+        &self,
+        py: Python<'py>,
+        query: PyBackedStr,
+        params: Vec<Py<PyAny>>,
+        as_dict: bool,
+    ) -> PyResult<Py<PyroFuture>>;
     // fn exec_iter<'py>(&self, py: Python<'py>, query: String, params: Params) -> PyResult<Py<RaiiFuture>>;) -> PyResult<Py<PyroFuture>>;
 }
 
@@ -286,6 +293,19 @@ impl<T: mysql_async::prelude::Queryable + Send + Sync + 'static> Queryable
                 .exec_batch(query, params_vec)
                 .await?)
         })
+    }
+
+    #[inline]
+    fn exec_bulk<'py>(
+        &self,
+        py: Python<'py>,
+        query: PyBackedStr,
+        params: Vec<Py<PyAny>>,
+        _as_dict: bool,
+    ) -> PyResult<Py<PyroFuture>> {
+        // Generic mysql_async backend doesn't support exec_bulk
+        // Fall back to exec_batch
+        self.exec_batch(py, query, params)
     }
 
     // fn exec_iter<'py>(&self, py: Python<'py>, query: String, params: Params) -> PyResult<Py<RaiiFuture>> {
@@ -810,6 +830,79 @@ impl Queryable for Arc<RwLock<Option<MultiAsyncConn>>> {
                             .map_err(Error::from)?;
                     }
                     Ok(())
+                }
+            }
+        })
+    }
+
+    #[inline]
+    fn exec_bulk<'py>(
+        &self,
+        py: Python<'py>,
+        query: PyBackedStr,
+        params: Vec<Py<PyAny>>,
+        as_dict: bool,
+    ) -> PyResult<Py<PyroFuture>> {
+        let inner = self.clone();
+
+        rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
+            let mut inner = inner.write().await;
+            let query: &str = query.as_ref();
+            let conn = inner.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+            match conn {
+                MultiAsyncConn::MysqlAsync(_) | MultiAsyncConn::Wtx(_) => {
+                    // Fallback to exec_batch for non-zero_mysql backends
+                    for params_item in params {
+                        let pyro_params =
+                            Python::attach(|py| params_item.extract::<crate::params::Params>(py))?;
+                        match conn {
+                            MultiAsyncConn::MysqlAsync(mysql_conn) => {
+                                mysql_conn.exec_drop(query, pyro_params).await?;
+                            }
+                            MultiAsyncConn::Wtx(wtx_conn) => {
+                                use wtx::database::Executor;
+                                use crate::r#async::backend::wtx::queryable::get_or_prepare_stmt;
+
+                                let stmt_id = get_or_prepare_stmt(
+                                    &mut wtx_conn.executor,
+                                    &mut wtx_conn.stmt_cache,
+                                    query,
+                                )
+                                .await?;
+
+                                let wtx_params = Python::attach(|py| {
+                                    WtxParams::from_py(py, &params_item)
+                                })?;
+
+                                wtx_conn
+                                    .executor
+                                    .execute_with_stmt(stmt_id, wtx_params)
+                                    .await
+                                    .map_err(|e| Error::WtxError(e.to_string()))?;
+                            }
+                            _ => unreachable!(),
+                        }
+                    }
+                    Ok(Vec::new())
+                }
+                MultiAsyncConn::ZeroMysql(zero_conn) => {
+                    // Use zero_mysql's native exec_bulk
+                    let mut params_vec = Vec::new();
+                    Python::attach(|py| {
+                        for p in params {
+                            params_vec.push(p.extract::<crate::params::Params>(py)?);
+                        }
+                        Ok::<_, PyErr>(())
+                    })?;
+
+                    let py_rows = zero_conn
+                        .exec_bulk(query.to_string(), params_vec, as_dict)
+                        .await
+                        .map_err(Error::from)?;
+
+                    Python::attach(|py| {
+                        Ok(py_rows.bind(py).extract::<Vec<Py<PyAny>>>()?)
+                    })
                 }
             }
         })

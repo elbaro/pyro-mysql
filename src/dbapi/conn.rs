@@ -10,7 +10,7 @@ use crate::{
     opts::Opts as PyroOpts,
     params::Params,
     sync::backend::ZeroMysqlConn,
-    sync::backend::zero_mysql::params_adapter::ParamsAdapter,
+    zero_params_adapter::ParamsAdapter,
 };
 
 use pyo3::types::PyTuple;

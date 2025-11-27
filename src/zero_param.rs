@@ -12,14 +12,6 @@ impl Param for &Value {
     fn encode_type(&self, out: &mut Vec<u8>) {
         match self {
             Value::NULL => {
-                out.push(ColumnType::MYSQL_TYPE_NULL as u8);
-                out.push(0x00);
-            }
-            Value::Bytes(_) => {
-                out.push(ColumnType::MYSQL_TYPE_BLOB as u8);
-                out.push(0x00);
-            }
-            Value::Str(_) => {
                 out.push(ColumnType::MYSQL_TYPE_VAR_STRING as u8);
                 out.push(0x00);
             }
@@ -29,7 +21,7 @@ impl Param for &Value {
             }
             Value::UInt(_) => {
                 out.push(ColumnType::MYSQL_TYPE_LONGLONG as u8);
-                out.push(0x80); // unsigned flag
+                out.push(0x80);
             }
             Value::Float(_) => {
                 out.push(ColumnType::MYSQL_TYPE_FLOAT as u8);
@@ -39,13 +31,16 @@ impl Param for &Value {
                 out.push(ColumnType::MYSQL_TYPE_DOUBLE as u8);
                 out.push(0x00);
             }
-            Value::Date(_, _, _, hour, minute, second, micro) => {
-                // Determine if this is a DATE or DATETIME based on time components
-                if *hour == 0 && *minute == 0 && *second == 0 && *micro == 0 {
-                    out.push(ColumnType::MYSQL_TYPE_DATE as u8);
-                } else {
-                    out.push(ColumnType::MYSQL_TYPE_DATETIME as u8);
-                }
+            Value::Str(_) => {
+                out.push(ColumnType::MYSQL_TYPE_VAR_STRING as u8);
+                out.push(0x00);
+            }
+            Value::Bytes(_) => {
+                out.push(ColumnType::MYSQL_TYPE_BLOB as u8);
+                out.push(0x00);
+            }
+            Value::Date(_, _, _, _, _, _, _) => {
+                out.push(ColumnType::MYSQL_TYPE_DATETIME as u8);
                 out.push(0x00);
             }
             Value::Time(_, _, _, _, _, _) => {

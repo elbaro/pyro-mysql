@@ -125,7 +125,7 @@ impl<'a> BinaryResultSetHandler for DbApiHandler<'a> {
         let tail = col_def.tail;
 
         // Extract column info for description
-        let name = String::from_utf8_lossy(col_def.name).to_string();
+        let name = String::from_utf8_lossy(col_def.name_alias).to_string();
         let flags = tail.flags()?;
         let null_ok = !flags.contains(ColumnFlags::NOT_NULL_FLAG);
 

@@ -14,6 +14,8 @@ pub mod tokio_thread;
 pub mod util;
 pub mod value;
 pub mod zero_mysql_util;
+pub mod zero_param;
+pub mod zero_params_adapter;
 
 use pyo3::prelude::*;
 

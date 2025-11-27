@@ -56,6 +56,7 @@ dev = [
   "aiomysql>=0.2.0",
   "asyncmy>=0.2.10",
   "sqlalchemy>=2.0.44",
+  "mariadb>=1.1.0",
 ]
 
 [project.entry-points."sqlalchemy.dialects"]

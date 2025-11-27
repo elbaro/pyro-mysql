@@ -233,4 +233,14 @@ impl AsyncConn {
     ) -> PyResult<Py<PyroFuture>> {
         self.inner.exec_batch(py, query, params)
     }
+    #[pyo3(signature = (query, params=vec![], *, as_dict=false))]
+    fn exec_bulk<'py>(
+        &self,
+        py: Python<'py>,
+        query: PyBackedStr,
+        params: Vec<Py<PyAny>>,
+        as_dict: bool,
+    ) -> PyResult<Py<PyroFuture>> {
+        self.inner.exec_bulk(py, query, params, as_dict)
+    }
 }

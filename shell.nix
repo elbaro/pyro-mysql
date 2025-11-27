@@ -4,6 +4,8 @@
 
 pkgs.mkShell {
   buildInputs = [
+    pkgs.gnuplot
+
     # Python with packages
     (pkgs.python313.withPackages (
       ps: with ps; [
@@ -28,6 +30,7 @@ pkgs.mkShell {
         aiomysql # broken in 3.14
         pymysql # broken in 3.14
         mysqlclient
+        mariadb
       ]
     ))
 

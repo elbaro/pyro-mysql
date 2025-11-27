@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 
 use crate::{
     r#async::backend::ZeroMysqlConn,
-    r#async::backend::zero_mysql::params_adapter::ParamsAdapter,
+    zero_params_adapter::ParamsAdapter,
     dbapi::{
         async_conn::AsyncDbApiConn,
         async_zero_handler::AsyncDbApiHandler,

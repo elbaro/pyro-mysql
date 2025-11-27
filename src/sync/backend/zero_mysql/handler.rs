@@ -270,7 +270,7 @@ impl<'a> BinaryResultSetHandler for DictHandler<'a> {
     fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
         let col_def = ColumnDefinition::try_from(col)?;
         self.col_names
-            .push(String::from_utf8_lossy(col_def.name).to_string());
+            .push(String::from_utf8_lossy(col_def.name_alias).to_string());
         self.cols.push(col_def.tail.clone());
         Ok(())
     }
@@ -322,7 +322,7 @@ impl<'a> TextResultSetHandler for DictHandler<'a> {
     fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
         let col_def = ColumnDefinition::try_from(col)?;
         self.col_names
-            .push(String::from_utf8_lossy(col_def.name).to_string());
+            .push(String::from_utf8_lossy(col_def.name_alias).to_string());
         self.cols.push(col_def.tail.clone());
         Ok(())
     }

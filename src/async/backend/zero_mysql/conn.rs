@@ -1,6 +1,7 @@
 use crate::r#async::backend::zero_mysql::handler::{DictHandler, DropHandler, TupleHandler};
 use crate::error::PyroResult;
 use crate::params::Params;
+use crate::zero_params_adapter::{ParamsAdapter, BulkParamsSetAdapter};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
 use zero_mysql::tokio::Conn;
@@ -127,8 +128,6 @@ impl ZeroMysqlConn {
         params: Params,
         as_dict: bool,
     ) -> PyroResult<Py<PyAny>> {
-        use super::params_adapter::ParamsAdapter;
-
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
@@ -169,8 +168,6 @@ impl ZeroMysqlConn {
         params: Params,
         as_dict: bool,
     ) -> PyroResult<Option<Py<PyAny>>> {
-        use super::params_adapter::ParamsAdapter;
-
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
@@ -206,8 +203,6 @@ impl ZeroMysqlConn {
     }
 
     pub async fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
-        use super::params_adapter::ParamsAdapter;
-
         let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
             cached_id
         } else {
@@ -225,5 +220,49 @@ impl ZeroMysqlConn {
         self.affected_rows = handler.affected_rows;
         self.last_insert_id = handler.last_insert_id;
         Ok(())
+    }
+
+    pub async fn exec_bulk(
+        &mut self,
+        query: String,
+        params_list: Vec<Params>,
+        as_dict: bool,
+    ) -> PyroResult<Py<PyAny>> {
+        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
+            cached_id
+        } else {
+            let stmt_id = self.inner.prepare(&query).await?;
+            self.stmt_cache.insert(query.clone(), stmt_id);
+            stmt_id
+        };
+
+        let params_adapters: Vec<ParamsAdapter> =
+            params_list.iter().map(ParamsAdapter::new).collect();
+        let bulk_params = BulkParamsSetAdapter::new(params_adapters);
+        let flags = zero_mysql::protocol::command::bulk_exec::BulkFlags::SEND_TYPES_TO_SERVER;
+
+        if as_dict {
+            self.dict_handler.clear();
+            self.inner
+                .exec_bulk(stmt_id, bulk_params, flags, &mut self.dict_handler)
+                .await?;
+            self.affected_rows = self.dict_handler.affected_rows();
+            self.last_insert_id = self.dict_handler.last_insert_id();
+            Python::attach(|py| {
+                let rows: Vec<Py<PyDict>> = self.dict_handler.rows_to_python(py)?;
+                Ok(rows.into_pyobject(py)?.into_any().unbind())
+            })
+        } else {
+            self.tuple_handler.clear();
+            self.inner
+                .exec_bulk(stmt_id, bulk_params, flags, &mut self.tuple_handler)
+                .await?;
+            self.affected_rows = self.tuple_handler.affected_rows();
+            self.last_insert_id = self.tuple_handler.last_insert_id();
+            Python::attach(|py| {
+                let rows: Vec<Py<PyTuple>> = self.tuple_handler.rows_to_python(py)?;
+                Ok(rows.into_pyobject(py)?.into_any().unbind())
+            })
+        }
     }
 }

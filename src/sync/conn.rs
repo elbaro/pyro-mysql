@@ -323,6 +323,37 @@ impl SyncConn {
         }
     }
 
+    #[pyo3(signature = (query, params_list=vec![], *, as_dict=false))]
+    fn exec_bulk<'py>(
+        &self,
+        py: Python<'py>,
+        query: String,
+        params_list: Vec<Params>,
+        as_dict: bool,
+    ) -> PyroResult<Py<PyList>> {
+        let mut guard = self.inner.write();
+        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        match multi_conn {
+            MultiSyncConn::Mysql(conn) => {
+                // Fallback to exec_batch for non-zero_mysql backends
+                for params in params_list {
+                    conn.inner.exec_drop(query.clone(), params)?;
+                }
+                Ok(PyList::new(py, Vec::<Py<PyAny>>::new()).unwrap().unbind())
+            }
+            MultiSyncConn::Diesel(conn) => {
+                // Fallback to exec_batch for non-zero_mysql backends
+                for params in params_list {
+                    conn.exec_drop(query.clone(), params)?;
+                }
+                Ok(PyList::new(py, Vec::<Py<PyAny>>::new()).unwrap().unbind())
+            }
+            MultiSyncConn::ZeroMysql(conn) => {
+                conn.exec_bulk(py, query, params_list, as_dict)
+            }
+        }
+    }
+
     pub fn close(&self) {
         *self.inner.write() = None;
     }
