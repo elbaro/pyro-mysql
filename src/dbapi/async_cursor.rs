@@ -243,18 +243,14 @@ async fn execute_with_handler(
         conn.inner.query(query, &mut handler).await?;
     } else {
         // Use binary protocol with prepared statement
-        let stmt_id = if let Some(&cached_id) = conn.stmt_cache.get(query) {
-            cached_id
-        } else {
-            let stmt_id = conn.inner.prepare(query).await?;
-            conn.stmt_cache.insert(query.to_string(), stmt_id);
-            stmt_id
-        };
+        if !conn.stmt_cache.contains_key(query) {
+            let stmt = conn.inner.prepare(query).await?;
+            conn.stmt_cache.insert(query.to_string(), stmt);
+        }
+        let stmt = conn.stmt_cache.get_mut(query).unwrap();
 
         let params_adapter = ParamsAdapter::new(&params);
-        conn.inner
-            .exec(stmt_id, params_adapter, &mut handler)
-            .await?;
+        conn.inner.exec(stmt, params_adapter, &mut handler).await?;
     }
 
     Ok(handler)

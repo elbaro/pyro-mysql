@@ -4,11 +4,12 @@ use crate::sync::backend::zero_mysql::handler::{DictHandler, DropHandler, TupleH
 use crate::zero_params_adapter::{BulkParamsSetAdapter, ParamsAdapter};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
+use zero_mysql::PreparedStatement;
 use zero_mysql::sync::Conn;
 
 pub struct ZeroMysqlConn {
     pub inner: Conn,
-    pub stmt_cache: std::collections::HashMap<String, u32>,
+    pub stmt_cache: std::collections::HashMap<String, PreparedStatement>,
     affected_rows: u64,
     last_insert_id: u64,
 }
@@ -110,27 +111,25 @@ impl ZeroMysqlConn {
         params: Params,
         as_dict: bool,
     ) -> PyroResult<Py<PyList>> {
-        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
-            cached_id
-        } else {
-            let stmt_id = self
+        if !self.stmt_cache.contains_key(&query) {
+            let stmt = self
                 .inner
                 .prepare(&query)
                 .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
-            self.stmt_cache.insert(query.clone(), stmt_id);
-            stmt_id
-        };
+            self.stmt_cache.insert(query.clone(), stmt);
+        }
+        let stmt = self.stmt_cache.get_mut(&query).unwrap();
 
         let params_adapter = ParamsAdapter::new(&params);
         if as_dict {
             let mut handler = DictHandler::new(py);
-            self.inner.exec(stmt_id, params_adapter, &mut handler)?;
+            self.inner.exec(stmt, params_adapter, &mut handler)?;
             self.affected_rows = handler.affected_rows();
             self.last_insert_id = handler.last_insert_id();
             Ok(handler.into_rows())
         } else {
             let mut handler = TupleHandler::new(py);
-            self.inner.exec(stmt_id, params_adapter, &mut handler)?;
+            self.inner.exec(stmt, params_adapter, &mut handler)?;
             self.affected_rows = handler.affected_rows();
             self.last_insert_id = handler.last_insert_id();
             Ok(handler.into_rows())
@@ -144,22 +143,19 @@ impl ZeroMysqlConn {
         params: Params,
         as_dict: bool,
     ) -> PyroResult<Option<Py<PyAny>>> {
-        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
-            cached_id
-        } else {
-            let stmt_id = self.inner.prepare(&query).map_err(|e| {
+        if !self.stmt_cache.contains_key(&query) {
+            let stmt = self.inner.prepare(&query).map_err(|e| {
                 println!("--- error from zero: {:?}", e);
                 Error::IncorrectApiUsageError("Failed to prepare query")
             })?;
-            self.stmt_cache.insert(query.clone(), stmt_id);
-            stmt_id
-        };
+            self.stmt_cache.insert(query.clone(), stmt);
+        }
+        let stmt = self.stmt_cache.get_mut(&query).unwrap();
 
         let params_adapter = ParamsAdapter::new(&params);
         if as_dict {
             let mut handler = DictHandler::new(py);
-            self.inner
-                .exec_first(stmt_id, params_adapter, &mut handler)?;
+            self.inner.exec_first(stmt, params_adapter, &mut handler)?;
             self.affected_rows = handler.affected_rows();
             self.last_insert_id = handler.last_insert_id();
             let rows = handler.into_rows();
@@ -170,8 +166,7 @@ impl ZeroMysqlConn {
             })
         } else {
             let mut handler = TupleHandler::new(py);
-            self.inner
-                .exec_first(stmt_id, params_adapter, &mut handler)?;
+            self.inner.exec_first(stmt, params_adapter, &mut handler)?;
             self.affected_rows = handler.affected_rows();
             self.last_insert_id = handler.last_insert_id();
             let rows = handler.into_rows();
@@ -184,20 +179,18 @@ impl ZeroMysqlConn {
     }
 
     pub fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
-        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
-            cached_id
-        } else {
-            let stmt_id = self
+        if !self.stmt_cache.contains_key(&query) {
+            let stmt = self
                 .inner
                 .prepare(&query)
                 .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
-            self.stmt_cache.insert(query.clone(), stmt_id);
-            stmt_id
-        };
+            self.stmt_cache.insert(query.clone(), stmt);
+        }
+        let stmt = self.stmt_cache.get_mut(&query).unwrap();
 
         let mut handler = DropHandler::default();
         let params_adapter = ParamsAdapter::new(&params);
-        self.inner.exec(stmt_id, params_adapter, &mut handler)?;
+        self.inner.exec(stmt, params_adapter, &mut handler)?;
 
         self.affected_rows = handler.affected_rows;
         self.last_insert_id = handler.last_insert_id;
@@ -211,16 +204,14 @@ impl ZeroMysqlConn {
         params_list: Vec<Params>,
         as_dict: bool,
     ) -> PyroResult<Py<PyList>> {
-        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
-            cached_id
-        } else {
-            let stmt_id = self
+        if !self.stmt_cache.contains_key(&query) {
+            let stmt = self
                 .inner
                 .prepare(&query)
                 .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
-            self.stmt_cache.insert(query.clone(), stmt_id);
-            stmt_id
-        };
+            self.stmt_cache.insert(query.clone(), stmt);
+        }
+        let stmt = self.stmt_cache.get_mut(&query).unwrap();
 
         let params_adapters: Vec<ParamsAdapter> =
             params_list.iter().map(ParamsAdapter::new).collect();
@@ -229,15 +220,13 @@ impl ZeroMysqlConn {
 
         if as_dict {
             let mut handler = DictHandler::new(py);
-            self.inner
-                .exec_bulk(stmt_id, bulk_params, flags, &mut handler)?;
+            self.inner.exec_bulk(stmt, bulk_params, flags, &mut handler)?;
             self.affected_rows = handler.affected_rows();
             self.last_insert_id = handler.last_insert_id();
             Ok(handler.into_rows())
         } else {
             let mut handler = TupleHandler::new(py);
-            self.inner
-                .exec_bulk(stmt_id, bulk_params, flags, &mut handler)?;
+            self.inner.exec_bulk(stmt, bulk_params, flags, &mut handler)?;
             self.affected_rows = handler.affected_rows();
             self.last_insert_id = handler.last_insert_id();
             Ok(handler.into_rows())

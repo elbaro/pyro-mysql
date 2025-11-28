@@ -5,9 +5,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyList, PyTuple};
 use zero_mysql::constant::ColumnFlags;
 use zero_mysql::error::Result;
-use zero_mysql::protocol::command::{
-    ColumnDefinition, ColumnDefinitionBytes, ColumnDefinitionTail,
-};
+use zero_mysql::protocol::command::{ColumnDefinition, ColumnDefinitionTail};
 use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
@@ -153,39 +151,32 @@ impl BinaryResultSetHandler for AsyncDbApiHandler {
         Ok(())
     }
 
-    fn resultset_start(&mut self, num_columns: usize) -> Result<()> {
+    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
         log::debug!(
             "AsyncDbApiHandler::resultset_start called with {} columns",
-            num_columns
+            cols.len()
         );
         self.cols.clear();
-        self.cols.reserve(num_columns);
+        self.cols.reserve(cols.len());
         self.col_infos.clear();
-        self.col_infos.reserve(num_columns);
+        self.col_infos.reserve(cols.len());
         self.has_result_set = true;
-        Ok(())
-    }
 
-    fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        log::debug!("AsyncDbApiHandler::col called");
-        // Parse full column definition for name and other metadata
-        let col_def = ColumnDefinition::try_from(col)?;
-        let tail = col_def.tail;
+        for col in cols {
+            let tail = col.tail;
+            let name = String::from_utf8_lossy(col.name_alias).to_string();
+            let flags = tail.flags()?;
+            let null_ok = !flags.contains(ColumnFlags::NOT_NULL_FLAG);
 
-        // Extract column info for description
-        let name = String::from_utf8_lossy(col_def.name_alias).to_string();
-        let flags = tail.flags()?;
-        let null_ok = !flags.contains(ColumnFlags::NOT_NULL_FLAG);
+            self.col_infos.push(ColumnInfo {
+                name,
+                type_code: tail.type_and_flags()?.column_type as u8,
+                column_length: tail.column_length(),
+                null_ok,
+            });
 
-        self.col_infos.push(ColumnInfo {
-            name,
-            type_code: tail.type_and_flags()?.column_type as u8,
-            column_length: tail.column_length(),
-            null_ok,
-        });
-
-        // Store the full tail for charset info during decoding
-        self.cols.push(*tail);
+            self.cols.push(*tail);
+        }
 
         Ok(())
     }
@@ -221,39 +212,32 @@ impl TextResultSetHandler for AsyncDbApiHandler {
         Ok(())
     }
 
-    fn resultset_start(&mut self, num_columns: usize) -> Result<()> {
+    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
         log::debug!(
             "AsyncDbApiHandler::resultset_start (text) called with {} columns",
-            num_columns
+            cols.len()
         );
         self.cols.clear();
-        self.cols.reserve(num_columns);
+        self.cols.reserve(cols.len());
         self.col_infos.clear();
-        self.col_infos.reserve(num_columns);
+        self.col_infos.reserve(cols.len());
         self.has_result_set = true;
-        Ok(())
-    }
 
-    fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        log::debug!("AsyncDbApiHandler::col (text) called");
-        // Parse full column definition for name and other metadata
-        let col_def = ColumnDefinition::try_from(col)?;
-        let tail = col_def.tail;
+        for col in cols {
+            let tail = col.tail;
+            let name = String::from_utf8_lossy(col.name_alias).to_string();
+            let flags = tail.flags()?;
+            let null_ok = !flags.contains(ColumnFlags::NOT_NULL_FLAG);
 
-        // Extract column info for description
-        let name = String::from_utf8_lossy(col_def.name_alias).to_string();
-        let flags = tail.flags()?;
-        let null_ok = !flags.contains(ColumnFlags::NOT_NULL_FLAG);
+            self.col_infos.push(ColumnInfo {
+                name,
+                type_code: tail.type_and_flags()?.column_type as u8,
+                column_length: tail.column_length(),
+                null_ok,
+            });
 
-        self.col_infos.push(ColumnInfo {
-            name,
-            type_code: tail.type_and_flags()?.column_type as u8,
-            column_length: tail.column_length(),
-            null_ok,
-        });
-
-        // Store the full tail for charset info during decoding
-        self.cols.push(*tail);
+            self.cols.push(*tail);
+        }
 
         Ok(())
     }

@@ -1,9 +1,7 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use zero_mysql::error::Result;
-use zero_mysql::protocol::command::{
-    ColumnDefinition, ColumnDefinitionBytes, ColumnDefinitionTail,
-};
+use zero_mysql::protocol::command::ColumnDefinition;
 use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
@@ -11,19 +9,19 @@ use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
 use crate::util::PyTupleBuilder;
 use crate::zero_mysql_util::{decode_binary_bytes_to_python, decode_text_value_to_python};
 
-pub struct TupleHandler<'a> {
-    py: Python<'a>,
-    cols: Vec<ColumnDefinitionTail>,
+pub struct TupleHandler<'py> {
+    py: Python<'py>,
+    cols: *const [ColumnDefinition<'static>],
     rows: Py<PyList>,
     affected_rows: u64,
     last_insert_id: u64,
 }
 
-impl<'a> TupleHandler<'a> {
-    pub fn new(py: Python<'a>) -> Self {
+impl<'py> TupleHandler<'py> {
+    pub fn new(py: Python<'py>) -> Self {
         Self {
             py,
-            cols: Vec::new(),
+            cols: &[] as *const [ColumnDefinition<'static>],
             rows: PyList::empty(py).unbind(),
             affected_rows: 0,
             last_insert_id: 0,
@@ -41,9 +39,13 @@ impl<'a> TupleHandler<'a> {
     pub fn last_insert_id(&self) -> u64 {
         self.last_insert_id
     }
+
+    fn cols(&self) -> &[ColumnDefinition<'_>] {
+        unsafe { &*self.cols }
+    }
 }
 
-impl<'a> BinaryResultSetHandler for TupleHandler<'a> {
+impl<'py> BinaryResultSetHandler for TupleHandler<'py> {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows = ok_payload.affected_rows;
@@ -51,27 +53,22 @@ impl<'a> BinaryResultSetHandler for TupleHandler<'a> {
         Ok(())
     }
 
-    fn resultset_start(&mut self, num_columns: usize) -> Result<()> {
-        self.cols.clear();
-        self.cols.reserve(num_columns);
-        Ok(())
-    }
-
-    fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        self.cols.push(*col.tail()?);
+    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
+        self.cols = cols as *const [ColumnDefinition<'stmt>] as *const [ColumnDefinition<'static>];
         Ok(())
     }
 
     fn row(&mut self, row: &BinaryRowPayload) -> Result<()> {
+        let cols = self.cols();
         let mut bytes = row.values();
-        let tuple = PyTupleBuilder::new(self.py, self.cols.len());
+        let tuple = PyTupleBuilder::new(self.py, cols.len());
 
-        for i in 0..self.cols.len() {
+        for (i, col) in cols.iter().enumerate() {
             if row.null_bitmap().is_null(i) {
                 tuple.set(i, self.py.None().into_bound(self.py));
             } else {
                 let py_value;
-                (py_value, bytes) = decode_binary_bytes_to_python(self.py, &self.cols[i], bytes)
+                (py_value, bytes) = decode_binary_bytes_to_python(self.py, col.tail, bytes)
                     .map_err(|_e| zero_mysql::error::Error::InvalidPacket)?;
                 tuple.set(i, py_value);
             }
@@ -92,7 +89,7 @@ impl<'a> BinaryResultSetHandler for TupleHandler<'a> {
     }
 }
 
-impl<'a> TextResultSetHandler for TupleHandler<'a> {
+impl<'py> TextResultSetHandler for TupleHandler<'py> {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows += ok_payload.affected_rows;
@@ -100,32 +97,25 @@ impl<'a> TextResultSetHandler for TupleHandler<'a> {
         Ok(())
     }
 
-    fn resultset_start(&mut self, num_columns: usize) -> Result<()> {
-        self.cols.clear();
-        self.cols.reserve(num_columns);
-        Ok(())
-    }
-
-    fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        self.cols.push(*col.tail()?);
+    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
+        self.cols = cols as *const [ColumnDefinition<'stmt>] as *const [ColumnDefinition<'static>];
         Ok(())
     }
 
     fn row(&mut self, row: &TextRowPayload) -> Result<()> {
         use zero_mysql::protocol::primitive::read_string_lenenc;
 
-        let tuple = PyTupleBuilder::new(self.py, self.cols.len());
+        let cols = self.cols();
+        let tuple = PyTupleBuilder::new(self.py, cols.len());
         let mut data = row.0;
 
-        for i in 0..self.cols.len() {
-            // Check for NULL (0xFB)
+        for (i, col) in cols.iter().enumerate() {
             if !data.is_empty() && data[0] == 0xFB {
                 tuple.set(i, self.py.None().into_bound(self.py));
                 data = &data[1..];
             } else {
-                // Read length-encoded string
                 let (value_bytes, rest) = read_string_lenenc(data)?;
-                let py_value = decode_text_value_to_python(self.py, &self.cols[i], value_bytes)
+                let py_value = decode_text_value_to_python(self.py, col.tail, value_bytes)
                     .map_err(|_e| zero_mysql::error::Error::InvalidPacket)?;
                 tuple.set(i, py_value);
                 data = rest;
@@ -161,11 +151,7 @@ impl BinaryResultSetHandler for DropHandler {
         Ok(())
     }
 
-    fn resultset_start(&mut self, _num_columns: usize) -> Result<()> {
-        Ok(())
-    }
-
-    fn col(&mut self, _col: ColumnDefinitionBytes) -> Result<()> {
+    fn resultset_start<'stmt>(&mut self, _cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
         Ok(())
     }
 
@@ -189,11 +175,7 @@ impl TextResultSetHandler for DropHandler {
         Ok(())
     }
 
-    fn resultset_start(&mut self, _num_columns: usize) -> Result<()> {
-        Ok(())
-    }
-
-    fn col(&mut self, _col: ColumnDefinitionBytes) -> Result<()> {
+    fn resultset_start<'stmt>(&mut self, _cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
         Ok(())
     }
 
@@ -209,21 +191,19 @@ impl TextResultSetHandler for DropHandler {
     }
 }
 
-pub struct DictHandler<'a> {
-    py: Python<'a>,
-    cols: Vec<ColumnDefinitionTail>,
-    col_names: Vec<String>,
+pub struct DictHandler<'py> {
+    py: Python<'py>,
+    cols: *const [ColumnDefinition<'static>],
     rows: Py<PyList>,
     affected_rows: u64,
     last_insert_id: u64,
 }
 
-impl<'a> DictHandler<'a> {
-    pub fn new(py: Python<'a>) -> Self {
+impl<'py> DictHandler<'py> {
+    pub fn new(py: Python<'py>) -> Self {
         Self {
             py,
-            cols: Vec::new(),
-            col_names: Vec::new(),
+            cols: &[] as *const [ColumnDefinition<'static>],
             rows: PyList::empty(py).unbind(),
             affected_rows: 0,
             last_insert_id: 0,
@@ -241,9 +221,13 @@ impl<'a> DictHandler<'a> {
     pub fn last_insert_id(&self) -> u64 {
         self.last_insert_id
     }
+
+    fn cols(&self) -> &[ColumnDefinition<'_>] {
+        unsafe { &*self.cols }
+    }
 }
 
-impl<'a> BinaryResultSetHandler for DictHandler<'a> {
+impl<'py> BinaryResultSetHandler for DictHandler<'py> {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows = ok_payload.affected_rows;
@@ -251,36 +235,30 @@ impl<'a> BinaryResultSetHandler for DictHandler<'a> {
         Ok(())
     }
 
-    fn resultset_start(&mut self, num_columns: usize) -> Result<()> {
-        self.cols.clear();
-        self.cols.reserve(num_columns);
-        self.col_names.clear();
-        self.col_names.reserve(num_columns);
-        Ok(())
-    }
-
-    fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        let col_def = ColumnDefinition::try_from(col)?;
-        self.col_names
-            .push(String::from_utf8_lossy(col_def.name_alias).to_string());
-        self.cols.push(*col_def.tail);
+    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
+        self.cols = cols as *const [ColumnDefinition<'stmt>] as *const [ColumnDefinition<'static>];
         Ok(())
     }
 
     fn row(&mut self, row: &BinaryRowPayload) -> Result<()> {
+        let cols = self.cols();
         let mut bytes = row.values();
         let dict = PyDict::new(self.py);
 
-        for i in 0..self.cols.len() {
+        for (i, col) in cols.iter().enumerate() {
             let py_value = if row.null_bitmap().is_null(i) {
                 self.py.None().into_bound(self.py)
             } else {
                 let val;
-                (val, bytes) = decode_binary_bytes_to_python(self.py, &self.cols[i], bytes)
+                (val, bytes) = decode_binary_bytes_to_python(self.py, col.tail, bytes)
                     .map_err(|_e| zero_mysql::error::Error::InvalidPacket)?;
                 val
             };
-            dict.set_item(&self.col_names[i], py_value).unwrap();
+            dict.set_item(
+                std::str::from_utf8(col.name_alias).unwrap_or(""),
+                py_value,
+            )
+            .unwrap();
         }
 
         self.rows.bind(self.py).append(dict).unwrap();
@@ -295,7 +273,7 @@ impl<'a> BinaryResultSetHandler for DictHandler<'a> {
     }
 }
 
-impl<'a> TextResultSetHandler for DictHandler<'a> {
+impl<'py> TextResultSetHandler for DictHandler<'py> {
     fn no_result_set(&mut self, ok: OkPayloadBytes) -> Result<()> {
         let ok_payload = OkPayload::try_from(ok)?;
         self.affected_rows += ok_payload.affected_rows;
@@ -303,42 +281,34 @@ impl<'a> TextResultSetHandler for DictHandler<'a> {
         Ok(())
     }
 
-    fn resultset_start(&mut self, num_columns: usize) -> Result<()> {
-        self.cols.clear();
-        self.cols.reserve(num_columns);
-        self.col_names.clear();
-        self.col_names.reserve(num_columns);
-        Ok(())
-    }
-
-    fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        let col_def = ColumnDefinition::try_from(col)?;
-        self.col_names
-            .push(String::from_utf8_lossy(col_def.name_alias).to_string());
-        self.cols.push(*col_def.tail);
+    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
+        self.cols = cols as *const [ColumnDefinition<'stmt>] as *const [ColumnDefinition<'static>];
         Ok(())
     }
 
     fn row(&mut self, row: &TextRowPayload) -> Result<()> {
         use zero_mysql::protocol::primitive::read_string_lenenc;
 
+        let cols = self.cols();
         let dict = PyDict::new(self.py);
         let mut data = row.0;
 
-        for i in 0..self.cols.len() {
+        for col in cols.iter() {
             let py_value = if !data.is_empty() && data[0] == 0xFB {
-                // NULL marker
                 data = &data[1..];
                 self.py.None().into_bound(self.py)
             } else {
-                // Read length-encoded string
                 let (value_bytes, rest) = read_string_lenenc(data)?;
-                let val = decode_text_value_to_python(self.py, &self.cols[i], value_bytes)
+                let val = decode_text_value_to_python(self.py, col.tail, value_bytes)
                     .map_err(|_e| zero_mysql::error::Error::InvalidPacket)?;
                 data = rest;
                 val
             };
-            dict.set_item(&self.col_names[i], py_value).unwrap();
+            dict.set_item(
+                std::str::from_utf8(col.name_alias).unwrap_or(""),
+                py_value,
+            )
+            .unwrap();
         }
 
         self.rows.bind(self.py).append(dict).unwrap();

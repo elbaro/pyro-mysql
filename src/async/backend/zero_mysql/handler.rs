@@ -1,11 +1,9 @@
 use pyo3::types::PyDict;
 use pyo3::{prelude::*, types::PyTuple};
 use zero_mysql::error::Result;
-use zero_mysql::protocol::command::{
-    ColumnDefinition, ColumnDefinitionBytes, ColumnDefinitionTail,
-};
-use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
+use zero_mysql::protocol::command::{ColumnDefinition, ColumnDefinitionTail};
 use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
+use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
 
 use crate::zero_mysql_util::{decode_binary_bytes_to_python, decode_text_value_to_python};
@@ -103,26 +101,20 @@ impl BinaryResultSetHandler for TupleHandler {
         Ok(())
     }
 
-    fn resultset_start(&mut self, num_columns: usize) -> Result<()> {
+    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
         self.cols.clear();
-        self.cols.reserve(num_columns);
-        Ok(())
-    }
-
-    fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        self.cols.push(*col.tail()?);
+        self.cols.reserve(cols.len());
+        for col in cols {
+            self.cols.push(*col.tail);
+        }
         Ok(())
     }
 
     fn row(&mut self, row: &BinaryRowPayload) -> Result<()> {
-        // Copy the values bytes (only non-NULL values)
         let bytes = row.values().to_vec();
-
-        // Extract null bitmap for each column
         let is_null: Vec<bool> = (0..self.cols.len())
             .map(|i| row.null_bitmap().is_null(i))
             .collect();
-
         self.rows.push(RawRow::Binary { bytes, is_null });
         Ok(())
     }
@@ -143,14 +135,12 @@ impl TextResultSetHandler for TupleHandler {
         Ok(())
     }
 
-    fn resultset_start(&mut self, num_columns: usize) -> Result<()> {
+    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
         self.cols.clear();
-        self.cols.reserve(num_columns);
-        Ok(())
-    }
-
-    fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        self.cols.push(*col.tail()?);
+        self.cols.reserve(cols.len());
+        for col in cols {
+            self.cols.push(*col.tail);
+        }
         Ok(())
     }
 
@@ -182,11 +172,7 @@ impl BinaryResultSetHandler for DropHandler {
         Ok(())
     }
 
-    fn resultset_start(&mut self, _num_columns: usize) -> Result<()> {
-        Ok(())
-    }
-
-    fn col(&mut self, _col: ColumnDefinitionBytes) -> Result<()> {
+    fn resultset_start<'stmt>(&mut self, _cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
         Ok(())
     }
 
@@ -210,11 +196,7 @@ impl TextResultSetHandler for DropHandler {
         Ok(())
     }
 
-    fn resultset_start(&mut self, _num_columns: usize) -> Result<()> {
-        Ok(())
-    }
-
-    fn col(&mut self, _col: ColumnDefinitionBytes) -> Result<()> {
+    fn resultset_start<'stmt>(&mut self, _cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
         Ok(())
     }
 
@@ -322,31 +304,24 @@ impl BinaryResultSetHandler for DictHandler {
         Ok(())
     }
 
-    fn resultset_start(&mut self, num_columns: usize) -> Result<()> {
+    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
         self.cols.clear();
-        self.cols.reserve(num_columns);
+        self.cols.reserve(cols.len());
         self.col_names.clear();
-        self.col_names.reserve(num_columns);
-        Ok(())
-    }
-
-    fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        let col_def = ColumnDefinition::try_from(col)?;
-        self.col_names
-            .push(String::from_utf8_lossy(col_def.name_alias).to_string());
-        self.cols.push(*col_def.tail);
+        self.col_names.reserve(cols.len());
+        for col in cols {
+            self.col_names
+                .push(String::from_utf8_lossy(col.name_alias).to_string());
+            self.cols.push(*col.tail);
+        }
         Ok(())
     }
 
     fn row(&mut self, row: &BinaryRowPayload) -> Result<()> {
-        // Copy the values bytes (only non-NULL values)
         let bytes = row.values().to_vec();
-
-        // Extract null bitmap for each column
         let is_null: Vec<bool> = (0..self.cols.len())
             .map(|i| row.null_bitmap().is_null(i))
             .collect();
-
         self.rows.push(RawRow::Binary { bytes, is_null });
         Ok(())
     }
@@ -367,19 +342,16 @@ impl TextResultSetHandler for DictHandler {
         Ok(())
     }
 
-    fn resultset_start(&mut self, num_columns: usize) -> Result<()> {
+    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
         self.cols.clear();
-        self.cols.reserve(num_columns);
+        self.cols.reserve(cols.len());
         self.col_names.clear();
-        self.col_names.reserve(num_columns);
-        Ok(())
-    }
-
-    fn col(&mut self, col: ColumnDefinitionBytes) -> Result<()> {
-        let col_def = ColumnDefinition::try_from(col)?;
-        self.col_names
-            .push(String::from_utf8_lossy(col_def.name_alias).to_string());
-        self.cols.push(*col_def.tail);
+        self.col_names.reserve(cols.len());
+        for col in cols {
+            self.col_names
+                .push(String::from_utf8_lossy(col.name_alias).to_string());
+            self.cols.push(*col.tail);
+        }
         Ok(())
     }
 

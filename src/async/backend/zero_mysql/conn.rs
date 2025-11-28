@@ -4,11 +4,12 @@ use crate::params::Params;
 use crate::zero_params_adapter::{BulkParamsSetAdapter, ParamsAdapter};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
+use zero_mysql::PreparedStatement;
 use zero_mysql::tokio::Conn;
 
 pub struct ZeroMysqlConn {
     pub inner: Conn,
-    pub stmt_cache: std::collections::HashMap<String, u32>,
+    pub stmt_cache: std::collections::HashMap<String, PreparedStatement>,
     tuple_handler: TupleHandler,
     dict_handler: DictHandler,
     affected_rows: u64,
@@ -124,19 +125,17 @@ impl ZeroMysqlConn {
         params: Params,
         as_dict: bool,
     ) -> PyroResult<Py<PyAny>> {
-        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
-            cached_id
-        } else {
-            let stmt_id = self.inner.prepare(&query).await?;
-            self.stmt_cache.insert(query.clone(), stmt_id);
-            stmt_id
-        };
+        if !self.stmt_cache.contains_key(&query) {
+            let stmt = self.inner.prepare(&query).await?;
+            self.stmt_cache.insert(query.clone(), stmt);
+        }
+        let stmt = self.stmt_cache.get_mut(&query).unwrap();
 
         let params_adapter = ParamsAdapter::new(&params);
         if as_dict {
             self.dict_handler.clear();
             self.inner
-                .exec(stmt_id, params_adapter, &mut self.dict_handler)
+                .exec(stmt, params_adapter, &mut self.dict_handler)
                 .await?;
             self.affected_rows = self.dict_handler.affected_rows();
             self.last_insert_id = self.dict_handler.last_insert_id();
@@ -147,7 +146,7 @@ impl ZeroMysqlConn {
         } else {
             self.tuple_handler.clear();
             self.inner
-                .exec(stmt_id, params_adapter, &mut self.tuple_handler)
+                .exec(stmt, params_adapter, &mut self.tuple_handler)
                 .await?;
             self.affected_rows = self.tuple_handler.affected_rows();
             self.last_insert_id = self.tuple_handler.last_insert_id();
@@ -164,19 +163,17 @@ impl ZeroMysqlConn {
         params: Params,
         as_dict: bool,
     ) -> PyroResult<Option<Py<PyAny>>> {
-        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
-            cached_id
-        } else {
-            let stmt_id = self.inner.prepare(&query).await?;
-            self.stmt_cache.insert(query.clone(), stmt_id);
-            stmt_id
-        };
+        if !self.stmt_cache.contains_key(&query) {
+            let stmt = self.inner.prepare(&query).await?;
+            self.stmt_cache.insert(query.clone(), stmt);
+        }
+        let stmt = self.stmt_cache.get_mut(&query).unwrap();
 
         let params_adapter = ParamsAdapter::new(&params);
         if as_dict {
             self.dict_handler.clear();
             self.inner
-                .exec_first(stmt_id, params_adapter, &mut self.dict_handler)
+                .exec_first(stmt, params_adapter, &mut self.dict_handler)
                 .await?;
             self.affected_rows = self.dict_handler.affected_rows();
             self.last_insert_id = self.dict_handler.last_insert_id();
@@ -187,7 +184,7 @@ impl ZeroMysqlConn {
         } else {
             self.tuple_handler.clear();
             self.inner
-                .exec_first(stmt_id, params_adapter, &mut self.tuple_handler)
+                .exec_first(stmt, params_adapter, &mut self.tuple_handler)
                 .await?;
             self.affected_rows = self.tuple_handler.affected_rows();
             self.last_insert_id = self.tuple_handler.last_insert_id();
@@ -199,19 +196,15 @@ impl ZeroMysqlConn {
     }
 
     pub async fn exec_drop(&mut self, query: String, params: Params) -> PyroResult<()> {
-        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
-            cached_id
-        } else {
-            let stmt_id = self.inner.prepare(&query).await?;
-            self.stmt_cache.insert(query.clone(), stmt_id);
-            stmt_id
-        };
+        if !self.stmt_cache.contains_key(&query) {
+            let stmt = self.inner.prepare(&query).await?;
+            self.stmt_cache.insert(query.clone(), stmt);
+        }
+        let stmt = self.stmt_cache.get_mut(&query).unwrap();
 
         let mut handler = DropHandler::default();
         let params_adapter = ParamsAdapter::new(&params);
-        self.inner
-            .exec(stmt_id, params_adapter, &mut handler)
-            .await?;
+        self.inner.exec(stmt, params_adapter, &mut handler).await?;
 
         self.affected_rows = handler.affected_rows;
         self.last_insert_id = handler.last_insert_id;
@@ -224,13 +217,11 @@ impl ZeroMysqlConn {
         params_list: Vec<Params>,
         as_dict: bool,
     ) -> PyroResult<Py<PyAny>> {
-        let stmt_id = if let Some(&cached_id) = self.stmt_cache.get(&query) {
-            cached_id
-        } else {
-            let stmt_id = self.inner.prepare(&query).await?;
-            self.stmt_cache.insert(query.clone(), stmt_id);
-            stmt_id
-        };
+        if !self.stmt_cache.contains_key(&query) {
+            let stmt = self.inner.prepare(&query).await?;
+            self.stmt_cache.insert(query.clone(), stmt);
+        }
+        let stmt = self.stmt_cache.get_mut(&query).unwrap();
 
         let params_adapters: Vec<ParamsAdapter> =
             params_list.iter().map(ParamsAdapter::new).collect();
@@ -240,7 +231,7 @@ impl ZeroMysqlConn {
         if as_dict {
             self.dict_handler.clear();
             self.inner
-                .exec_bulk(stmt_id, bulk_params, flags, &mut self.dict_handler)
+                .exec_bulk(stmt, bulk_params, flags, &mut self.dict_handler)
                 .await?;
             self.affected_rows = self.dict_handler.affected_rows();
             self.last_insert_id = self.dict_handler.last_insert_id();
@@ -251,7 +242,7 @@ impl ZeroMysqlConn {
         } else {
             self.tuple_handler.clear();
             self.inner
-                .exec_bulk(stmt_id, bulk_params, flags, &mut self.tuple_handler)
+                .exec_bulk(stmt, bulk_params, flags, &mut self.tuple_handler)
                 .await?;
             self.affected_rows = self.tuple_handler.affected_rows();
             self.last_insert_id = self.tuple_handler.last_insert_id();
