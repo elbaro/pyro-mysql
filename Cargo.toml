@@ -53,6 +53,16 @@ mysql_async = { git = "https://github.com/elbaro/mysql_async.git", rev = "3811ae
 extension-module = ["pyo3/extension-module"]
 default = ["extension-module"]
 
+[profile.release]
+lto = true
+
+[profile.profiling]
+inherits = "release"
+debug = true
+
+[profile.bench]
+lto = true
+
 [[bench]]
 name = "bench"
 harness = false
@@ -68,13 +78,3 @@ harness = false
 [[bench]]
 name = "connect"
 harness = false
-
-[profile.profiling]
-inherits = "release"
-debug = true
-
-[profile.bench]
-debug = true
-
-[dev-dependencies]
-gungraun = "0.17.0"
