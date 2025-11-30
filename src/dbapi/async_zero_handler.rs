@@ -27,13 +27,17 @@ enum RawRow {
     Text(Vec<u8>),
 }
 
+struct ResultSet {
+    cols: Vec<ColumnDefinitionTail>,
+    rows: Vec<RawRow>,
+}
+
 /// Handler that collects rows and column metadata for async DB-API
 /// Stores raw bytes during async operation, converts to Python later
 #[derive(Default)]
 pub struct AsyncDbApiHandler {
-    cols: Vec<ColumnDefinitionTail>,
     col_infos: Vec<ColumnInfo>,
-    rows: Vec<RawRow>,
+    result_sets: Vec<ResultSet>,
     affected_rows: u64,
     last_insert_id: u64,
     has_result_set: bool,
@@ -41,9 +45,8 @@ pub struct AsyncDbApiHandler {
 
 impl AsyncDbApiHandler {
     pub fn clear(&mut self) {
-        self.cols.clear();
         self.col_infos.clear();
-        self.rows.clear();
+        self.result_sets.clear();
         self.affected_rows = 0;
         self.last_insert_id = 0;
         self.has_result_set = false;
@@ -61,7 +64,7 @@ impl AsyncDbApiHandler {
         self.last_insert_id
     }
 
-    /// Build the DB-API description as a PyList
+    /// Build the DB-API description as a PyList (uses last result set's columns)
     /// Must be called with the GIL held
     pub fn build_description(&self, py: Python) -> PyResult<Py<PyList>> {
         PyList::new(
@@ -90,10 +93,10 @@ impl AsyncDbApiHandler {
     /// Convert collected raw rows to Python tuples
     /// Must be called with the GIL held, after the async operation completes
     pub fn rows_to_python(&self, py: Python) -> PyResult<Vec<Py<PyTuple>>> {
-        self.rows
-            .iter()
-            .map(|raw_row| {
-                let tuple = PyTupleBuilder::new(py, self.cols.len());
+        let mut result = Vec::new();
+        for rs in &self.result_sets {
+            for raw_row in &rs.rows {
+                let tuple = PyTupleBuilder::new(py, rs.cols.len());
 
                 match raw_row {
                     RawRow::Binary { bytes, is_null } => {
@@ -104,7 +107,7 @@ impl AsyncDbApiHandler {
                             } else {
                                 let py_value;
                                 (py_value, bytes_slice) =
-                                    decode_binary_bytes_to_python(py, &self.cols[i], bytes_slice)?;
+                                    decode_binary_bytes_to_python(py, &rs.cols[i], bytes_slice)?;
                                 tuple.set(i, py_value);
                             }
                         }
@@ -113,13 +116,11 @@ impl AsyncDbApiHandler {
                         use zero_mysql::protocol::primitive::read_string_lenenc;
                         let mut data = &bytes[..];
 
-                        for i in 0..self.cols.len() {
+                        for i in 0..rs.cols.len() {
                             if !data.is_empty() && data[0] == 0xFB {
-                                // NULL marker
                                 tuple.set(i, py.None().into_bound(py));
                                 data = &data[1..];
                             } else {
-                                // Read length-encoded string
                                 let (value_bytes, rest) =
                                     read_string_lenenc(data).map_err(|_| {
                                         PyErr::new::<pyo3::exceptions::PyException, _>(
@@ -127,7 +128,7 @@ impl AsyncDbApiHandler {
                                         )
                                     })?;
                                 let py_value =
-                                    decode_text_value_to_python(py, &self.cols[i], value_bytes)?;
+                                    decode_text_value_to_python(py, &rs.cols[i], value_bytes)?;
                                 tuple.set(i, py_value);
                                 data = rest;
                             }
@@ -135,9 +136,10 @@ impl AsyncDbApiHandler {
                     }
                 }
 
-                Ok(tuple.build(py).unbind())
-            })
-            .collect()
+                result.push(tuple.build(py).unbind());
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -151,17 +153,16 @@ impl BinaryResultSetHandler for AsyncDbApiHandler {
         Ok(())
     }
 
-    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
+    fn resultset_start(&mut self, cols: &[ColumnDefinition<'_>]) -> Result<()> {
         log::debug!(
             "AsyncDbApiHandler::resultset_start called with {} columns",
             cols.len()
         );
-        self.cols.clear();
-        self.cols.reserve(cols.len());
-        self.col_infos.clear();
-        self.col_infos.reserve(cols.len());
         self.has_result_set = true;
 
+        // Update col_infos for DB-API description (uses last result set)
+        self.col_infos.clear();
+        self.col_infos.reserve(cols.len());
         for col in cols {
             let tail = col.tail;
             let name = String::from_utf8_lossy(col.name_alias).to_string();
@@ -174,23 +175,26 @@ impl BinaryResultSetHandler for AsyncDbApiHandler {
                 column_length: tail.column_length(),
                 null_ok,
             });
-
-            self.cols.push(*tail);
         }
+
+        // Push new result set for row storage
+        self.result_sets.push(ResultSet {
+            cols: cols.iter().map(|c| *c.tail).collect(),
+            rows: Vec::new(),
+        });
 
         Ok(())
     }
 
-    fn row(&mut self, row: &BinaryRowPayload) -> Result<()> {
-        // Copy the values bytes (only non-NULL values)
-        let bytes = row.values().to_vec();
-
-        // Extract null bitmap for each column
-        let is_null: Vec<bool> = (0..self.cols.len())
+    fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: BinaryRowPayload<'_>) -> Result<()> {
+        let rs = self.result_sets.last_mut().unwrap();
+        let is_null: Vec<bool> = (0..rs.cols.len())
             .map(|i| row.null_bitmap().is_null(i))
             .collect();
-
-        self.rows.push(RawRow::Binary { bytes, is_null });
+        rs.rows.push(RawRow::Binary {
+            bytes: row.values().to_vec(),
+            is_null,
+        });
         Ok(())
     }
 
@@ -212,17 +216,16 @@ impl TextResultSetHandler for AsyncDbApiHandler {
         Ok(())
     }
 
-    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
+    fn resultset_start(&mut self, cols: &[ColumnDefinition<'_>]) -> Result<()> {
         log::debug!(
             "AsyncDbApiHandler::resultset_start (text) called with {} columns",
             cols.len()
         );
-        self.cols.clear();
-        self.cols.reserve(cols.len());
-        self.col_infos.clear();
-        self.col_infos.reserve(cols.len());
         self.has_result_set = true;
 
+        // Update col_infos for DB-API description (uses last result set)
+        self.col_infos.clear();
+        self.col_infos.reserve(cols.len());
         for col in cols {
             let tail = col.tail;
             let name = String::from_utf8_lossy(col.name_alias).to_string();
@@ -235,16 +238,20 @@ impl TextResultSetHandler for AsyncDbApiHandler {
                 column_length: tail.column_length(),
                 null_ok,
             });
-
-            self.cols.push(*tail);
         }
+
+        // Push new result set for row storage
+        self.result_sets.push(ResultSet {
+            cols: cols.iter().map(|c| *c.tail).collect(),
+            rows: Vec::new(),
+        });
 
         Ok(())
     }
 
-    fn row(&mut self, row: &TextRowPayload) -> Result<()> {
-        let bytes = row.0.to_vec();
-        self.rows.push(RawRow::Text(bytes));
+    fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: TextRowPayload<'_>) -> Result<()> {
+        let rs = self.result_sets.last_mut().unwrap();
+        rs.rows.push(RawRow::Text(row.0.to_vec()));
         Ok(())
     }
 

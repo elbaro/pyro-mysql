@@ -103,7 +103,7 @@ impl<'a> BinaryResultSetHandler for DbApiHandler<'a> {
         Ok(())
     }
 
-    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
+    fn resultset_start(&mut self, cols: &[ColumnDefinition<'_>]) -> Result<()> {
         log::debug!(
             "DbApiHandler::resultset_start called with {} columns",
             cols.len()
@@ -133,7 +133,7 @@ impl<'a> BinaryResultSetHandler for DbApiHandler<'a> {
         Ok(())
     }
 
-    fn row(&mut self, row: &BinaryRowPayload) -> Result<()> {
+    fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: BinaryRowPayload<'_>) -> Result<()> {
         let mut bytes = row.values();
         let tuple = PyTupleBuilder::new(self.py, self.cols.len());
 

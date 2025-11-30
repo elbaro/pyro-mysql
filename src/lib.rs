@@ -1,4 +1,5 @@
 #![allow(async_fn_in_trait)]
+#![feature(likely_unlikely)]
 
 pub mod r#async;
 pub mod capability_flags;

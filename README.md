@@ -50,7 +50,7 @@ def example():
 
 ### 2. Query Execution
 
-`SyncConn` and `AsyncConn` provides the following 8 methods:
+`SyncConn` and `AsyncConn` provides the following 8 methods (SyncConn doesn't return Awaitable):
 
 ```py
 # Text Protocols - supports multiple statements concatenated with ';' but accepts no argument
@@ -78,17 +78,15 @@ await conn.exec_batch("SELECT * FROM my_table WHERE a=? AND b=?", [(a1, b1), (a2
 ```py
 # async API
 async with conn.start_transaction() as tx:
-    await tx.exec('INSERT ..')
-    await tx.exec('INSERT ..')
-    await tx.commit()
-    await conn.exec(..)  # this is not allowed
+    await conn.exec('INSERT ..')
+    await conn.exec('INSERT ..')
+    await tx.commit(conn)
 
 # sync API
 with conn.start_transaction() as tx:
-    tx.exec('INSERT ..')
-    tx.exec('INSERT ..')
-    conn.exec('INSERT ..')  # this is not allowed
-    tx.rollback()
+    conn.exec('INSERT ..')
+    conn.exec('INSERT ..')
+    tx.rollback(conn)
 ```
 
 ### 4. Choosing a backend
@@ -98,21 +96,8 @@ conn = Conn(url, backend="mysql")
 conn = await Conn.new(url, backend="mysql")
 ```
 
-Sync
-
-| backend | zero-copy, allocation | server_version | ping |
-| ------- | --------------------- | -------------- | ---- |
-| `zero` |  O | O | O |
-| `mysql` | X | O | O |
-| `diesel` | X | X | X |
-
-Async
-
-| backend | zero-copy, allocation | server_version | ping |
-| ------- | --------------------- | -------------- | ---- |
-| `zero` | O | O | O |
-| `mysql` | X | O | O |
-| `wtx` | O | X | X |
+- Sync backends: `zero` (use `zero-mysql` crate), `mysql` (use `mysql` crate)
+- Async backends: `zero` (use `zero-mysql` crate), `mysql` (use `mysql_async` crate)
 
 
 ## DataType Mapping
@@ -228,6 +213,8 @@ pytest -p pyro_mysql.testing.sqlalchemy_pytest_plugin --dburi=mariadb+pyro_mysql
 - [pyro_mysql.dbapi_async](https://github.com/elbaro/pyro-mysql/blob/main/pyro_mysql/dbapi_async.pyi)
 - [pyro_mysql.error](https://github.com/elbaro/pyro-mysql/blob/main/pyro_mysql/error.pyi)
 
+There is no auto-generated API Reference. *.pyi files are manually synced.
+
 ```
 .
 └── pyro_mysql/
@@ -237,23 +224,17 @@ pytest -p pyro_mysql.testing.sqlalchemy_pytest_plugin --dburi=mariadb+pyro_mysql
     │   └── PyroFuture
     ├── sync/
     │   ├── Conn
-    │   ├── Transaction
-    │   ├── Pool
     │   ├── Opts
-    │   ├── Opts
-    │   └── PoolOpts
+    │   └── Transaction
     ├── async_/
     │   ├── Conn
-    │   ├── Transaction
-    │   ├── Pool
     │   ├── Opts
-    │   ├── Opts
-    │   └── PoolOpts
+    │   └── Transaction
     ├── dbapi/
     │   ├── connect()
     │   ├── Connection
     │   ├── Cursor
-    │   └── (exceptions)/
+    │   └── (exceptions)
     │       ├── Warning
     │       ├── Error
     │       ├── InterfaceError
@@ -268,7 +249,7 @@ pytest -p pyro_mysql.testing.sqlalchemy_pytest_plugin --dburi=mariadb+pyro_mysql
     │   ├── connect()
     │   ├── Connection
     │   ├── Cursor
-    │   └── (exceptions)/
+    │   └── (exceptions)
     │       ├── Warning
     │       ├── Error
     │       ├── InterfaceError
@@ -282,14 +263,14 @@ pytest -p pyro_mysql.testing.sqlalchemy_pytest_plugin --dburi=mariadb+pyro_mysql
     └── (aliases)/
         ├── SyncConn
         ├── SyncTransaction
-        ├── SyncPool
-        ├── Opts
-        ├── Opts
-        ├── SyncPoolOpts
         ├── AsyncConn
         ├── AsyncTransaction
-        ├── AsyncPool
-        ├── Opts
-        ├── Opts
-        └── AsyncPoolOpts
+        └── Opts
 ```
+
+## Perf Notes
+- Prefer MariaDB to MySQL
+- Prefer UnixSocket to TCP
+- Use BufferPool to reuse allocations between connections
+- Use Conn.exec_bulk to group 2~1000 INSERTs or UPDATEs
+- Wait for Python 3.14 + mature free-threaded build for faster asyncio performance

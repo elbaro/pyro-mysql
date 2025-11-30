@@ -13,18 +13,21 @@ enum RawRow {
     Text(Vec<u8>),
 }
 
-#[derive(Default)]
-pub struct TupleHandler {
+struct ResultSet {
     cols: Vec<ColumnDefinitionTail>,
     rows: Vec<RawRow>,
+}
+
+#[derive(Default)]
+pub struct TupleHandler {
+    result_sets: Vec<ResultSet>,
     affected_rows: u64,
     last_insert_id: u64,
 }
 
 impl TupleHandler {
     pub fn clear(&mut self) {
-        self.cols.clear();
-        self.rows.clear();
+        self.result_sets.clear();
         self.affected_rows = 0;
         self.last_insert_id = 0;
     }
@@ -40,14 +43,13 @@ impl TupleHandler {
     /// Convert collected raw rows to Python tuples
     /// This must be called with the GIL held, after the async operation completes
     pub fn rows_to_python(&mut self, py: Python) -> PyResult<Vec<Py<PyTuple>>> {
-        self.rows
-            .iter()
-            .map(|raw_row| {
-                let mut values = Vec::with_capacity(self.cols.len());
+        let mut result = Vec::new();
+        for rs in &self.result_sets {
+            for raw_row in &rs.rows {
+                let mut values = Vec::with_capacity(rs.cols.len());
 
                 match raw_row {
                     RawRow::Binary { bytes, is_null } => {
-                        // Binary protocol: parse from continuous byte stream with null bitmap
                         let mut bytes_slice = &bytes[..];
                         for (i, &is_null_val) in is_null.iter().enumerate() {
                             if is_null_val {
@@ -55,23 +57,20 @@ impl TupleHandler {
                             } else {
                                 let py_value;
                                 (py_value, bytes_slice) =
-                                    decode_binary_bytes_to_python(py, &self.cols[i], bytes_slice)?;
+                                    decode_binary_bytes_to_python(py, &rs.cols[i], bytes_slice)?;
                                 values.push(py_value);
                             }
                         }
                     }
                     RawRow::Text(bytes) => {
-                        // Text protocol: parse length-encoded values with 0xFB NULL markers
                         use zero_mysql::protocol::primitive::read_string_lenenc;
                         let mut data = &bytes[..];
 
-                        for i in 0..self.cols.len() {
-                            // Check for NULL (0xFB)
+                        for i in 0..rs.cols.len() {
                             if !data.is_empty() && data[0] == 0xFB {
                                 values.push(py.None().into_bound(py));
                                 data = &data[1..];
                             } else {
-                                // Read length-encoded string
                                 let (value_bytes, rest) =
                                     read_string_lenenc(data).map_err(|_| {
                                         PyErr::new::<pyo3::exceptions::PyException, _>(
@@ -79,7 +78,7 @@ impl TupleHandler {
                                         )
                                     })?;
                                 let py_value =
-                                    decode_text_value_to_python(py, &self.cols[i], value_bytes)?;
+                                    decode_text_value_to_python(py, &rs.cols[i], value_bytes)?;
                                 values.push(py_value);
                                 data = rest;
                             }
@@ -87,9 +86,10 @@ impl TupleHandler {
                     }
                 }
 
-                Ok(PyTuple::new(py, values)?.unbind())
-            })
-            .collect()
+                result.push(PyTuple::new(py, values)?.unbind());
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -101,21 +101,23 @@ impl BinaryResultSetHandler for TupleHandler {
         Ok(())
     }
 
-    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
-        self.cols.clear();
-        self.cols.reserve(cols.len());
-        for col in cols {
-            self.cols.push(*col.tail);
-        }
+    fn resultset_start(&mut self, cols: &[ColumnDefinition<'_>]) -> Result<()> {
+        self.result_sets.push(ResultSet {
+            cols: cols.iter().map(|c| *c.tail).collect(),
+            rows: Vec::new(),
+        });
         Ok(())
     }
 
-    fn row(&mut self, row: &BinaryRowPayload) -> Result<()> {
-        let bytes = row.values().to_vec();
-        let is_null: Vec<bool> = (0..self.cols.len())
+    fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: BinaryRowPayload<'_>) -> Result<()> {
+        let rs = self.result_sets.last_mut().unwrap();
+        let is_null: Vec<bool> = (0..rs.cols.len())
             .map(|i| row.null_bitmap().is_null(i))
             .collect();
-        self.rows.push(RawRow::Binary { bytes, is_null });
+        rs.rows.push(RawRow::Binary {
+            bytes: row.values().to_vec(),
+            is_null,
+        });
         Ok(())
     }
 
@@ -135,18 +137,17 @@ impl TextResultSetHandler for TupleHandler {
         Ok(())
     }
 
-    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
-        self.cols.clear();
-        self.cols.reserve(cols.len());
-        for col in cols {
-            self.cols.push(*col.tail);
-        }
+    fn resultset_start(&mut self, cols: &[ColumnDefinition<'_>]) -> Result<()> {
+        self.result_sets.push(ResultSet {
+            cols: cols.iter().map(|c| *c.tail).collect(),
+            rows: Vec::new(),
+        });
         Ok(())
     }
 
-    fn row(&mut self, row: &TextRowPayload) -> Result<()> {
-        let bytes = row.0.to_vec();
-        self.rows.push(RawRow::Text(bytes));
+    fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: TextRowPayload<'_>) -> Result<()> {
+        let rs = self.result_sets.last_mut().unwrap();
+        rs.rows.push(RawRow::Text(row.0.to_vec()));
         Ok(())
     }
 
@@ -172,11 +173,11 @@ impl BinaryResultSetHandler for DropHandler {
         Ok(())
     }
 
-    fn resultset_start<'stmt>(&mut self, _cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
+    fn resultset_start(&mut self, _cols: &[ColumnDefinition<'_>]) -> Result<()> {
         Ok(())
     }
 
-    fn row(&mut self, _row: &BinaryRowPayload) -> Result<()> {
+    fn row(&mut self, _cols: &[ColumnDefinition<'_>], _row: BinaryRowPayload<'_>) -> Result<()> {
         Ok(())
     }
 
@@ -196,11 +197,11 @@ impl TextResultSetHandler for DropHandler {
         Ok(())
     }
 
-    fn resultset_start<'stmt>(&mut self, _cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
+    fn resultset_start(&mut self, _cols: &[ColumnDefinition<'_>]) -> Result<()> {
         Ok(())
     }
 
-    fn row(&mut self, _row: &TextRowPayload) -> Result<()> {
+    fn row(&mut self, _cols: &[ColumnDefinition<'_>], _row: TextRowPayload<'_>) -> Result<()> {
         Ok(())
     }
 
@@ -212,20 +213,22 @@ impl TextResultSetHandler for DropHandler {
     }
 }
 
-#[derive(Default)]
-pub struct DictHandler {
+struct DictResultSet {
     cols: Vec<ColumnDefinitionTail>,
     col_names: Vec<String>,
     rows: Vec<RawRow>,
+}
+
+#[derive(Default)]
+pub struct DictHandler {
+    result_sets: Vec<DictResultSet>,
     affected_rows: u64,
     last_insert_id: u64,
 }
 
 impl DictHandler {
     pub fn clear(&mut self) {
-        self.cols.clear();
-        self.col_names.clear();
-        self.rows.clear();
+        self.result_sets.clear();
         self.affected_rows = 0;
         self.last_insert_id = 0;
     }
@@ -241,14 +244,13 @@ impl DictHandler {
     /// Convert collected raw rows to Python dicts
     /// This must be called with the GIL held, after the async operation completes
     pub fn rows_to_python(&mut self, py: Python) -> PyResult<Vec<Py<PyDict>>> {
-        self.rows
-            .iter()
-            .map(|raw_row| {
+        let mut result = Vec::new();
+        for rs in &self.result_sets {
+            for raw_row in &rs.rows {
                 let dict = PyDict::new(py);
 
                 match raw_row {
                     RawRow::Binary { bytes, is_null } => {
-                        // Binary protocol: parse from continuous byte stream with null bitmap
                         let mut bytes_slice = &bytes[..];
                         for (i, &is_null_val) in is_null.iter().enumerate() {
                             let py_value = if is_null_val {
@@ -256,24 +258,21 @@ impl DictHandler {
                             } else {
                                 let val;
                                 (val, bytes_slice) =
-                                    decode_binary_bytes_to_python(py, &self.cols[i], bytes_slice)?;
+                                    decode_binary_bytes_to_python(py, &rs.cols[i], bytes_slice)?;
                                 val
                             };
-                            dict.set_item(&self.col_names[i], py_value)?;
+                            dict.set_item(&rs.col_names[i], py_value)?;
                         }
                     }
                     RawRow::Text(bytes) => {
-                        // Text protocol: parse length-encoded values with 0xFB NULL markers
                         use zero_mysql::protocol::primitive::read_string_lenenc;
                         let mut data = &bytes[..];
 
-                        for i in 0..self.cols.len() {
+                        for i in 0..rs.cols.len() {
                             let py_value = if !data.is_empty() && data[0] == 0xFB {
-                                // NULL marker
                                 data = &data[1..];
                                 py.None().into_bound(py)
                             } else {
-                                // Read length-encoded string
                                 let (value_bytes, rest) =
                                     read_string_lenenc(data).map_err(|_| {
                                         PyErr::new::<pyo3::exceptions::PyException, _>(
@@ -281,18 +280,19 @@ impl DictHandler {
                                         )
                                     })?;
                                 let val =
-                                    decode_text_value_to_python(py, &self.cols[i], value_bytes)?;
+                                    decode_text_value_to_python(py, &rs.cols[i], value_bytes)?;
                                 data = rest;
                                 val
                             };
-                            dict.set_item(&self.col_names[i], py_value)?;
+                            dict.set_item(&rs.col_names[i], py_value)?;
                         }
                     }
                 }
 
-                Ok(dict.unbind())
-            })
-            .collect()
+                result.push(dict.unbind());
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -304,25 +304,27 @@ impl BinaryResultSetHandler for DictHandler {
         Ok(())
     }
 
-    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
-        self.cols.clear();
-        self.cols.reserve(cols.len());
-        self.col_names.clear();
-        self.col_names.reserve(cols.len());
-        for col in cols {
-            self.col_names
-                .push(String::from_utf8_lossy(col.name_alias).to_string());
-            self.cols.push(*col.tail);
-        }
+    fn resultset_start(&mut self, cols: &[ColumnDefinition<'_>]) -> Result<()> {
+        self.result_sets.push(DictResultSet {
+            cols: cols.iter().map(|c| *c.tail).collect(),
+            col_names: cols
+                .iter()
+                .map(|c| String::from_utf8_lossy(c.name_alias).to_string())
+                .collect(),
+            rows: Vec::new(),
+        });
         Ok(())
     }
 
-    fn row(&mut self, row: &BinaryRowPayload) -> Result<()> {
-        let bytes = row.values().to_vec();
-        let is_null: Vec<bool> = (0..self.cols.len())
+    fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: BinaryRowPayload<'_>) -> Result<()> {
+        let rs = self.result_sets.last_mut().unwrap();
+        let is_null: Vec<bool> = (0..rs.cols.len())
             .map(|i| row.null_bitmap().is_null(i))
             .collect();
-        self.rows.push(RawRow::Binary { bytes, is_null });
+        rs.rows.push(RawRow::Binary {
+            bytes: row.values().to_vec(),
+            is_null,
+        });
         Ok(())
     }
 
@@ -342,22 +344,21 @@ impl TextResultSetHandler for DictHandler {
         Ok(())
     }
 
-    fn resultset_start<'stmt>(&mut self, cols: &'stmt [ColumnDefinition<'stmt>]) -> Result<()> {
-        self.cols.clear();
-        self.cols.reserve(cols.len());
-        self.col_names.clear();
-        self.col_names.reserve(cols.len());
-        for col in cols {
-            self.col_names
-                .push(String::from_utf8_lossy(col.name_alias).to_string());
-            self.cols.push(*col.tail);
-        }
+    fn resultset_start(&mut self, cols: &[ColumnDefinition<'_>]) -> Result<()> {
+        self.result_sets.push(DictResultSet {
+            cols: cols.iter().map(|c| *c.tail).collect(),
+            col_names: cols
+                .iter()
+                .map(|c| String::from_utf8_lossy(c.name_alias).to_string())
+                .collect(),
+            rows: Vec::new(),
+        });
         Ok(())
     }
 
-    fn row(&mut self, row: &TextRowPayload) -> Result<()> {
-        let bytes = row.0.to_vec();
-        self.rows.push(RawRow::Text(bytes));
+    fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: TextRowPayload<'_>) -> Result<()> {
+        let rs = self.result_sets.last_mut().unwrap();
+        rs.rows.push(RawRow::Text(row.0.to_vec()));
         Ok(())
     }
 

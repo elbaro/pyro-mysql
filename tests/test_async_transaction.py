@@ -18,8 +18,6 @@ async def test_basic_transaction(async_backend):
 
     await setup_test_table_async(conn)
 
-    print("---")
-
     async with conn.start_transaction() as tx:
         await conn.exec_drop(
             "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)

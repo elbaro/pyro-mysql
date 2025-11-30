@@ -1,4 +1,6 @@
 /// Utilities for converting zero-mysql values to Python objects
+use std::hint::unlikely;
+
 use crate::py_imports::{
     get_date_class, get_datetime_class, get_decimal_class, get_timedelta_class,
 };
@@ -420,7 +422,7 @@ pub fn decode_text_value_to_python<'py>(
                 PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in date value")
             })?;
 
-            if text_str == "0000-00-00" {
+            if unlikely(text_str == "0000-00-00") {
                 return Ok(py.None().into_bound(py));
             }
             let parts: Vec<&str> = text_str.split('-').collect();
@@ -451,7 +453,7 @@ pub fn decode_text_value_to_python<'py>(
                 PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in datetime value")
             })?;
 
-            if text_str.starts_with("0000-00-00") {
+            if unlikely(text_str.starts_with("0000-00-00")) {
                 return Ok(py.None().into_bound(py));
             }
 
@@ -516,12 +518,12 @@ pub fn decode_text_value_to_python<'py>(
                 PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in time value")
             })?;
 
-            if text_str == "00:00:00" {
+            if unlikely(text_str == "00:00:00") {
                 let timedelta_class = get_timedelta_class(py)?;
                 return timedelta_class.call1((0,));
             }
 
-            let is_negative = text_str.starts_with('-');
+            let is_negative = unlikely(text_str.starts_with('-'));
             let time_str = if is_negative {
                 &text_str[1..]
             } else {
