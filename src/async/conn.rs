@@ -30,7 +30,7 @@ impl AsyncConn {
         ))
     }
 
-    #[allow(clippy::new_ret_no_self)]
+    #[expect(clippy::new_ret_no_self)]
     #[staticmethod]
     #[pyo3(signature = (url_or_opts, backend="mysql"))]
     pub fn new<'py>(

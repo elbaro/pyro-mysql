@@ -61,7 +61,7 @@ impl<'py> BinaryResultSetHandler for TupleHandler<'py> {
             } else {
                 let py_value;
                 (py_value, bytes) = decode_binary_bytes_to_python(self.py, col.tail, bytes)
-                    .map_err(|_e| zero_mysql::error::Error::InvalidPacket)?;
+                    .map_err(|e| zero_mysql::error::Error::LibraryBug(e.into()))?;
                 tuple.set(i, py_value);
             }
         }
@@ -106,7 +106,7 @@ impl<'py> TextResultSetHandler for TupleHandler<'py> {
             } else {
                 let (value_bytes, rest) = read_string_lenenc(data)?;
                 let py_value = decode_text_value_to_python(self.py, col.tail, value_bytes)
-                    .map_err(|_e| zero_mysql::error::Error::InvalidPacket)?;
+                    .map_err(|e| zero_mysql::error::Error::LibraryBug(e.into()))?;
                 tuple.set(i, py_value);
                 data = rest;
             }
@@ -233,7 +233,7 @@ impl<'py> BinaryResultSetHandler for DictHandler<'py> {
             } else {
                 let val;
                 (val, bytes) = decode_binary_bytes_to_python(self.py, col.tail, bytes)
-                    .map_err(|_e| zero_mysql::error::Error::InvalidPacket)?;
+                    .map_err(|e| zero_mysql::error::Error::LibraryBug(e.into()))?;
                 val
             };
             dict.set_item(
@@ -280,7 +280,7 @@ impl<'py> TextResultSetHandler for DictHandler<'py> {
             } else {
                 let (value_bytes, rest) = read_string_lenenc(data)?;
                 let val = decode_text_value_to_python(self.py, col.tail, value_bytes)
-                    .map_err(|_e| zero_mysql::error::Error::InvalidPacket)?;
+                    .map_err(|e| zero_mysql::error::Error::LibraryBug(e.into()))?;
                 data = rest;
                 val
             };

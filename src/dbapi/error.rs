@@ -78,7 +78,7 @@ impl From<crate::error::Error> for DbApiError {
                     err_payload.error_code,
                     e.to_string(),
                 ),
-                zero_mysql::error::Error::InvalidPacket => IntegrityError::new_err(e.to_string()),
+                zero_mysql::error::Error::LibraryBug(_) => IntegrityError::new_err(e.to_string()),
                 _ => Error::new_err(e.to_string()),
             },
         })

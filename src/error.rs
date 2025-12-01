@@ -1,5 +1,5 @@
 use mysql::consts::ColumnType;
-use pyo3::{PyErr, create_exception, exceptions::PyException};
+use pyo3::{create_exception, exceptions::PyException, PyErr};
 use thiserror::Error;
 
 pub type PyroResult<T> = std::result::Result<T, Error>;
@@ -100,7 +100,7 @@ impl From<Error> for pyo3::PyErr {
             }
             Error::IoError(s) => MysqlError::new_err(format!("IO Error: {}", s)),
             Error::WtxError(s) => MysqlError::new_err(format!("Wtx Error: {}", s)),
-            Error::ZeroMysqlError(e) => MysqlError::new_err(e.to_string()),
+            Error::ZeroMysqlError(e) => MysqlError::new_err(format!("{:?}", e)),
         }
     }
 }

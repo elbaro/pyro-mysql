@@ -143,7 +143,7 @@ impl<'a> BinaryResultSetHandler for DbApiHandler<'a> {
             } else {
                 let py_value;
                 (py_value, bytes) = decode_binary_bytes_to_python(self.py, &self.cols[i], bytes)
-                    .map_err(|_e| zero_mysql::error::Error::InvalidPacket)?;
+                    .map_err(|e| zero_mysql::error::Error::LibraryBug(e.into()))?;
                 tuple.set(i, py_value);
             }
         }
