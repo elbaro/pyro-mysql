@@ -142,7 +142,7 @@ impl wtx::database::Typed<wtx::database::client::mysql::Mysql<wtx::Error>> for W
 
 /// Lightweight parameter wrapper for wtx - holds WtxParam values
 pub struct WtxParams {
-    pub(crate) values: Vec<WtxParam>,
+    pub values: Vec<WtxParam>,
 }
 
 impl WtxParams {

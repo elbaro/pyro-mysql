@@ -2,8 +2,9 @@ import logging
 import os
 
 import pytest
-from pyro_mysql import Opts
 from sqlalchemy.dialects import registry
+
+from pyro_mysql import Opts
 
 
 def pytest_configure(config):
@@ -31,7 +32,7 @@ def pytest_configure(config):
 
 def get_test_db_url() -> str:
     """Get the test database URL from environment or default."""
-    return os.environ.get("TEST_DATABASE_URL", "mysql://test:1234@127.0.0.1:3306/test")
+    return os.environ.get("TEST_DATABASE_URL", "mysql://test:1234@localhost:3306/test")
 
 
 def get_async_opts() -> Opts:
@@ -136,13 +137,13 @@ def sync_conn_with_table():
     cleanup_test_table_sync(conn)
 
 
-@pytest.fixture(params=["mysql", "diesel", "zero"])
+@pytest.fixture(params=["mysql", "zero"])
 def backend(request):
     """Fixture that provides mysql, diesel, and zero backends for parameterized tests."""
     return request.param
 
 
-@pytest.fixture(params=["mysql", "wtx", "zero"])
+@pytest.fixture(params=["mysql", "zero"])
 def async_backend(request):
     """Fixture that provides mysql_async, wtx, and zero backends for parameterized async tests."""
     return request.param

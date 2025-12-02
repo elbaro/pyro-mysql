@@ -24,7 +24,7 @@ use crate::{
     r#async::{conn::AsyncConn, transaction::AsyncTransaction},
     capability_flags::CapabilityFlags,
     isolation_level::IsolationLevel,
-    opts::Opts,
+    opts::{BufferPool, Opts},
     sync::conn::SyncConn,
     util::PyroFuture,
 };
@@ -61,6 +61,9 @@ mod pyro_mysql {
 
     #[pymodule_export]
     use super::Opts;
+
+    #[pymodule_export]
+    use super::BufferPool;
 
     #[pymodule_export]
     use super::PyroFuture;
@@ -123,15 +126,15 @@ mod pyro_mysql {
         // ─── Global Constant ─────────────────────────────────────────
 
         #[pymodule_export]
-        #[allow(non_upper_case_globals)]
+        #[expect(non_upper_case_globals)]
         const apilevel: &str = "2.0";
 
         #[pymodule_export]
-        #[allow(non_upper_case_globals)]
+        #[expect(non_upper_case_globals)]
         const threadsafety: u8 = 1;
 
         #[pymodule_export]
-        #[allow(non_upper_case_globals)]
+        #[expect(non_upper_case_globals)]
         const paramstyle: &str = "qmark";
 
         // ─── Error ───────────────────────────────────────────────────
@@ -226,15 +229,15 @@ mod pyro_mysql {
         // ─── Global Constant ─────────────────────────────────────────
 
         #[pymodule_export]
-        #[allow(non_upper_case_globals)]
+        #[expect(non_upper_case_globals)]
         const apilevel: &str = "2.0";
 
         #[pymodule_export]
-        #[allow(non_upper_case_globals)]
+        #[expect(non_upper_case_globals)]
         const threadsafety: u8 = 1;
 
         #[pymodule_export]
-        #[allow(non_upper_case_globals)]
+        #[expect(non_upper_case_globals)]
         const paramstyle: &str = "qmark";
 
         // ─── Error ───────────────────────────────────────────────────

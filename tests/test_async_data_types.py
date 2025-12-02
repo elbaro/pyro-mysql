@@ -31,7 +31,14 @@ async def test_integer_types(async_backend):
     )
 
     result = await conn.query_first("SELECT * FROM test_int_types")
-    assert result and (result[0], result[1], result[2], result[3], result[4], result[5]) == (
+    assert result and (
+        result[0],
+        result[1],
+        result[2],
+        result[3],
+        result[4],
+        result[5],
+    ) == (
         127,
         32767,
         8388607,

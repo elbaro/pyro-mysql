@@ -10,8 +10,8 @@ use zero_mysql::sync::Conn;
 pub struct ZeroMysqlConn {
     pub inner: Conn,
     pub stmt_cache: std::collections::HashMap<String, PreparedStatement>,
-    affected_rows: u64,
-    last_insert_id: u64,
+    pub affected_rows: u64,
+    pub last_insert_id: u64,
 }
 
 impl ZeroMysqlConn {
@@ -220,13 +220,15 @@ impl ZeroMysqlConn {
 
         if as_dict {
             let mut handler = DictHandler::new(py);
-            self.inner.exec_bulk(stmt, bulk_params, flags, &mut handler)?;
+            self.inner
+                .exec_bulk(stmt, bulk_params, flags, &mut handler)?;
             self.affected_rows = handler.affected_rows();
             self.last_insert_id = handler.last_insert_id();
             Ok(handler.into_rows())
         } else {
             let mut handler = TupleHandler::new(py);
-            self.inner.exec_bulk(stmt, bulk_params, flags, &mut handler)?;
+            self.inner
+                .exec_bulk(stmt, bulk_params, flags, &mut handler)?;
             self.affected_rows = handler.affected_rows();
             self.last_insert_id = handler.last_insert_id();
             Ok(handler.into_rows())

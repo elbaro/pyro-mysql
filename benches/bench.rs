@@ -3,8 +3,7 @@ use mysql::{TxOpts, prelude::Queryable};
 use pyo3::{ffi::c_str, prelude::*};
 
 fn setup_db() {
-    let mut conn =
-        mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false").unwrap();
+    let mut conn = mysql::Conn::new("mysql://test:1234@localhost:3306/test").unwrap();
     conn.exec_drop("DROP TABLE IF EXISTS benchmark_test", ())
         .unwrap();
     conn.exec_drop(
@@ -22,14 +21,12 @@ fn setup_db() {
 }
 
 fn clear_table() {
-    let mut conn =
-        mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false").unwrap();
+    let mut conn = mysql::Conn::new("mysql://test:1234@localhost:3306/test").unwrap();
     conn.exec_drop("TRUNCATE TABLE benchmark_test", ()).unwrap();
 }
 
 fn populate_table(n: usize) {
-    let mut conn =
-        mysql::Conn::new("mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false").unwrap();
+    let mut conn = mysql::Conn::new("mysql://test:1234@localhost:3306/test").unwrap();
     conn.exec_drop("TRUNCATE TABLE benchmark_test", ()).unwrap();
     {
         let mut tx = conn.start_transaction(TxOpts::default()).unwrap();
@@ -65,12 +62,12 @@ pub fn bench(c: &mut Criterion) {
         for (name, setup, statement) in [
             (
                 "mysqlclient (sync)",
-                cr"mysqldb_conn = MySQLdb.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
+                cr"mysqldb_conn = MySQLdb.connect(host='localhost', port=3306, user='test', password='1234', database='test', autocommit=True)",
                 c"select_sync(mysqldb_conn)",
             ),
             (
                 "pymysql (sync)",
-                cr"pymysql_conn = pymysql.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
+                cr"pymysql_conn = pymysql.connect(host='localhost', port=3306, user='test', password='1234', database='test', autocommit=True)",
                 c"select_sync(pymysql_conn)",
             ),
             (
@@ -80,17 +77,17 @@ pub fn bench(c: &mut Criterion) {
             ),
             (
                 "pyro/mysql (sync)",
-                cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false')",
+                cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
                 c"select_pyro_sync(pyro_sync_conn)",
             ),
             (
                 "pyro/diesel (sync)",
-                cr"pyro_diesel_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='diesel')",
+                cr"pyro_diesel_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test', backend='diesel')",
                 c"select_pyro_sync(pyro_diesel_conn)",
             ),
             (
                 "pyro/zero (sync)",
-                cr"pyro_zero_mysql_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='zero')",
+                cr"pyro_zero_mysql_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test', backend='zero')",
                 c"select_pyro_sync(pyro_zero_mysql_conn)",
             ),
             (
@@ -133,12 +130,12 @@ pub fn bench(c: &mut Criterion) {
         for (name, setup, stmt_template) in [
             (
                 "mysqlclient (sync)",
-                cr"mysqldb_conn = MySQLdb.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
+                cr"mysqldb_conn = MySQLdb.connect(host='localhost', port=3306, user='test', password='1234', database='test', autocommit=True)",
                 "insert_sync(mysqldb_conn, {})",
             ),
             (
                 "pymysql (sync)",
-                cr"pymysql_conn = pymysql.connect(host='127.0.0.1', port=3306, user='test', password='1234', database='test', autocommit=True)",
+                cr"pymysql_conn = pymysql.connect(host='localhost', port=3306, user='test', password='1234', database='test', autocommit=True)",
                 "insert_sync(pymysql_conn, {})",
             ),
             (
@@ -153,22 +150,22 @@ pub fn bench(c: &mut Criterion) {
             ),
             (
                 "pyro/mysql (sync)",
-                cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false')",
+                cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
                 "insert_pyro_sync(pyro_sync_conn, {})",
             ),
             (
                 "pyro/diesel (sync)",
-                cr"pyro_diesel_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='diesel')",
+                cr"pyro_diesel_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test', backend='diesel')",
                 "insert_pyro_sync(pyro_diesel_conn, {})",
             ),
             (
                 "pyro/zero (sync)",
-                cr"pyro_zero_mysql_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='zero')",
+                cr"pyro_zero_mysql_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test', backend='zero')",
                 "insert_pyro_sync(pyro_zero_mysql_conn, {})",
             ),
             (
                 "pyro/zero (sync, bulk)",
-                cr"pyro_zero_mysql_bulk_conn = pyro_mysql.SyncConn('mysql://test:1234@127.0.0.1:3306/test', backend='zero')",
+                cr"pyro_zero_mysql_bulk_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test', backend='zero')",
                 "insert_pyro_sync_bulk(pyro_zero_mysql_bulk_conn, {})",
             ),
             (

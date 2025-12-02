@@ -48,14 +48,14 @@ impl From<crate::error::Error> for DbApiError {
             crate::error::Error::SyncUrlError(url_error) => Error::new_err(url_error.to_string()),
             crate::error::Error::AsyncUrlError(url_error) => Error::new_err(url_error.to_string()),
             crate::error::Error::SyncError(error) => {
-                if let mysql::Error::MySqlError(ref mysql_error) = error {
+                if let mysql::Error::MySqlError(mysql_error) = &error {
                     map_mysql_error_to_dbapi(mysql_error, error.to_string())
                 } else {
                     Error::new_err(error.to_string())
                 }
             }
             crate::error::Error::AsyncError(error) => {
-                if let mysql_async::Error::Server(ref server_error) = error {
+                if let mysql_async::Error::Server(server_error) = &error {
                     map_mysql_async_error_to_dbapi(server_error, error.to_string())
                 } else {
                     Error::new_err(error.to_string())

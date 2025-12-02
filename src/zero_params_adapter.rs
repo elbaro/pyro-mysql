@@ -36,8 +36,8 @@ impl<'a> Params for ParamsAdapter<'a> {
                 // Set bits for NULL parameters
                 for (i, value) in values.iter().enumerate() {
                     if value.is_null() {
-                        let byte_pos = start_len + (i / 8);
-                        let bit_offset = i % 8;
+                        let byte_pos = start_len + (i >> 3);
+                        let bit_offset = i & 7;
                         out[byte_pos] |= 1 << bit_offset;
                     }
                 }

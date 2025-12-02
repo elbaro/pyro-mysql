@@ -109,13 +109,12 @@ fn diesel_value_to_python<'py>(
 
             // We should not access time_zone_displacement, which only exists in mysql and not in mariadb
             // https://github.com/diesel-rs/diesel/issues/2373#issuecomment-618408680
-            let c_struct: &MysqlTime = unsafe { &*(bytes.as_ptr() as *const diesel::data_types::MysqlTime) };
+            let c_struct: &MysqlTime =
+                unsafe { &*(bytes.as_ptr() as *const diesel::data_types::MysqlTime) };
             match mysql_type {
-                MysqlType::Date => get_date_class(py)?.call1((
-                    c_struct.year as i32,
-                    c_struct.month,
-                    c_struct.day,
-                )),
+                MysqlType::Date => {
+                    get_date_class(py)?.call1((c_struct.year as i32, c_struct.month, c_struct.day))
+                }
                 MysqlType::DateTime | MysqlType::Timestamp => get_datetime_class(py)?.call1((
                     c_struct.year as i32,
                     c_struct.month,

@@ -54,7 +54,9 @@ async def test_update_rowcount(conn_with_table):
     assert cursor.rowcount == 3
 
     # Update some rows
-    await cursor.execute("UPDATE test_async_dbapi SET age = age + 1 WHERE age > ?", (25,))
+    await cursor.execute(
+        "UPDATE test_async_dbapi SET age = age + 1 WHERE age > ?", (25,)
+    )
     assert cursor.rowcount == 2  # Alice and Charlie
 
     # Update no rows

@@ -25,7 +25,7 @@ async def test_invalid_credentials_error(async_backend):
     """Test invalid credentials error (mysql_async only)."""
     opts = (
         Opts()
-        .host("127.0.0.1")
+        .host("localhost")
         .port(3306)
         .user("nonexistent_user")
         .password("wrong_password")

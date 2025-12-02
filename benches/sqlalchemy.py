@@ -11,7 +11,7 @@ registry.register(
     "mariadb.pyro_mysql", "pyro_mysql.sqlalchemy_sync", "MariaDBDialect_sync"
 )
 
-HOST = "127.0.0.1"
+HOST = "localhost"
 PORT = 3306
 USER = "test"
 PASSWORD = "1234"

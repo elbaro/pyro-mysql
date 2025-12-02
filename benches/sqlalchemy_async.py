@@ -14,7 +14,7 @@ registry.register(
     "mariadb.pyro_mysql_async", "pyro_mysql.sqlalchemy_async", "MariaDBDialect_async"
 )
 
-HOST = "127.0.0.1"
+HOST = "localhost"
 PORT = 3306
 USER = "test"
 PASSWORD = "1234"

@@ -54,6 +54,12 @@ class Connection(pep249.Connection):
     def is_closed(self) -> bool: ...
 
 class Cursor(pep249.Cursor):
+    # PEP-249 attributes
+    arraysize: int
+    description: list[tuple[str, Any, None, None, None, None, None]] | None
+    rowcount: int
+    lastrowid: int | None
+
     # PEP-249 optional extensions
     def __iter__(self) -> "Cursor": ...
     def __next__(self) -> tuple[Any, ...] | None: ...
@@ -70,6 +76,19 @@ def TimeFromTicks(ticks: int) -> datetime.time: ...
 def TimestampFromTicks(ticks: int) -> datetime.datetime: ...
 def Binary(x: Any) -> bytes: ...
 
+# ─── Type Object ──────────────────────────────────────────────────────────────
+
+class TypeObject:
+    """PEP-249 Type Object for comparing database types."""
+
+    ...
+
+BINARY: TypeObject
+DATETIME: TypeObject
+NUMBER: TypeObject
+ROWID: TypeObject
+STRING: TypeObject
+
 # ─── Sqlalchemy Compatibility ─────────────────────────────────────────────────
 
-def __getattr__(self, attr: str) -> Any: ...
+def __getattr__(attr: str) -> Any: ...

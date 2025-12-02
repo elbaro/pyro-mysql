@@ -56,7 +56,7 @@ impl SyncTransaction {
         }
 
         // Set isolation level if specified (must be done before START TRANSACTION)
-        if let Some(ref level) = slf_ref.isolation_level {
+        if let Some(level) = &slf_ref.isolation_level {
             let conn_ref = conn.borrow(py);
             conn_ref.query_drop_internal(format!("SET TRANSACTION ISOLATION LEVEL {}", level))?;
         }

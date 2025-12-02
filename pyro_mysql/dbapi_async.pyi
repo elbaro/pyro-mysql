@@ -24,7 +24,9 @@ class NotSupportedError(DatabaseError): ...
 
 # ─── Connection ───────────────────────────────────────────────────────────────
 
-def connect(url_or_opts: str | Opts, autocommit: bool | None = False) -> Awaitable[Connection]:
+def connect(
+    url_or_opts: str | Opts, autocommit: bool | None = False
+) -> Awaitable[Connection]:
     """
     Create an async DB-API 2.0 compliant connection to a MySQL server.
 
@@ -59,6 +61,20 @@ class Connection:
     def is_closed(self) -> Awaitable[bool]: ...
 
 class Cursor:
+    # PEP-249 attributes
+    @property
+    def arraysize(self) -> int: ...
+    @arraysize.setter
+    def arraysize(self, value: int) -> None: ...
+    @property
+    def description(
+        self,
+    ) -> list[tuple[str, Any, None, None, None, None, None]] | None: ...
+    @property
+    def rowcount(self) -> int: ...
+    @property
+    def lastrowid(self) -> int | None: ...
+
     # PEP-249 required methods (async versions)
     def close(self) -> Awaitable[None]: ...
     def execute(self, query: str, params: Any = ...) -> Awaitable[None]: ...
@@ -86,3 +102,16 @@ def DateFromTicks(ticks: int) -> datetime.date: ...
 def TimeFromTicks(ticks: int) -> datetime.time: ...
 def TimestampFromTicks(ticks: int) -> datetime.datetime: ...
 def Binary(x: Any) -> bytes: ...
+
+# ─── Type Object ──────────────────────────────────────────────────────────────
+
+class TypeObject:
+    """PEP-249 Type Object for comparing database types."""
+
+    ...
+
+BINARY: TypeObject
+DATETIME: TypeObject
+NUMBER: TypeObject
+ROWID: TypeObject
+STRING: TypeObject

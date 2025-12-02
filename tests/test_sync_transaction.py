@@ -11,7 +11,9 @@ class TestSyncTransaction:
         conn = SyncConn(get_test_db_url(), backend=backend)
 
         # First create a test table outside of transaction
-        conn.exec_drop("CREATE TEMPORARY TABLE test_tx_rollback (id INT, value VARCHAR(50))")
+        conn.exec_drop(
+            "CREATE TEMPORARY TABLE test_tx_rollback (id INT, value VARCHAR(50))"
+        )
 
         with conn.start_transaction() as tx:
             rows = conn.exec("SELECT 42 as answer")
@@ -22,7 +24,9 @@ class TestSyncTransaction:
         # Test auto-rollback on exception
         with pytest.raises(ValueError):
             with conn.start_transaction() as tx:
-                conn.exec_drop("INSERT INTO test_tx_rollback VALUES (1, 'should_rollback')")
+                conn.exec_drop(
+                    "INSERT INTO test_tx_rollback VALUES (1, 'should_rollback')"
+                )
                 raise ValueError("Intentional failure")
 
         # Verify insert was rolled back

@@ -41,7 +41,7 @@ classifiers = [
   "Framework :: AsyncIO",
   "Typing :: Typed",
 ]
-dependencies = ["pep249>=1.1.0", "sqlalchemy>=2.0.44"]
+dependencies = ["pep249>=1.1.0", "sqlalchemy>=2.0.44", "typing_extensions>=4.0.0"]
 
 [project.urls]
 Repository = "https://github.com/elbaro/pyro-mysql"

@@ -1,52 +1,9 @@
 """
 pyro_mysql - High-performance MySQL driver for Python, written in Rust.
 
-- pyro_mysql.sync: The synchronous API using the `mysql` crate.
-- pyro_mysql.async_: The asynchronous API using the `mysql_async` crate.
-- pyro_mysql.error: Exceptions.
-
-```py
-import asyncio
-import pyro_mysql as mysql
-
-mysql.init(worker_threads=1)
-
-async def example_select():
-    conn = await mysql.Conn.new("mysql://localhost@127.0.0.1:3306/test")
-    rows = await conn.exec("SELECT * from mydb.mytable")
-    print(rows[-1])  # prints tuple by default
-    # or get dict:
-    rows_as_dicts = await conn.exec("SELECT * from mydb.mytable", as_dict=True)
-    print(rows_as_dicts[-1])  # prints dict
-
-
-async def example_transaction():
-    conn = await mysql.Conn.new("mysql://localhost@127.0.0.1:3306/test")
-
-    async with conn.start_transaction() as tx:
-        await tx.exec_drop(
-            "INSERT INTO test.asyncmy(`decimal`, `date`, `datetime`, `float`, `string`, `tinyint`) VALUES (?,?,?,?,?,?)",
-            (
-                1,
-                "2021-01-01",
-                "2020-07-16 22:49:54",
-                1,
-                "asyncmy",
-                1,
-            ),
-        )
-        await tx.commit()
-
-    await len(conn.exec('SELECT * FROM mydb.mytable')) == 100
-
-# The connection pool is not tied to a single event loop.
-# You can reuse the pool between event loops.
-asyncio.run(example_pool())
-asyncio.run(example_select())
-asyncio.run(example_transaction())
-...
-```
-
+- pyro_mysql.sync: The synchronous API
+- pyro_mysql.async_: The asynchronous API
+- pyro_mysql.error: Exceptions
 """
 
 import datetime

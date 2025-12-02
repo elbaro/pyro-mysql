@@ -15,7 +15,7 @@ use crate::row::{RowDict, RowTuple};
 /// Bind parameters to a boxed SQL query
 /// This is needed because Diesel's type system requires boxing when the number/types
 /// of parameters vary at runtime. Each .bind() call changes the query's type.
-pub(crate) fn bind_params(
+pub fn bind_params(
     query_str: String,
     values: Vec<crate::value::Value>,
 ) -> BoxedSqlQuery<'static, diesel::mysql::Mysql, SqlQuery> {
@@ -76,7 +76,7 @@ pub(crate) fn bind_params(
 
 /// Diesel synchronous connection wrapper
 pub struct DieselConn {
-    pub inner: MysqlConnection,
+    inner: MysqlConnection,
     // Track last statement stats
     affected_rows: u64,
     last_insert_id: Option<u64>,

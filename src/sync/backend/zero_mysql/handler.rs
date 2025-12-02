@@ -236,14 +236,11 @@ impl<'py> BinaryResultSetHandler for DictHandler<'py> {
                     .map_err(|e| zero_mysql::error::Error::LibraryBug(e.into()))?;
                 val
             };
-            dict.set_item(
-                std::str::from_utf8(col.name_alias).unwrap_or(""),
-                py_value,
-            )
-            .unwrap();
+            dict.set_item(std::str::from_utf8(col.name_alias).unwrap_or(""), py_value)
+                .unwrap();
         }
 
-        self.rows.bind(self.py).append(dict).unwrap();
+        self.rows.bind(self.py).append(dict).expect("OOM");
         Ok(())
     }
 
@@ -284,11 +281,8 @@ impl<'py> TextResultSetHandler for DictHandler<'py> {
                 data = rest;
                 val
             };
-            dict.set_item(
-                std::str::from_utf8(col.name_alias).unwrap_or(""),
-                py_value,
-            )
-            .unwrap();
+            dict.set_item(std::str::from_utf8(col.name_alias).unwrap_or(""), py_value)
+                .unwrap();
         }
 
         self.rows.bind(self.py).append(dict).unwrap();

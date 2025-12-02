@@ -3,11 +3,13 @@
 }:
 
 pkgs.mkShell {
-  buildInputs = [
-    pkgs.gnuplot
+  buildInputs = with pkgs; [
+    gnuplot
+    openssl
+    pkg-config
 
     # Python with packages
-    (pkgs.python313.withPackages (
+    (python313.withPackages (
       ps: with ps; [
         # Runtime dependencies
         greenlet
@@ -35,11 +37,11 @@ pkgs.mkShell {
     ))
 
     # Tools available as top-level packages
-    pkgs.maturin
-    pkgs.pyright
+    maturin
+    pyright
 
     # MySQL client library for diesel backend
-    pkgs.libmysqlclient
+    libmysqlclient
   ];
 
   shellHook = ''

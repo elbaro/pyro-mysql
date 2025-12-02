@@ -7,6 +7,9 @@ from pyro_mysql import IsolationLevel, Opts, Params, PyroFuture
 class Transaction:
     """
     Represents a MySQL transaction with async context manager support.
+
+    Note: Query and exec methods are NOT available on Transaction.
+    Use the connection's query/exec methods while the transaction is active.
     """
 
     def __aenter__(self) -> PyroFuture[Self]:
@@ -28,137 +31,6 @@ class Transaction:
 
     def rollback(self) -> PyroFuture[None]:
         """Rollback the transaction."""
-        ...
-
-    def affected_rows(self) -> PyroFuture[int]:
-        """Close a prepared statement (not yet implemented)."""
-        ...
-
-    def ping(self) -> PyroFuture[None]:
-        """Ping the server to check connection."""
-        ...
-
-    @overload
-    def query(
-        self, query: str, *, as_dict: Literal[False] = False
-    ) -> PyroFuture[list[tuple[Any, ...]]]: ...
-    @overload
-    def query(
-        self, query: str, *, as_dict: Literal[True]
-    ) -> PyroFuture[list[dict[str, Any]]]: ...
-    def query(
-        self, query: str, *, as_dict: bool = False
-    ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
-        """
-        Execute a query using text protocol and return all rows.
-
-        Args:
-            query: SQL query string.
-            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
-
-        Returns:
-            List of tuples (default) or dictionaries.
-        """
-        ...
-
-    @overload
-    def query_first(
-        self, query: str, *, as_dict: Literal[False] = False
-    ) -> PyroFuture[tuple[Any, ...] | None]: ...
-    @overload
-    def query_first(
-        self, query: str, *, as_dict: Literal[True]
-    ) -> PyroFuture[dict[str, Any] | None]: ...
-    def query_first(
-        self, query: str, *, as_dict: bool = False
-    ) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
-        """
-        Execute a query using text protocol and return the first row.
-
-        Args:
-            query: SQL query string.
-            as_dict: If True, return row as dictionary. If False (default), return row as tuple.
-
-        Returns:
-            First row as tuple (default) or dictionary, or None if no results.
-        """
-        ...
-
-    def query_drop(self, query: str) -> PyroFuture[None]:
-        """
-        Execute a query using text protocol and discard the results.
-
-        Args:
-            query: SQL query string.
-        """
-        ...
-
-    @overload
-    def exec(
-        self, query: str, params: Params = None, *, as_dict: Literal[False] = False
-    ) -> PyroFuture[list[tuple[Any, ...]]]: ...
-    @overload
-    def exec(
-        self, query: str, params: Params = None, *, as_dict: Literal[True]
-    ) -> PyroFuture[list[dict[str, Any]]]: ...
-    def exec(
-        self, query: str, params: Params = None, *, as_dict: bool = False
-    ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
-        """
-        Execute a query and return all rows.
-
-        Args:
-            query: SQL query string with '?' placeholders.
-            params: Query parameters.
-            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
-
-        Returns:
-            List of tuples (default) or dictionaries.
-        """
-        ...
-
-    @overload
-    def exec_first(
-        self, query: str, params: Params = None, *, as_dict: Literal[False] = False
-    ) -> PyroFuture[tuple[Any, ...] | None]: ...
-    @overload
-    def exec_first(
-        self, query: str, params: Params = None, *, as_dict: Literal[True]
-    ) -> PyroFuture[dict[str, Any] | None]: ...
-    def exec_first(
-        self, query: str, params: Params = None, *, as_dict: bool = False
-    ) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
-        """
-        Execute a query and return the first row.
-
-        Args:
-            query: SQL query string with '?' placeholders.
-            params: Query parameters.
-            as_dict: If True, return row as dictionary. If False (default), return row as tuple.
-
-        Returns:
-            First row as tuple (default) or dictionary, or None if no results.
-        """
-        ...
-
-    def exec_drop(self, query: str, params: Params = None) -> PyroFuture[None]:
-        """
-        Execute a query and discard the results.
-
-        Args:
-            query: SQL query string with '?' placeholders.
-            params: Query parameters.
-        """
-        ...
-
-    def exec_batch(self, query: str, params: list[Params] = []) -> PyroFuture[None]:
-        """
-        Execute a query multiple times with different parameters.
-
-        Args:
-            query: SQL query string with '?' placeholders.
-            params: List of parameter sets.
-        """
         ...
 
 class Conn:
@@ -335,6 +207,34 @@ class Conn:
         Args:
             query: SQL query string with '?' placeholders.
             params: List of parameter sets.
+        """
+        ...
+
+    @overload
+    def exec_bulk(
+        self,
+        query: str,
+        params: Sequence[Params] = [],
+        *,
+        as_dict: Literal[False] = False,
+    ) -> PyroFuture[list[tuple[Any, ...]]]: ...
+    @overload
+    def exec_bulk(
+        self, query: str, params: Sequence[Params] = [], *, as_dict: Literal[True]
+    ) -> PyroFuture[list[dict[str, Any]]]: ...
+    def exec_bulk(
+        self, query: str, params: Sequence[Params] = [], *, as_dict: bool = False
+    ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
+        """
+        Execute a query multiple times with different parameters and return all results.
+
+        Args:
+            query: SQL query string with '?' placeholders.
+            params: List of parameter sets.
+            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
+
+        Returns:
+            List of tuples (default) or dictionaries.
         """
         ...
 

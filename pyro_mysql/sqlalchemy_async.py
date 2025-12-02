@@ -15,7 +15,9 @@ Usage:
 from __future__ import annotations
 
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, NoReturn, override
+from typing import TYPE_CHECKING, Any, NoReturn
+
+from typing_extensions import override
 
 from sqlalchemy import util
 from sqlalchemy.connectors.asyncio import (

@@ -6,7 +6,9 @@ integrating pyro-mysql with SQLAlchemy.
 """
 
 from types import ModuleType
-from typing import Any, cast, override
+from typing import Any, cast
+
+from typing_extensions import override
 
 from pyro_mysql.dbapi import Error
 from sqlalchemy import PoolProxiedConnection, sql, util

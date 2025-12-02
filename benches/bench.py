@@ -27,17 +27,13 @@ DATA = [
 
 
 async def create_pyro_async_conn(backend="mysql"):
-    url = (
-        "mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false"
-        if backend == "mysql"
-        else "mysql://test:1234@127.0.0.1:3306/test"
-    )
+    url = "mysql://test:1234@localhost:3306/test"
     return await pyro_mysql.AsyncConn.new(url, backend=backend)
 
 
 async def create_asyncmy_conn():
     return await asyncmy.connect(
-        host="127.0.0.1",
+        host="localhost",
         port=3306,
         user="test",
         password="1234",
@@ -48,7 +44,7 @@ async def create_asyncmy_conn():
 
 async def create_aiomysql_conn():
     return await aiomysql.connect(
-        host="127.0.0.1",
+        host="localhost",
         port=3306,
         user="test",
         password="1234",
@@ -59,7 +55,7 @@ async def create_aiomysql_conn():
 
 def create_mariadb_conn():
     return mariadb.connect(
-        host="127.0.0.1",
+        host="localhost",
         port=3306,
         user="test",
         password="1234",

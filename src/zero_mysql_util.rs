@@ -43,9 +43,6 @@ pub fn parse_server_version(version_str: &str) -> (u16, u16, u16) {
 
 /// Directly decode raw bytes to Python object based on column type and flags (binary protocol)
 ///
-/// This function skips the intermediate `Value` enum and directly converts
-/// from raw MySQL binary protocol bytes to Python objects for better performance.
-///
 /// Returns the Python object and the remaining bytes.
 pub fn decode_binary_bytes_to_python<'py, 'data>(
     py: Python<'py>,
@@ -348,9 +345,6 @@ pub fn decode_binary_bytes_to_python<'py, 'data>(
 
 /// Decode text protocol value to Python object based on column type and flags
 ///
-/// In the text protocol, all values come as strings and need to be parsed
-/// according to the column type.
-///
 /// Returns the Python object.
 pub fn decode_text_value_to_python<'py>(
     py: Python<'py>,
@@ -366,7 +360,6 @@ pub fn decode_text_value_to_python<'py>(
     match type_and_flags.column_type {
         ColumnType::MYSQL_TYPE_NULL => Ok(py.None().into_bound(py)),
 
-        // Integer types - parse from string
         ColumnType::MYSQL_TYPE_TINY
         | ColumnType::MYSQL_TYPE_SHORT
         | ColumnType::MYSQL_TYPE_INT24
@@ -391,7 +384,6 @@ pub fn decode_text_value_to_python<'py>(
             }
         }
 
-        // Floating point types - parse from string
         ColumnType::MYSQL_TYPE_FLOAT => {
             let text_str = std::str::from_utf8(text_value).map_err(|_| {
                 PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in float value")
@@ -415,7 +407,6 @@ pub fn decode_text_value_to_python<'py>(
             Ok(val.into_bound_py_any(py)?)
         }
 
-        // Temporal types - parse from string
         ColumnType::MYSQL_TYPE_DATE | ColumnType::MYSQL_TYPE_NEWDATE => {
             // Format: YYYY-MM-DD
             let text_str = std::str::from_utf8(text_value).map_err(|_| {

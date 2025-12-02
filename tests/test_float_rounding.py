@@ -5,7 +5,7 @@ import pyro_mysql
 
 def get_test_db_url() -> str:
     """Get the test database URL from environment or default."""
-    return os.environ.get("TEST_DATABASE_URL", "mysql://test:1234@127.0.0.1:3306/test")
+    return os.environ.get("TEST_DATABASE_URL", "mysql://test:1234@localhost:3306/test")
 
 
 def test_float_rounding():

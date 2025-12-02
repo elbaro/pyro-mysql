@@ -103,7 +103,7 @@ impl AsyncTransaction {
             })?;
 
             // Set isolation level if specified (must be done before START TRANSACTION)
-            if let Some(&level) = isolation_level {
+            if let Some(level) = isolation_level {
                 multi_conn_query_drop(&inner, format!("SET TRANSACTION ISOLATION LEVEL {}", level))
                     .await?;
             }

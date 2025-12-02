@@ -7,7 +7,7 @@ import MySQLdb
 import pymysql
 import pyro_mysql
 
-HOST = "127.0.0.1"
+HOST = "localhost"
 PORT = 3306
 USER = "test"
 PASSWORD = "1234"
@@ -35,9 +35,7 @@ def connect_pymysql():
 
 
 def connect_pyro_sync():
-    conn = pyro_mysql.SyncConn(
-        "mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false"
-    )
+    conn = pyro_mysql.SyncConn("mysql://test:1234@localhost:3306/test")
     # SyncConn closes automatically when dropped
 
 
@@ -45,15 +43,13 @@ def connect_pyro_sync():
 
 
 async def connect_pyro_async():
-    conn = await pyro_mysql.AsyncConn.new(
-        "mysql://test:1234@127.0.0.1:3306/test?prefer_socket=false"
-    )
+    conn = await pyro_mysql.AsyncConn.new("mysql://test:1234@localhost:3306/test")
     # AsyncConn closes automatically when dropped
 
 
 async def connect_pyro_wtx():
     conn = await pyro_mysql.AsyncConn.new_wtx(
-        "mysql://test:1234@127.0.0.1:3306/test",
+        "mysql://test:1234@localhost:3306/test",
         max_statements=32,
         buffer_size=(512, 512, 8192, 512, 32),
     )

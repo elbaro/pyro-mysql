@@ -1,5 +1,5 @@
 use mysql::consts::ColumnType;
-use pyo3::{create_exception, exceptions::PyException, PyErr};
+use pyo3::{PyErr, create_exception, exceptions::PyException};
 use thiserror::Error;
 
 pub type PyroResult<T> = std::result::Result<T, Error>;
@@ -59,10 +59,6 @@ pub enum Error {
 
     #[error("{0}")]
     ZeroMysqlError(#[from] zero_mysql::error::Error),
-    // #[error("")]
-    // NetworkTimeoutError(String),
-    // #[error("invalid header (expected {expected:?}, found {found:?})")]
-    // InvalidHeader { expected: String, found: String },
 }
 
 impl<T> From<std::sync::PoisonError<T>> for Error {

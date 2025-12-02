@@ -124,11 +124,8 @@ def test_sync_connection_autocommit(backend):
 def test_sync_connection_ssl(backend):
     """Test SSL connection (if available)."""
     url = get_test_db_url()
-    # Note: prefer_socket option is backend-specific, just use URL
-    conn_input = url
-
     try:
-        conn = Conn(conn_input, backend=backend)
+        conn = Conn(url, backend=backend)
 
         try:
             _ssl_result = conn.query_first("SHOW STATUS LIKE 'Ssl_cipher'")
@@ -179,7 +176,7 @@ def test_sync_connection_init_command(backend):
 
 def test_sync_connection_with_wrong_credentials(backend):
     """Test sync connection failure with wrong credentials."""
-    opts = Opts().host("127.0.0.1").user("nonexistent_user").password("wrong_password")
+    opts = Opts().host("localhost").user("nonexistent_user").password("wrong_password")
 
     with pytest.raises(Exception):
         Conn(opts, backend=backend)

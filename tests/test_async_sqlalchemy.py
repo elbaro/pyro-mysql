@@ -63,9 +63,9 @@ async def test_create_and_query_table(engine, setup_table):
         await session.commit()
 
         result = await session.execute(
-            text("SELECT * FROM sqlalchemy_async_test_users WHERE name = :name").bindparams(
-                name="Alice"
-            )
+            text(
+                "SELECT * FROM sqlalchemy_async_test_users WHERE name = :name"
+            ).bindparams(name="Alice")
         )
         row = result.fetchone()
         assert row is not None
@@ -107,16 +107,16 @@ async def test_update_row(engine, setup_table):
 
     async with AsyncSession(engine) as session:
         await session.execute(
-            text("UPDATE sqlalchemy_async_test_users SET age = :age WHERE id = :id").bindparams(
-                age=31, id=user_id
-            )
+            text(
+                "UPDATE sqlalchemy_async_test_users SET age = :age WHERE id = :id"
+            ).bindparams(age=31, id=user_id)
         )
         await session.commit()
 
         result = await session.execute(
-            text("SELECT age FROM sqlalchemy_async_test_users WHERE id = :id").bindparams(
-                id=user_id
-            )
+            text(
+                "SELECT age FROM sqlalchemy_async_test_users WHERE id = :id"
+            ).bindparams(id=user_id)
         )
         row = result.fetchone()
         assert row is not None
@@ -160,24 +160,24 @@ async def test_transaction_rollback(engine, setup_table):
 
     async with AsyncSession(engine) as session:
         result = await session.execute(
-            text("SELECT * FROM sqlalchemy_async_test_users WHERE name = :name").bindparams(
-                name="Alice"
-            )
+            text(
+                "SELECT * FROM sqlalchemy_async_test_users WHERE name = :name"
+            ).bindparams(name="Alice")
         )
         row = result.fetchone()
 
         await session.execute(
-            text("UPDATE sqlalchemy_async_test_users SET age = 99 WHERE name = :name").bindparams(
-                name="Alice"
-            )
+            text(
+                "UPDATE sqlalchemy_async_test_users SET age = 99 WHERE name = :name"
+            ).bindparams(name="Alice")
         )
         await session.rollback()
 
         # After rollback, the age should still be 30
         result = await session.execute(
-            text("SELECT age FROM sqlalchemy_async_test_users WHERE name = :name").bindparams(
-                name="Alice"
-            )
+            text(
+                "SELECT age FROM sqlalchemy_async_test_users WHERE name = :name"
+            ).bindparams(name="Alice")
         )
         row = result.fetchone()
         assert row.age == 30
@@ -196,17 +196,17 @@ async def test_filter_with_parameters(engine, setup_table):
         await session.commit()
 
         result = await session.execute(
-            text("SELECT * FROM sqlalchemy_async_test_users WHERE age > :age").bindparams(
-                age=28
-            )
+            text(
+                "SELECT * FROM sqlalchemy_async_test_users WHERE age > :age"
+            ).bindparams(age=28)
         )
         older_users = result.fetchall()
         assert len(older_users) == 2
 
         result = await session.execute(
-            text("SELECT * FROM sqlalchemy_async_test_users WHERE age < :age").bindparams(
-                age=28
-            )
+            text(
+                "SELECT * FROM sqlalchemy_async_test_users WHERE age < :age"
+            ).bindparams(age=28)
         )
         young_users = result.fetchall()
         assert len(young_users) == 1

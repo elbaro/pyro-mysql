@@ -140,7 +140,6 @@ async def test_connection_ssl(async_backend):
     url = get_test_db_url()
 
     try:
-        # Note: prefer_socket is backend-specific, just use URL
         conn = await get_async_conn_with_backend(url, async_backend)
 
         try:
@@ -199,7 +198,7 @@ async def test_connection_with_wrong_credentials(async_backend):
     """Test connection failure with wrong credentials."""
     if async_backend == "mysql_async":
         opts = (
-            Opts().host("127.0.0.1").user("nonexistent_user").password("wrong_password")
+            Opts().host("localhost").user("nonexistent_user").password("wrong_password")
         )
 
         with pytest.raises(Exception):
@@ -208,7 +207,7 @@ async def test_connection_with_wrong_credentials(async_backend):
         # For wtx and zero, construct URL string with wrong credentials
         with pytest.raises(Exception):
             _ = await get_async_conn_with_backend(
-                "mysql://nonexistent_user:wrong_password@127.0.0.1:3306/test",
+                "mysql://nonexistent_user:wrong_password@localhost:3306/test",
                 async_backend,
             )
 
