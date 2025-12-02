@@ -9,9 +9,9 @@ from .conftest import (
 )
 
 
-def test_basic_sync_connection(backend):
+def test_basic_sync_connection():
     """Test basic synchronous connection."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     result = conn.query_first("SELECT 1")
     assert result
@@ -31,16 +31,16 @@ def test_basic_sync_connection(backend):
 #     conn.close()
 
 
-def test_sync_connection_ping(backend):
+def test_sync_connection_ping():
     """Test sync connection ping functionality."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
     conn.ping()
     conn.close()
 
 
-def test_sync_connection_reset(backend):
+def test_sync_connection_reset():
     """Test sync connection reset functionality."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("SET @test_var = 42")
 
@@ -57,9 +57,9 @@ def test_sync_connection_reset(backend):
     conn.close()
 
 
-def test_sync_connection_server_info(backend):
+def test_sync_connection_server_info():
     """Test retrieving server information."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     server_version = conn.server_version()
     assert len(server_version) >= 5
@@ -70,12 +70,12 @@ def test_sync_connection_server_info(backend):
     conn.close()
 
 
-def test_sync_connection_charset(backend):
+def test_sync_connection_charset():
     """Test sync connection charset handling."""
     url = get_test_db_url()
     opts = Opts(url)
 
-    conn = Conn(opts, backend=backend)
+    conn = Conn(opts)
 
     charset = conn.query_first("SELECT @@character_set_connection")
     assert charset is not None
@@ -89,9 +89,9 @@ def test_sync_connection_charset(backend):
     conn.close()
 
 
-def test_sync_connection_autocommit(backend):
+def test_sync_connection_autocommit():
     """Test sync autocommit functionality."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 
@@ -121,11 +121,11 @@ def test_sync_connection_autocommit(backend):
     conn.close()
 
 
-def test_sync_connection_ssl(backend):
+def test_sync_connection_ssl():
     """Test SSL connection (if available)."""
     url = get_test_db_url()
     try:
-        conn = Conn(url, backend=backend)
+        conn = Conn(url)
 
         try:
             _ssl_result = conn.query_first("SHOW STATUS LIKE 'Ssl_cipher'")
@@ -140,14 +140,10 @@ def test_sync_connection_ssl(backend):
         pass
 
 
-def test_sync_connection_init_command(backend):
+def test_sync_connection_init_command():
     """Test sync connection initialization commands."""
-    url = get_test_db_url()
-    # Note: init commands are backend-specific, test manually
-    conn = Conn(url, backend=backend)
-
-    # Manually set the variable instead of using init command
-    conn.query_drop("SET @init_test = 123")
+    opts = Opts(get_test_db_url()).init_command("SET @init_test = 123")
+    conn = Conn(opts)
 
     result = conn.query_first("SELECT @init_test")
     assert result
@@ -174,17 +170,17 @@ def test_sync_connection_init_command(backend):
 #     conn.close()
 
 
-def test_sync_connection_with_wrong_credentials(backend):
+def test_sync_connection_with_wrong_credentials():
     """Test sync connection failure with wrong credentials."""
     opts = Opts().host("localhost").user("nonexistent_user").password("wrong_password")
 
     with pytest.raises(Exception):
-        Conn(opts, backend=backend)
+        Conn(opts)
 
 
-def test_sync_connection_to_invalid_host(backend):
+def test_sync_connection_to_invalid_host():
     """Test sync connection failure to invalid host."""
     opts = Opts().host("invalid.host.that.does.not.exist").port(3306)
 
     with pytest.raises(Exception):
-        Conn(opts, backend=backend)
+        Conn(opts)

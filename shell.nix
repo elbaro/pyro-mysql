@@ -39,9 +39,6 @@ pkgs.mkShell {
     # Tools available as top-level packages
     maturin
     pyright
-
-    # MySQL client library for diesel backend
-    libmysqlclient
   ];
 
   shellHook = ''

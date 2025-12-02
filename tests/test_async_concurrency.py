@@ -5,16 +5,16 @@ import time
 
 import pytest
 
-from .conftest import get_async_conn_with_backend, get_test_db_url
+from .conftest import get_async_conn, get_test_db_url
 
 
 @pytest.mark.asyncio
-async def test_concurrent_sleep(async_backend):
+async def test_concurrent_sleep():
     """Test that multiple async connections can run queries concurrently."""
     # Create 3 async connections
-    conn1 = await get_async_conn_with_backend(get_test_db_url(), async_backend)
-    conn2 = await get_async_conn_with_backend(get_test_db_url(), async_backend)
-    conn3 = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn1 = await get_async_conn(get_test_db_url())
+    conn2 = await get_async_conn(get_test_db_url())
+    conn3 = await get_async_conn(get_test_db_url())
 
     try:
         # Record start time

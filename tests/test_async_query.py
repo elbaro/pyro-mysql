@@ -2,16 +2,16 @@ import pytest
 
 from .conftest import (
     cleanup_test_table_async,
-    get_async_conn_with_backend,
+    get_async_conn,
     get_test_db_url,
     setup_test_table_async,
 )
 
 
 @pytest.mark.asyncio
-async def test_basic_query(async_backend):
+async def test_basic_query():
     """Test basic query execution."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     result = await conn.query("SELECT 1 UNION SELECT 2 UNION SELECT 3")
 
@@ -24,9 +24,9 @@ async def test_basic_query(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_query_with_params(async_backend):
+async def test_query_with_params():
     """Test query execution with parameters."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -49,9 +49,9 @@ async def test_query_with_params(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_query_first(async_backend):
+async def test_query_first():
     """Test query_first method."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -77,9 +77,9 @@ async def test_query_first(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_batch_exec(async_backend):
+async def test_batch_exec():
     """Test batch execution."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -102,9 +102,9 @@ async def test_batch_exec(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_query_with_nulls(async_backend):
+async def test_query_with_nulls():
     """Test handling of NULL values in queries."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -124,9 +124,9 @@ async def test_query_with_nulls(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_multi_statement_query(async_backend):
+async def test_multi_statement_query():
     """Test multi-statement query execution."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -144,9 +144,9 @@ async def test_multi_statement_query(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_last_insert_id(async_backend):
+async def test_last_insert_id():
     """Test last_insert_id functionality."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -171,9 +171,9 @@ async def test_last_insert_id(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_affected_rows(async_backend):
+async def test_affected_rows():
     """Test affected_rows functionality."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -203,9 +203,9 @@ async def test_affected_rows(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_query_as_dict(async_backend):
+async def test_query_as_dict():
     """Test async query with as_dict=True returns dictionaries."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -231,9 +231,9 @@ async def test_query_as_dict(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_query_first_as_dict(async_backend):
+async def test_query_first_as_dict():
     """Test async query_first with as_dict=True returns dictionary."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -262,9 +262,9 @@ async def test_query_first_as_dict(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_exec_as_dict(async_backend):
+async def test_exec_as_dict():
     """Test async exec with as_dict=True returns dictionaries."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -289,9 +289,9 @@ async def test_exec_as_dict(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_exec_first_as_dict(async_backend):
+async def test_exec_first_as_dict():
     """Test async exec_first with as_dict=True returns dictionary."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -320,9 +320,9 @@ async def test_exec_first_as_dict(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_query_as_dict_with_nulls(async_backend):
+async def test_query_as_dict_with_nulls():
     """Test async query with as_dict=True handles NULL values correctly."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 

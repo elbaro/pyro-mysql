@@ -1,6 +1,6 @@
 [package]
 name = "pyro-mysql"
-version = "0.1.9"
+version = "0.2.0"
 edition = "2024"
 
 [lib]
@@ -10,14 +10,9 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 chrono = "0.4"
 criterion = "0.8.0"
-diesel = { version = "2.2", features = ["mysql", "chrono"] }
 either = "1.15.0"
 futures = "0.3.31"
 log = "0.4.28"
-mysql = "26.0.1"
-mysql_async = "0.36.1"
-mysql_common = "0.35.5"
-mysqlclient-sys = "0.4.7"
 parking_lot = { version = "0.12.4", features = ["send_guard"] }
 pyo3 = { version = "0.27.1", features = [
   "experimental-async",
@@ -30,12 +25,6 @@ pyo3-async-runtimes = { version = "0.27.0", features = ["tokio-runtime"] }
 pyo3-log = "0.13.2"
 ryu = "1"
 simdutf8 = "0.1"
-wtx = { version = "0.38", features = [
-  "database",
-  "mysql",
-  "getrandom",
-  "tokio",
-] }
 thiserror = "2"
 tokio = "1"
 tokio-util = { version = "0.7.16", features = ["rt"] }
@@ -46,9 +35,6 @@ zero-mysql = { version = "0.1", features = [
   "tokio",
   "tokio-tls",
 ] }
-
-[patch.crates-io]
-mysql_async = { git = "https://github.com/elbaro/mysql_async.git", rev = "3811ae03b54872248ed183f1968b2dc033c8dcc4" }
 
 [dev-dependencies]
 coz = "0.1.3"

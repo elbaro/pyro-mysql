@@ -26,9 +26,9 @@ DATA = [
 # ─── Connection Setup Helpers ─────────────────────────────────────────────────
 
 
-async def create_pyro_async_conn(backend="mysql"):
+async def create_pyro_async_conn():
     url = "mysql://test:1234@localhost:3306/test"
-    return await pyro_mysql.AsyncConn.new(url, backend=backend)
+    return await pyro_mysql.AsyncConn.new(url)
 
 
 async def create_asyncmy_conn():

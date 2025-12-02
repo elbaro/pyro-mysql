@@ -1,26 +1,84 @@
 // PEP 249 – Python Database API Specification v2.0
 
+use std::collections::HashMap;
+
 use either::Either;
 use parking_lot::RwLock;
 use pyo3::{prelude::*, types::PyList};
+use zero_mysql::PreparedStatement;
+use zero_mysql::sync::Conn;
 
 use crate::{
     dbapi::{cursor::Cursor, error::DbApiResult, zero_handler::DbApiHandler},
     error::Error,
     opts::Opts as PyroOpts,
     params::Params,
-    sync::backend::ZeroMysqlConn,
     zero_params_adapter::ParamsAdapter,
 };
 
 use pyo3::types::PyTuple;
 
-#[pyclass(module = "pyro_mysql.dbapi", name = "Connection")]
-pub struct DbApiConn {
-    conn: RwLock<Option<ZeroMysqlConn>>,
+/// Internal connection wrapper for dbapi sync
+pub struct DbApiZeroConn {
+    pub inner: Conn,
+    pub stmt_cache: HashMap<String, PreparedStatement>,
+    affected_rows: u64,
+    last_insert_id: u64,
 }
 
-/// A row from zero_mysql backend (already a Python tuple)
+impl DbApiZeroConn {
+    pub fn new(url: &str) -> Result<Self, Error> {
+        let opts: zero_mysql::Opts = url.try_into().map_err(Error::ZeroMysqlError)?;
+        Self::new_with_opts(opts)
+    }
+
+    pub fn new_with_opts(opts: zero_mysql::Opts) -> Result<Self, Error> {
+        let inner = Conn::new(opts)?;
+        Ok(Self {
+            inner,
+            stmt_cache: HashMap::new(),
+            affected_rows: 0,
+            last_insert_id: 0,
+        })
+    }
+
+    pub fn affected_rows(&self) -> u64 {
+        self.affected_rows
+    }
+
+    pub fn last_insert_id(&self) -> u64 {
+        self.last_insert_id
+    }
+
+    pub fn ping(&mut self) -> Result<(), Error> {
+        self.inner.ping()?;
+        Ok(())
+    }
+
+    pub fn exec_drop(&mut self, query: String, params: Params) -> Result<(), Error> {
+        use crate::sync::handler::DropHandler;
+
+        if !self.stmt_cache.contains_key(&query) {
+            let stmt = self.inner.prepare(&query)?;
+            self.stmt_cache.insert(query.clone(), stmt);
+        }
+        #[expect(clippy::unwrap_used)]
+        let stmt = self.stmt_cache.get_mut(&query).unwrap();
+
+        let mut handler = DropHandler::default();
+        let params_adapter = ParamsAdapter::new(&params);
+        self.inner.exec(stmt, params_adapter, &mut handler)?;
+        self.affected_rows = handler.affected_rows;
+        self.last_insert_id = handler.last_insert_id;
+        Ok(())
+    }
+}
+
+#[pyclass(module = "pyro_mysql.dbapi", name = "Connection")]
+pub struct DbApiConn {
+    conn: RwLock<Option<DbApiZeroConn>>,
+}
+
 pub struct DbApiRow(pub Py<PyTuple>);
 
 impl DbApiRow {
@@ -44,8 +102,8 @@ pub enum DbApiExecResult {
 impl DbApiConn {
     pub fn new(url_or_opts: Either<String, PyRef<PyroOpts>>) -> DbApiResult<Self> {
         let conn = match url_or_opts {
-            Either::Left(url) => ZeroMysqlConn::new(&url)?,
-            Either::Right(opts) => ZeroMysqlConn::new_with_opts(opts.inner.clone())?,
+            Either::Left(url) => DbApiZeroConn::new(&url)?,
+            Either::Right(opts) => DbApiZeroConn::new_with_opts(opts.inner.clone())?,
         };
         Ok(Self {
             conn: RwLock::new(Some(conn)),
@@ -54,7 +112,7 @@ impl DbApiConn {
 
     fn with_conn<T, F>(&self, f: F) -> DbApiResult<T>
     where
-        F: FnOnce(&mut ZeroMysqlConn) -> DbApiResult<T>,
+        F: FnOnce(&mut DbApiZeroConn) -> DbApiResult<T>,
     {
         let mut guard = self.conn.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
@@ -70,6 +128,7 @@ impl DbApiConn {
                 let stmt = conn.inner.prepare(query).map_err(Error::ZeroMysqlError)?;
                 conn.stmt_cache.insert(query.to_string(), stmt);
             }
+            #[expect(clippy::unwrap_used)]
             let stmt = conn.stmt_cache.get_mut(query).unwrap();
 
             // Execute with custom handler that captures description

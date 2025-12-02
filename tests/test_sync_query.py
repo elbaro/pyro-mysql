@@ -7,9 +7,9 @@ from .conftest import (
 )
 
 
-def test_basic_sync_query(backend):
+def test_basic_sync_query():
     """Test basic synchronous query execution."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     result = conn.query("SELECT 1 UNION SELECT 2 UNION SELECT 3")
 
@@ -21,9 +21,9 @@ def test_basic_sync_query(backend):
     conn.close()
 
 
-def test_sync_query_with_params(backend):
+def test_sync_query_with_params():
     """Test sync query execution with parameters."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 
@@ -45,9 +45,9 @@ def test_sync_query_with_params(backend):
     conn.close()
 
 
-def test_sync_query_first(backend):
+def test_sync_query_first():
     """Test sync query_first method."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 
@@ -68,9 +68,9 @@ def test_sync_query_first(backend):
     conn.close()
 
 
-def test_sync_batch_exec(backend):
+def test_sync_batch_exec():
     """Test sync batch execution."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 
@@ -92,9 +92,9 @@ def test_sync_batch_exec(backend):
     conn.close()
 
 
-def test_sync_query_with_nulls(backend):
+def test_sync_query_with_nulls():
     """Test sync handling of NULL values in queries."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 
@@ -113,9 +113,9 @@ def test_sync_query_with_nulls(backend):
     conn.close()
 
 
-def test_sync_multi_statement_query(backend):
+def test_sync_multi_statement_query():
     """Test sync multi-statement query execution."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 
@@ -132,9 +132,9 @@ def test_sync_multi_statement_query(backend):
     conn.close()
 
 
-def test_sync_last_insert_id(backend):
+def test_sync_last_insert_id():
     """Test sync last_insert_id functionality."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 
@@ -154,9 +154,9 @@ def test_sync_last_insert_id(backend):
     conn.close()
 
 
-def test_sync_affected_rows(backend):
+def test_sync_affected_rows():
     """Test sync affected_rows functionality."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 
@@ -185,9 +185,9 @@ def test_sync_affected_rows(backend):
 # ─── as_dict=True Tests ────────────────────────────────────────────────────
 
 
-def test_sync_query_as_dict(backend):
+def test_sync_query_as_dict():
     """Test sync query with as_dict=True returns dictionaries."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 
@@ -210,9 +210,9 @@ def test_sync_query_as_dict(backend):
     conn.close()
 
 
-def test_sync_query_first_as_dict(backend):
+def test_sync_query_first_as_dict():
     """Test sync query_first with as_dict=True returns dictionary."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 
@@ -240,9 +240,9 @@ def test_sync_query_first_as_dict(backend):
     conn.close()
 
 
-def test_sync_exec_as_dict(backend):
+def test_sync_exec_as_dict():
     """Test sync exec with as_dict=True returns dictionaries."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 
@@ -266,9 +266,9 @@ def test_sync_exec_as_dict(backend):
     conn.close()
 
 
-def test_sync_exec_first_as_dict(backend):
+def test_sync_exec_first_as_dict():
     """Test sync exec_first with as_dict=True returns dictionary."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 
@@ -296,9 +296,9 @@ def test_sync_exec_first_as_dict(backend):
     conn.close()
 
 
-def test_sync_query_as_dict_with_nulls(backend):
+def test_sync_query_as_dict_with_nulls():
     """Test sync query with as_dict=True handles NULL values correctly."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     setup_test_table_sync(conn)
 

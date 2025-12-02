@@ -48,7 +48,7 @@ class Conn:
         ...
 
     @staticmethod
-    def new(url_or_opts: str | Opts, backend: str = "mysql") -> PyroFuture["Conn"]:
+    def new(url_or_opts: str | Opts) -> PyroFuture["Conn"]:
         """
         Create a new connection.
 

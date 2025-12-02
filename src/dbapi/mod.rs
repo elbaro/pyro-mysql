@@ -11,8 +11,11 @@ pub mod zero_handler;
 use std::sync::Arc;
 
 use crate::{
-    r#async::backend::ZeroMysqlConn,
-    dbapi::{async_conn::AsyncDbApiConn, conn::DbApiConn, error::DbApiResult},
+    dbapi::{
+        async_conn::{AsyncDbApiConn, DbApiAsyncZeroConn},
+        conn::DbApiConn,
+        error::DbApiResult,
+    },
     error::Error,
     opts::Opts,
     util::{PyroFuture, rust_future_into_py},
@@ -41,7 +44,6 @@ pub fn connect_async(
     url_or_opts: Either<String, PyRef<Opts>>,
     autocommit: Option<bool>,
 ) -> DbApiResult<Py<PyroFuture>> {
-    // Use zero_mysql backend
     let opts = match url_or_opts {
         Either::Left(url) => {
             let inner: zero_mysql::Opts = url.as_str().try_into().map_err(Error::ZeroMysqlError)?;
@@ -50,7 +52,7 @@ pub fn connect_async(
         Either::Right(opts) => opts.inner.clone(),
     };
     Ok(rust_future_into_py(py, async move {
-        let mut conn = ZeroMysqlConn::new_with_opts(opts).await?;
+        let mut conn = DbApiAsyncZeroConn::new_with_opts(opts).await?;
         if let Some(on) = autocommit {
             let query = if on {
                 "SET autocommit=1"

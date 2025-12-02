@@ -33,7 +33,7 @@ class Conn:
     Synchronous MySQL connection.
     """
 
-    def __init__(self, url_or_opts: str | Opts, backend: str = "mysql") -> None:
+    def __init__(self, url_or_opts: str | Opts) -> None:
         """
         Create a new synchronous connection.
 

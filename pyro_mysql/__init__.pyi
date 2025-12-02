@@ -34,6 +34,22 @@ AsyncTransaction = async_.Transaction
 SyncConn = sync.Conn
 SyncTransaction = sync.Transaction
 
+class BufferPool:
+    """
+    A pool of reusable buffers for MySQL connections.
+
+    Buffer pools reduce memory allocation overhead by reusing buffers across queries.
+    """
+
+    def __new__(cls, capacity: int | None = None) -> "BufferPool":
+        """
+        Create a new BufferPool with the specified capacity.
+
+        Args:
+            capacity: Maximum number of buffer sets to pool (default: 128)
+        """
+        ...
+
 class Opts:
     """
     Connection options for MySQL connections.
@@ -89,6 +105,18 @@ class Opts:
 
     def compress(self, enable: bool) -> "Opts":
         """Enable or disable compression for the connection."""
+        ...
+
+    def upgrade_to_unix_socket(self, enable: bool) -> "Opts":
+        """Enable or disable automatic upgrade from TCP to Unix socket."""
+        ...
+
+    def init_command(self, command: str | None) -> "Opts":
+        """Set an SQL command to execute immediately after connection is established."""
+        ...
+
+    def buffer_pool(self, pool: "BufferPool") -> "Opts":
+        """Set a custom buffer pool for connection."""
         ...
 
     def capabilities(self, capabilities: int) -> "Opts":

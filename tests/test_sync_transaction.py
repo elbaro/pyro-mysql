@@ -6,9 +6,9 @@ from .conftest import get_test_db_url
 
 
 class TestSyncTransaction:
-    def test_start_transaction(self, backend):
+    def test_start_transaction(self):
         """Test run_transaction with a callable"""
-        conn = SyncConn(get_test_db_url(), backend=backend)
+        conn = SyncConn(get_test_db_url())
 
         # First create a test table outside of transaction
         conn.exec_drop(
@@ -33,9 +33,9 @@ class TestSyncTransaction:
         rows = conn.exec("SELECT * FROM test_tx_rollback")
         assert len(rows) == 0
 
-    def test_nested_transaction_not_allowed(self, backend):
+    def test_nested_transaction_not_allowed(self):
         """Test that nested transactions are not allowed"""
-        conn = SyncConn(get_test_db_url(), backend=backend)
+        conn = SyncConn(get_test_db_url())
 
         with conn.start_transaction() as tx:
             # Trying to start a second transaction should fail

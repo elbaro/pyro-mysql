@@ -1,79 +1,51 @@
+use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
 
 use either::Either;
-use mysql::{Opts as MysqlOpts, prelude::*};
 use parking_lot::RwLock;
 use pyo3::prelude::*;
 use pyo3::types::PyList;
+use zero_mysql::PreparedStatement;
+use zero_mysql::sync::Conn;
 
 use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
 use crate::opts::Opts;
 use crate::params::Params;
-use crate::row::Row;
-use crate::sync::multi_conn::MultiSyncConn;
+use crate::sync::handler::{DictHandler, DropHandler, TupleHandler};
 use crate::sync::transaction::SyncTransaction;
+use crate::zero_params_adapter::{BulkParamsSetAdapter, ParamsAdapter};
 
 #[pyclass(module = "pyro_mysql.sync", name = "Conn")]
 pub struct SyncConn {
-    pub inner: RwLock<Option<MultiSyncConn>>,
+    pub inner: RwLock<Option<Conn>>,
     pub in_transaction: AtomicBool,
+    pub stmt_cache: RwLock<HashMap<String, PreparedStatement>>,
+    affected_rows: RwLock<u64>,
+    last_insert_id: RwLock<u64>,
 }
 
 #[pymethods]
 impl SyncConn {
     #[new]
-    #[pyo3(signature = (url_or_opts, backend="mysql"))]
-    pub fn new(url_or_opts: Either<String, PyRef<Opts>>, backend: &str) -> PyroResult<Self> {
-        match backend {
-            "mysql" => {
-                let opts = match url_or_opts {
-                    Either::Left(url) => MysqlOpts::from_url(&url)?,
-                    Either::Right(opts) => opts.to_mysql_opts(),
-                };
-                let conn = crate::sync::backend::MysqlConn::new(opts)?;
-
-                Ok(Self {
-                    inner: RwLock::new(Some(MultiSyncConn::Mysql(conn))),
-                    in_transaction: AtomicBool::new(false),
-                })
+    #[pyo3(signature = (url_or_opts))]
+    pub fn new(url_or_opts: Either<String, PyRef<Opts>>) -> PyroResult<Self> {
+        let opts = match url_or_opts {
+            Either::Left(url) => {
+                let inner: zero_mysql::Opts = url.as_str().try_into().map_err(Error::from)?;
+                inner
             }
-            "diesel" => {
-                let url = match url_or_opts {
-                    Either::Left(url) => url,
-                    Either::Right(_opts) => {
-                        return Err(crate::error::Error::IncorrectApiUsageError(
-                            "Diesel backend currently only supports URL strings",
-                        ));
-                    }
-                };
-                let conn = crate::sync::backend::DieselConn::new(&url)?;
+            Either::Right(opts) => opts.inner.clone(),
+        };
+        let conn = Conn::new(opts)?;
 
-                Ok(Self {
-                    inner: RwLock::new(Some(MultiSyncConn::Diesel(conn))),
-                    in_transaction: AtomicBool::new(false),
-                })
-            }
-            "zero" => {
-                let opts = match url_or_opts {
-                    Either::Left(url) => {
-                        let inner: zero_mysql::Opts =
-                            url.as_str().try_into().map_err(Error::from)?;
-                        inner
-                    }
-                    Either::Right(opts) => opts.inner.clone(),
-                };
-                let conn = crate::sync::backend::ZeroMysqlConn::new_with_opts(opts)?;
-
-                Ok(Self {
-                    inner: RwLock::new(Some(MultiSyncConn::ZeroMysql(conn))),
-                    in_transaction: AtomicBool::new(false),
-                })
-            }
-            _ => Err(crate::error::Error::IncorrectApiUsageError(
-                "Unknown backend. Supported backends: 'mysql', 'diesel', 'zero'",
-            )),
-        }
+        Ok(Self {
+            inner: RwLock::new(Some(conn)),
+            in_transaction: AtomicBool::new(false),
+            stmt_cache: RwLock::new(HashMap::new()),
+            affected_rows: RwLock::new(0),
+            last_insert_id: RwLock::new(0),
+        })
     }
 
     #[pyo3(signature=(consistent_snapshot=false, isolation_level=None, readonly=None))]
@@ -90,27 +62,22 @@ impl SyncConn {
     fn id(&self) -> PyroResult<u64> {
         let guard = self.inner.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
-        Ok(conn.id())
+        Ok(conn.connection_id())
     }
 
     fn affected_rows(&self) -> PyResult<u64> {
-        let guard = self.inner.read();
-        let conn = guard.as_ref().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Connection is not available")
-        })?;
-        Ok(conn.affected_rows())
+        Ok(*self.affected_rows.read())
     }
 
     fn last_insert_id(&self) -> PyroResult<Option<u64>> {
-        let guard = self.inner.read();
-        let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
-        Ok(conn.last_insert_id())
+        Ok(Some(*self.last_insert_id.read()))
     }
 
     fn ping(&self) -> PyroResult<()> {
         let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        conn.ping()
+        conn.ping()?;
+        Ok(())
     }
 
     // ─── Text Protocol ───────────────────────────────────────────────────
@@ -123,34 +90,22 @@ impl SyncConn {
         as_dict: bool,
     ) -> PyroResult<Vec<Py<PyAny>>> {
         let mut guard = self.inner.write();
-        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
-        match multi_conn {
-            MultiSyncConn::Mysql(conn) => {
-                let rows: Vec<Row> = conn.inner.query(query)?;
-                // Convert rows to either tuples or dicts
-                let result: Vec<Py<PyAny>> = if as_dict {
-                    rows.iter()
-                        .map(|row| row.to_dict(py).map(|d| d.into_any().unbind()))
-                        .collect::<PyResult<_>>()?
-                } else {
-                    rows.iter()
-                        .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
-                        .collect::<PyResult<_>>()?
-                };
-                Ok(result)
-            }
-            MultiSyncConn::Diesel(conn) => {
-                // Diesel handles as_dict internally
-                conn.query(query, as_dict)
-            }
-            MultiSyncConn::ZeroMysql(conn) => {
-                let rows = conn.query(py, query, as_dict)?;
-                // ZeroMysql returns PyList, convert to Vec<Py<PyAny>>
-                let result: Vec<Py<PyAny>> =
-                    rows.bind(py).iter().map(|item| item.unbind()).collect();
-                Ok(result)
-            }
+        if as_dict {
+            let mut handler = DictHandler::new(py);
+            conn.query(&query, &mut handler)?;
+            *self.affected_rows.write() = handler.affected_rows();
+            *self.last_insert_id.write() = handler.last_insert_id();
+            let rows = handler.into_rows();
+            Ok(rows.bind(py).iter().map(|item| item.unbind()).collect())
+        } else {
+            let mut handler = TupleHandler::new(py);
+            conn.query(&query, &mut handler)?;
+            *self.affected_rows.write() = handler.affected_rows();
+            *self.last_insert_id.write() = handler.last_insert_id();
+            let rows = handler.into_rows();
+            Ok(rows.bind(py).iter().map(|item| item.unbind()).collect())
         }
     }
 
@@ -162,49 +117,44 @@ impl SyncConn {
         as_dict: bool,
     ) -> PyroResult<Option<Py<PyAny>>> {
         let mut guard = self.inner.write();
-        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
-        match multi_conn {
-            MultiSyncConn::Mysql(conn) => {
-                let row: Option<Row> = conn.inner.query_first(query)?;
-                // Convert row to either tuple or dict
-                match row {
-                    Some(r) => {
-                        let result: Py<PyAny> = if as_dict {
-                            r.to_dict(py)?.into_any().unbind()
-                        } else {
-                            r.to_tuple(py)?.into_any().unbind()
-                        };
-                        Ok(Some(result))
-                    }
-                    None => Ok(None),
-                }
-            }
-            MultiSyncConn::Diesel(conn) => {
-                // Diesel handles as_dict internally
-                conn.query_first(query, as_dict)
-            }
-            MultiSyncConn::ZeroMysql(conn) => {
-                let rows = conn.query(py, query, as_dict)?;
-                // Get first row if any
-                Ok(if rows.bind(py).len() > 0 {
-                    Some(rows.bind(py).get_item(0)?.unbind())
-                } else {
-                    None
-                })
-            }
+        if as_dict {
+            let mut handler = DictHandler::new(py);
+            conn.query(&query, &mut handler)?;
+            *self.affected_rows.write() = handler.affected_rows();
+            *self.last_insert_id.write() = handler.last_insert_id();
+            let rows = handler.into_rows();
+            Ok(if rows.bind(py).len() > 0 {
+                Some(rows.bind(py).get_item(0)?.unbind())
+            } else {
+                None
+            })
+        } else {
+            let mut handler = TupleHandler::new(py);
+            conn.query(&query, &mut handler)?;
+            *self.affected_rows.write() = handler.affected_rows();
+            *self.last_insert_id.write() = handler.last_insert_id();
+            let rows = handler.into_rows();
+            Ok(if rows.bind(py).len() > 0 {
+                Some(rows.bind(py).get_item(0)?.unbind())
+            } else {
+                None
+            })
         }
     }
 
     #[pyo3(signature = (query))]
     fn query_drop(&self, query: String) -> PyroResult<()> {
         let mut guard = self.inner.write();
-        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        match multi_conn {
-            MultiSyncConn::Mysql(conn) => Ok(conn.inner.query_drop(query)?),
-            MultiSyncConn::Diesel(conn) => conn.query_drop(query),
-            MultiSyncConn::ZeroMysql(conn) => conn.query_drop(query),
-        }
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+
+        let mut handler = DropHandler::default();
+        conn.query(&query, &mut handler)?;
+
+        *self.affected_rows.write() = handler.affected_rows;
+        *self.last_insert_id.write() = handler.last_insert_id;
+        Ok(())
     }
 
     // ─── Binary Protocol ─────────────────────────────────────────────────
@@ -218,37 +168,31 @@ impl SyncConn {
         as_dict: bool,
     ) -> PyroResult<Py<PyList>> {
         let mut guard = self.inner.write();
-        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
-        match multi_conn {
-            MultiSyncConn::Mysql(conn) => {
-                // log::debug!("exec {query}");
-                let rows: Vec<Row> =
-                    conn.inner
-                        .exec_fold(query, params, Vec::new(), |mut acc, row| {
-                            acc.push(mysql::from_row::<Row>(row));
-                            acc
-                        })?;
+        let mut cache = self.stmt_cache.write();
+        if !cache.contains_key(&query) {
+            let stmt = conn
+                .prepare(&query)
+                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
+            cache.insert(query.clone(), stmt);
+        }
+        #[expect(clippy::unwrap_used)]
+        let stmt = cache.get_mut(&query).unwrap();
 
-                // Convert rows to either tuples or dicts
-                let result: Vec<Py<PyAny>> = if as_dict {
-                    rows.iter()
-                        .map(|row| row.to_dict(py).map(|d| d.into_any().unbind()))
-                        .collect::<PyResult<_>>()?
-                } else {
-                    rows.iter()
-                        .map(|row| row.to_tuple(py).map(|t| t.into_any().unbind()))
-                        .collect::<PyResult<_>>()?
-                };
-                Ok(PyList::new(py, result).unwrap().unbind())
-            }
-            MultiSyncConn::Diesel(conn) => {
-                // Diesel handles as_dict internally
-                Ok(PyList::new(py, conn.exec(query, params, as_dict)?)
-                    .unwrap()
-                    .unbind())
-            }
-            MultiSyncConn::ZeroMysql(conn) => conn.exec(py, query, params, as_dict),
+        let params_adapter = ParamsAdapter::new(&params);
+        if as_dict {
+            let mut handler = DictHandler::new(py);
+            conn.exec(stmt, params_adapter, &mut handler)?;
+            *self.affected_rows.write() = handler.affected_rows();
+            *self.last_insert_id.write() = handler.last_insert_id();
+            Ok(handler.into_rows())
+        } else {
+            let mut handler = TupleHandler::new(py);
+            conn.exec(stmt, params_adapter, &mut handler)?;
+            *self.affected_rows.write() = handler.affected_rows();
+            *self.last_insert_id.write() = handler.last_insert_id();
+            Ok(handler.into_rows())
         }
     }
 
@@ -261,66 +205,91 @@ impl SyncConn {
         as_dict: bool,
     ) -> PyroResult<Option<Py<PyAny>>> {
         let mut guard = self.inner.write();
-        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
-        match multi_conn {
-            MultiSyncConn::Mysql(conn) => {
-                // log::debug!("exec_first {query}");
-                let row: Option<Row> = conn.inner.exec_first(query, params)?;
+        let mut cache = self.stmt_cache.write();
+        if !cache.contains_key(&query) {
+            let stmt = conn
+                .prepare(&query)
+                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
+            cache.insert(query.clone(), stmt);
+        }
+        #[expect(clippy::unwrap_used)]
+        let stmt = cache.get_mut(&query).unwrap();
 
-                // Convert row to either tuple or dict
-                match row {
-                    Some(r) => {
-                        let result: Py<PyAny> = if as_dict {
-                            r.to_dict(py)?.into_any().unbind()
-                        } else {
-                            r.to_tuple(py)?.into_any().unbind()
-                        };
-                        Ok(Some(result))
-                    }
-                    None => Ok(None),
-                }
-            }
-            MultiSyncConn::Diesel(conn) => {
-                // Diesel handles as_dict internally
-                conn.exec_first(query, params, as_dict)
-            }
-            MultiSyncConn::ZeroMysql(conn) => conn.exec_first(py, query, params, as_dict),
+        let params_adapter = ParamsAdapter::new(&params);
+        if as_dict {
+            let mut handler = DictHandler::new(py);
+            conn.exec_first(stmt, params_adapter, &mut handler)?;
+            *self.affected_rows.write() = handler.affected_rows();
+            *self.last_insert_id.write() = handler.last_insert_id();
+            let rows = handler.into_rows();
+            Ok(if rows.bind(py).len() > 0 {
+                Some(rows.bind(py).get_item(0)?.unbind())
+            } else {
+                None
+            })
+        } else {
+            let mut handler = TupleHandler::new(py);
+            conn.exec_first(stmt, params_adapter, &mut handler)?;
+            *self.affected_rows.write() = handler.affected_rows();
+            *self.last_insert_id.write() = handler.last_insert_id();
+            let rows = handler.into_rows();
+            Ok(if rows.bind(py).len() > 0 {
+                Some(rows.bind(py).get_item(0)?.unbind())
+            } else {
+                None
+            })
         }
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_drop(&self, query: String, params: Params) -> PyroResult<()> {
         let mut guard = self.inner.write();
-        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        match multi_conn {
-            MultiSyncConn::Mysql(conn) => {
-                // log::debug!("exec_drop {query}");
-                Ok(conn.inner.exec_drop(query, params)?)
-            }
-            MultiSyncConn::Diesel(conn) => conn.exec_drop(query, params),
-            MultiSyncConn::ZeroMysql(conn) => conn.exec_drop(query, params),
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+
+        let mut cache = self.stmt_cache.write();
+        if !cache.contains_key(&query) {
+            let stmt = conn
+                .prepare(&query)
+                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
+            cache.insert(query.clone(), stmt);
         }
+        #[expect(clippy::unwrap_used)]
+        let stmt = cache.get_mut(&query).unwrap();
+
+        let mut handler = DropHandler::default();
+        let params_adapter = ParamsAdapter::new(&params);
+        conn.exec(stmt, params_adapter, &mut handler)?;
+
+        *self.affected_rows.write() = handler.affected_rows;
+        *self.last_insert_id.write() = handler.last_insert_id;
+        Ok(())
     }
 
     #[pyo3(signature = (query, params_list=vec![]))]
     fn exec_batch(&self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
         let mut guard = self.inner.write();
-        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        match multi_conn {
-            MultiSyncConn::Mysql(conn) => {
-                // log::debug!("exec_batch {query}");
-                Ok(conn.inner.exec_batch(query, params_list)?)
-            }
-            MultiSyncConn::Diesel(conn) => conn.exec_batch(query, params_list),
-            MultiSyncConn::ZeroMysql(conn) => {
-                // Execute each params set
-                for params in params_list {
-                    conn.exec_drop(query.clone(), params)?;
-                }
-                Ok(())
-            }
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+
+        let mut cache = self.stmt_cache.write();
+        if !cache.contains_key(&query) {
+            let stmt = conn
+                .prepare(&query)
+                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
+            cache.insert(query.clone(), stmt);
         }
+        #[expect(clippy::unwrap_used)]
+        let stmt = cache.get_mut(&query).unwrap();
+
+        for params in params_list {
+            let mut handler = DropHandler::default();
+            let params_adapter = ParamsAdapter::new(&params);
+            conn.exec(stmt, params_adapter, &mut handler)?;
+            *self.affected_rows.write() = handler.affected_rows;
+            *self.last_insert_id.write() = handler.last_insert_id;
+        }
+        Ok(())
     }
 
     #[pyo3(signature = (query, params_list=vec![], *, as_dict=false))]
@@ -332,23 +301,35 @@ impl SyncConn {
         as_dict: bool,
     ) -> PyroResult<Py<PyList>> {
         let mut guard = self.inner.write();
-        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        match multi_conn {
-            MultiSyncConn::Mysql(conn) => {
-                // Fallback to exec_batch for non-zero_mysql backends
-                for params in params_list {
-                    conn.inner.exec_drop(query.clone(), params)?;
-                }
-                Ok(PyList::new(py, Vec::<Py<PyAny>>::new()).unwrap().unbind())
-            }
-            MultiSyncConn::Diesel(conn) => {
-                // Fallback to exec_batch for non-zero_mysql backends
-                for params in params_list {
-                    conn.exec_drop(query.clone(), params)?;
-                }
-                Ok(PyList::new(py, Vec::<Py<PyAny>>::new()).unwrap().unbind())
-            }
-            MultiSyncConn::ZeroMysql(conn) => conn.exec_bulk(py, query, params_list, as_dict),
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+
+        let mut cache = self.stmt_cache.write();
+        if !cache.contains_key(&query) {
+            let stmt = conn
+                .prepare(&query)
+                .map_err(|_e| Error::IncorrectApiUsageError("Failed to prepare query"))?;
+            cache.insert(query.clone(), stmt);
+        }
+        #[expect(clippy::unwrap_used)]
+        let stmt = cache.get_mut(&query).unwrap();
+
+        let params_adapters: Vec<ParamsAdapter> =
+            params_list.iter().map(ParamsAdapter::new).collect();
+        let bulk_params = BulkParamsSetAdapter::new(params_adapters);
+        let flags = zero_mysql::protocol::command::bulk_exec::BulkFlags::SEND_TYPES_TO_SERVER;
+
+        if as_dict {
+            let mut handler = DictHandler::new(py);
+            conn.exec_bulk(stmt, bulk_params, flags, &mut handler)?;
+            *self.affected_rows.write() = handler.affected_rows();
+            *self.last_insert_id.write() = handler.last_insert_id();
+            Ok(handler.into_rows())
+        } else {
+            let mut handler = TupleHandler::new(py);
+            conn.exec_bulk(stmt, bulk_params, flags, &mut handler)?;
+            *self.affected_rows.write() = handler.affected_rows();
+            *self.last_insert_id.write() = handler.last_insert_id();
+            Ok(handler.into_rows())
         }
     }
 
@@ -359,26 +340,30 @@ impl SyncConn {
     fn reset(&self) -> PyroResult<()> {
         let mut guard = self.inner.write();
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        conn.reset()
+        conn.reset()?;
+        self.stmt_cache.write().clear();
+        Ok(())
     }
 
     fn server_version(&self) -> PyroResult<String> {
         let guard = self.inner.read();
         let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
-        Ok(conn.server_version())
+        let version_bytes = conn.server_version();
+        Ok(String::from_utf8_lossy(version_bytes).to_string())
     }
 }
 
 // Public methods for internal use (not exposed to Python via #[pymethods])
 impl SyncConn {
-    /// Execute a query and discard results. Used internally by Transaction.
     pub fn query_drop_internal(&self, query: String) -> PyroResult<()> {
         let mut guard = self.inner.write();
-        let multi_conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        match multi_conn {
-            MultiSyncConn::Mysql(conn) => Ok(conn.inner.query_drop(query)?),
-            MultiSyncConn::Diesel(conn) => conn.query_drop(query),
-            MultiSyncConn::ZeroMysql(conn) => conn.query_drop(query),
-        }
+        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+
+        let mut handler = DropHandler::default();
+        conn.query(&query, &mut handler)?;
+
+        *self.affected_rows.write() = handler.affected_rows;
+        *self.last_insert_id.write() = handler.last_insert_id;
+        Ok(())
     }
 }

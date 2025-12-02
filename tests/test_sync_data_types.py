@@ -7,9 +7,9 @@ from pyro_mysql.sync import Conn
 from tests.conftest import get_test_db_url
 
 
-def test_none_type(backend):
+def test_none_type():
     """Test None type handling."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_none_types")
     conn.query_drop(
@@ -32,9 +32,9 @@ def test_none_type(backend):
     conn.close()
 
 
-def test_int_type(backend):
+def test_int_type():
     """Test int type handling."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_int_types")
     conn.query_drop(
@@ -58,9 +58,9 @@ def test_int_type(backend):
     conn.close()
 
 
-def test_float_type(backend):
+def test_float_type():
     """Test float type handling."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_float_types")
     conn.query_drop(
@@ -96,9 +96,9 @@ def test_float_type(backend):
     conn.close()
 
 
-def test_str_type(backend):
+def test_str_type():
     """Test str type handling."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_str_types")
     conn.query_drop(
@@ -135,9 +135,9 @@ def test_str_type(backend):
     conn.close()
 
 
-def test_bytearray_type(backend):
+def test_bytearray_type():
     """Test bytearray type handling."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_bytearray_types")
     conn.query_drop(
@@ -165,9 +165,9 @@ def test_bytearray_type(backend):
     conn.close()
 
 
-def test_tuple_type(backend):
+def test_tuple_type():
     """Test tuple type handling (as parameter binding)."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_tuple_types")
     conn.query_drop(
@@ -192,9 +192,9 @@ def test_tuple_type(backend):
     conn.close()
 
 
-def test_list_type(backend):
+def test_list_type():
     """Test list type handling (as parameter binding)."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_list_types")
     conn.query_drop(
@@ -219,9 +219,9 @@ def test_list_type(backend):
     conn.close()
 
 
-def test_set_type(backend):
+def test_set_type():
     """Test set type handling (converted to list for parameter binding)."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_set_types")
     conn.query_drop(
@@ -252,9 +252,9 @@ def test_set_type(backend):
     conn.close()
 
 
-def test_frozenset_type(backend):
+def test_frozenset_type():
     """Test frozenset type handling (converted to list for parameter binding)."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_frozenset_types")
     conn.query_drop(
@@ -285,9 +285,9 @@ def test_frozenset_type(backend):
     conn.close()
 
 
-def test_dict_type(backend):
+def test_dict_type():
     """Test basic data type handling."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_dict_types")
     conn.query_drop(
@@ -314,9 +314,9 @@ def test_dict_type(backend):
     conn.close()
 
 
-def test_datetime_types(backend):
+def test_datetime_types():
     """Test datetime.* types handling."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_datetime_types")
     conn.query_drop(
@@ -359,9 +359,9 @@ def test_datetime_types(backend):
     conn.close()
 
 
-def test_struct_time_type(backend):
+def test_struct_time_type():
     """Test time.struct_time type handling."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_struct_time_types")
     conn.query_drop(
@@ -394,9 +394,9 @@ def test_struct_time_type(backend):
     conn.close()
 
 
-def test_decimal_type(backend):
+def test_decimal_type():
     """Test decimal.Decimal type handling."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_decimal_types")
     conn.query_drop(
@@ -428,9 +428,9 @@ def test_decimal_type(backend):
     conn.close()
 
 
-def test_combined_data_types(backend):
+def test_combined_data_types():
     """Test a combination of different data types in a single query."""
-    conn = Conn(get_test_db_url(), backend=backend)
+    conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_combined_types")
     conn.query_drop(

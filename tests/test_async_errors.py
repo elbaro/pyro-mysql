@@ -1,58 +1,25 @@
 import pytest
 from pyro_mysql import Opts
 
-from .conftest import get_async_conn_with_backend, get_async_opts, get_test_db_url
-
-# TODO: hangs
-# @pytest.mark.asyncio
-# async def test_wait_timeout_error():
-#     """Test wait timeout errors."""
-#     opts = (
-#         OptsBuilder()
-#         .ip_or_hostname("192.0.2.0")  # Non-routable IP
-#         .tcp_port(3306)
-#         .wait_timeout(1)
-#         .build()
-#     )
-
-#     with pytest.raises(Exception):
-#         await Conn.new(opts)
+from .conftest import get_async_conn, get_async_opts, get_test_db_url
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("async_backend", ["mysql_async"], indirect=True)
-async def test_invalid_credentials_error(async_backend):
-    """Test invalid credentials error (mysql_async only)."""
-    opts = (
-        Opts()
-        .host("localhost")
-        .port(3306)
-        .user("nonexistent_user")
-        .password("wrong_password")
-    )
-
+async def test_invalid_credentials_error():
+    """Test invalid credentials error."""
     with pytest.raises(Exception) as exc_info:
-        await get_async_conn_with_backend(opts, async_backend)
+        await get_async_conn(
+            "mysql://nonexistent_user:wrong_password@localhost:3306/test"
+        )
 
     # Should be an authentication error
     assert exc_info.value is not None
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("async_backend", ["mysql_async"], indirect=True)
-async def test_invalid_database_error(async_backend):
-    """Test connecting to non-existent database (mysql_async only)."""
-    url = get_test_db_url()
-    opts = Opts(url).db("nonexistent_database")
-
-    with pytest.raises(Exception):
-        await get_async_conn_with_backend(opts, async_backend)
-
-
-@pytest.mark.asyncio
-async def test_syntax_error_in_query(async_backend):
+async def test_syntax_error_in_query():
     """Test SQL syntax errors."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     with pytest.raises(Exception):
         await conn.query("INVALID SQL SYNTAX")
@@ -61,9 +28,9 @@ async def test_syntax_error_in_query(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_table_not_found_error(async_backend):
+async def test_table_not_found_error():
     """Test table not found errors."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     with pytest.raises(Exception):
         await conn.query("SELECT * FROM nonexistent_table")
@@ -72,9 +39,9 @@ async def test_table_not_found_error(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_duplicate_key_error(async_backend):
+async def test_duplicate_key_error():
     """Test duplicate key constraint errors."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_unique")
     await conn.query_drop(
@@ -102,9 +69,9 @@ async def test_duplicate_key_error(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_data_too_long_error(async_backend):
+async def test_data_too_long_error():
     """Test data too long errors."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_varchar")
     await conn.query_drop(
@@ -127,9 +94,9 @@ async def test_data_too_long_error(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_foreign_key_constraint_error(async_backend):
+async def test_foreign_key_constraint_error():
     """Test foreign key constraint errors."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_child")
     await conn.query_drop("DROP TABLE IF EXISTS test_parent")
@@ -165,36 +132,12 @@ async def test_foreign_key_constraint_error(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_connection_lost_error(async_backend):
+async def test_connection_lost_error():
     """Test handling of lost connections."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     # Force close and try to use connection
     await conn.close()
 
     with pytest.raises(Exception):
         await conn.query("SELECT 1")
-
-
-# TODO: raise timeout
-# @pytest.mark.asyncio
-# async def test_pool_exhaustion():
-#     """Test pool connection exhaustion."""
-#     opts = get_async_opts()
-
-#     pool_opts = PoolOpts().with_constraints((1, 1))
-#     pool = Pool(opts.pool_opts(pool_opts))
-
-#     # Get the only available connection
-#     conn1 = await pool.get()
-
-#     # Trying to get another connection should timeout or fail
-#     # (behavior depends on implementation)
-#     try:
-#         conn2 = await pool.get()
-#         await conn2.close()
-#     except Exception:
-#         pass  # Expected to potentially fail
-
-#     await conn1.close()
-#     await pool.close()

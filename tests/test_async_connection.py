@@ -4,7 +4,7 @@ from pyro_mysql.async_ import Conn
 
 from .conftest import (
     cleanup_test_table_async,
-    get_async_conn_with_backend,
+    get_async_conn,
     get_async_opts,
     get_test_db_url,
     setup_test_table_async,
@@ -12,9 +12,9 @@ from .conftest import (
 
 
 @pytest.mark.asyncio
-async def test_basic_connection(async_backend):
+async def test_basic_connection():
     """Test basic connection establishment."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     result = await conn.query_first("SELECT 1")
     assert result and result[0] == 1
@@ -23,16 +23,10 @@ async def test_basic_connection(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_connection_with_database(async_backend):
+async def test_connection_with_database():
     """Test connection with specific database."""
     url = get_test_db_url()
-
-    if async_backend == "mysql_async":
-        opts = Opts(url).db("test")
-        conn = await Conn.new(opts, backend=async_backend)
-    else:
-        # wtx and zero backends use URL strings
-        conn = await get_async_conn_with_backend(url, async_backend)
+    conn = await get_async_conn(url)
 
     db_name = await conn.query_first("SELECT DATABASE()")
     assert db_name and db_name[0] == "test"
@@ -41,13 +35,12 @@ async def test_connection_with_database(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_connection_timeout(async_backend):
+async def test_connection_timeout():
     """Test connection timeout handling."""
     url = get_test_db_url()
 
     try:
-        # Note: wait_timeout is backend-specific and not in unified Opts
-        conn = await get_async_conn_with_backend(url, async_backend)
+        conn = await get_async_conn(url)
         await conn.close()
     except Exception:
         # Connection timeout is expected to potentially fail
@@ -55,9 +48,9 @@ async def test_connection_timeout(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_connection_ping(async_backend):
+async def test_connection_ping():
     """Test connection ping functionality."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await conn.ping()
 
@@ -65,9 +58,9 @@ async def test_connection_ping(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_connection_reset(async_backend):
+async def test_connection_reset():
     """Test connection reset functionality."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("SET @test_var = 42")
 
@@ -83,15 +76,10 @@ async def test_connection_reset(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_connection_charset(async_backend):
+async def test_connection_charset():
     """Test connection charset handling."""
     url = get_test_db_url()
-
-    if async_backend == "mysql_async":
-        opts = Opts(url)
-        conn = await Conn.new(opts, backend=async_backend)
-    else:
-        conn = await get_async_conn_with_backend(url, async_backend)
+    conn = await get_async_conn(url)
 
     charset = await conn.query_first("SELECT @@character_set_connection")
     assert charset and charset is not None
@@ -105,9 +93,9 @@ async def test_connection_charset(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_connection_autocommit(async_backend):
+async def test_connection_autocommit():
     """Test autocommit functionality."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -135,12 +123,12 @@ async def test_connection_autocommit(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_connection_ssl(async_backend):
+async def test_connection_ssl():
     """Test SSL connection (if available)."""
     url = get_test_db_url()
 
     try:
-        conn = await get_async_conn_with_backend(url, async_backend)
+        conn = await get_async_conn(url)
 
         try:
             _ssl_result = await conn.query_first("SHOW STATUS LIKE 'Ssl_cipher'")
@@ -155,15 +143,12 @@ async def test_connection_ssl(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_connection_init_command(async_backend):
+async def test_connection_init_command():
     """Test connection initialization commands."""
-    url = get_test_db_url()
+    from pyro_mysql.async_ import Conn
 
-    # Note: init commands are backend-specific and not in unified Opts
-    # Test manually setting variable after connection
-    conn = await get_async_conn_with_backend(url, async_backend)
-
-    await conn.query_drop("SET @init_test = 123")
+    opts = Opts(get_test_db_url()).init_command("SET @init_test = 123")
+    conn = await Conn.new(opts)
 
     result = await conn.query_first("SELECT @init_test")
     assert result and result[0] == 123
@@ -171,59 +156,19 @@ async def test_connection_init_command(async_backend):
     await conn.close()
 
 
-# TODO: needs a separate table dedicated for this test
-# @pytest.mark.asyncio
-# async def test_large_data_transfer():
-#     """Test handling of large data transfers."""
-#     opts = (
-#         OptsBuilder().from_url(get_test_db_url()).max_allowed_packet(200).build()
-#     )
-#     conn = await Conn.new(opts)
-
-#     await setup_test_table_async(conn)
-
-#     large_string = "x" * (250)
-
-#     # with pytest.raises(
-#     #     RuntimeError, match="Input/output error: Input/output error: packet too larg"
-#     # ):
-#     await conn.exec_drop("INSERT INTO test_table (name) VALUES (?)", (large_string,))
-
-#     await cleanup_test_table_async(conn)
-#     await conn.close()
-
-
 @pytest.mark.asyncio
-async def test_connection_with_wrong_credentials(async_backend):
+async def test_connection_with_wrong_credentials():
     """Test connection failure with wrong credentials."""
-    if async_backend == "mysql_async":
-        opts = (
-            Opts().host("localhost").user("nonexistent_user").password("wrong_password")
+    with pytest.raises(Exception):
+        _ = await get_async_conn(
+            "mysql://nonexistent_user:wrong_password@localhost:3306/test"
         )
 
-        with pytest.raises(Exception):
-            _ = await Conn.new(opts, backend=async_backend)
-    else:
-        # For wtx and zero, construct URL string with wrong credentials
-        with pytest.raises(Exception):
-            _ = await get_async_conn_with_backend(
-                "mysql://nonexistent_user:wrong_password@localhost:3306/test",
-                async_backend,
-            )
-
 
 @pytest.mark.asyncio
-async def test_connection_to_invalid_host(async_backend):
+async def test_connection_to_invalid_host():
     """Test connection failure to invalid host."""
-    if async_backend == "mysql_async":
-        opts = Opts().host("invalid.host.that.does.not.exist").port(3306)
-
-        with pytest.raises(Exception):
-            await Conn.new(opts, backend=async_backend)
-    else:
-        # For wtx and zero, use URL string with invalid host
-        with pytest.raises(Exception):
-            await get_async_conn_with_backend(
-                "mysql://test:1234@invalid.host.that.does.not.exist:3306/test",
-                async_backend,
-            )
+    with pytest.raises(Exception):
+        await get_async_conn(
+            "mysql://test:1234@invalid.host.that.does.not.exist:3306/test"
+        )

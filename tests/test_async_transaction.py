@@ -5,16 +5,16 @@ from pyro_mysql import IsolationLevel
 
 from .conftest import (
     cleanup_test_table_async,
-    get_async_conn_with_backend,
+    get_async_conn,
     get_test_db_url,
     setup_test_table_async,
 )
 
 
 @pytest.mark.asyncio
-async def test_basic_transaction(async_backend):
+async def test_basic_transaction():
     """Test basic transaction commit."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -38,9 +38,9 @@ async def test_basic_transaction(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_transaction_rollback(async_backend):
+async def test_transaction_rollback():
     """Test transaction rollback."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -64,9 +64,9 @@ async def test_transaction_rollback(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_transaction_isolation_levels(async_backend):
+async def test_transaction_isolation_levels():
     """Test different transaction isolation levels."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -97,9 +97,9 @@ async def test_transaction_isolation_levels(async_backend):
 # TODO
 # Server error: `ERROR HY000 (1295): This command is not supported in the prepared statement protocol yet
 @pytest.mark.asyncio
-async def test_nested_transactions(async_backend):
+async def test_nested_transactions():
     """Test nested transactions with savepoints."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -135,9 +135,9 @@ async def test_nested_transactions(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_transaction_with_error(async_backend):
+async def test_transaction_with_error():
     """Test transaction behavior with errors."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -168,10 +168,10 @@ async def test_transaction_with_error(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_transaction_concurrent_read(async_backend):
+async def test_transaction_concurrent_read():
     """Test concurrent reads with transactions."""
-    conn1 = await get_async_conn_with_backend(get_test_db_url(), async_backend)
-    conn2 = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn1 = await get_async_conn(get_test_db_url())
+    conn2 = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn1)
 
@@ -204,9 +204,9 @@ async def test_transaction_concurrent_read(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_transaction_read_only(async_backend):
+async def test_transaction_read_only():
     """Test read-only transactions."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -231,9 +231,9 @@ async def test_transaction_read_only(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_transaction_consistent_snapshot(async_backend):
+async def test_transaction_consistent_snapshot():
     """Test consistent snapshot transactions."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 
@@ -255,9 +255,9 @@ async def test_transaction_consistent_snapshot(async_backend):
 
 
 @pytest.mark.asyncio
-async def test_transaction_auto_rollback_on_drop(async_backend):
+async def test_transaction_auto_rollback_on_drop():
     """Test automatic rollback when transaction is dropped."""
-    conn = await get_async_conn_with_backend(get_test_db_url(), async_backend)
+    conn = await get_async_conn(get_test_db_url())
 
     await setup_test_table_async(conn)
 

@@ -1,63 +1,89 @@
 use criterion::{Criterion, criterion_group, criterion_main};
-use mysql::{TxOpts, prelude::Queryable};
 use pyo3::{ffi::c_str, prelude::*};
 
-fn setup_db() {
-    let mut conn = mysql::Conn::new("mysql://test:1234@localhost:3306/test").unwrap();
-    conn.exec_drop("DROP TABLE IF EXISTS benchmark_test", ())
-        .unwrap();
-    conn.exec_drop(
-        "CREATE TABLE benchmark_test (
+fn setup_db(py: Python) {
+    py.run(
+        c"pyro_setup_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
+        None,
+        None,
+    )
+    .unwrap();
+    py.run(
+        c"pyro_setup_conn.query_drop('DROP TABLE IF EXISTS benchmark_test')",
+        None,
+        None,
+    )
+    .unwrap();
+    py.run(
+        c"pyro_setup_conn.query_drop('''CREATE TABLE benchmark_test (
             id INT PRIMARY KEY AUTO_INCREMENT,
             name VARCHAR(100),
             age INT,
             email VARCHAR(100),
             score FLOAT,
             description VARCHAR(100)
-        ) ENGINE = MEMORY",
-        (),
+        ) ENGINE = MEMORY''')",
+        None,
+        None,
     )
     .unwrap();
+    py.run(c"pyro_setup_conn.close()", None, None).unwrap();
 }
 
-fn clear_table() {
-    let mut conn = mysql::Conn::new("mysql://test:1234@localhost:3306/test").unwrap();
-    conn.exec_drop("TRUNCATE TABLE benchmark_test", ()).unwrap();
+fn clear_table(py: Python) {
+    py.run(
+        c"pyro_clear_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
+        None,
+        None,
+    )
+    .unwrap();
+    py.run(
+        c"pyro_clear_conn.query_drop('TRUNCATE TABLE benchmark_test')",
+        None,
+        None,
+    )
+    .unwrap();
+    py.run(c"pyro_clear_conn.close()", None, None).unwrap();
 }
 
-fn populate_table(n: usize) {
-    let mut conn = mysql::Conn::new("mysql://test:1234@localhost:3306/test").unwrap();
-    conn.exec_drop("TRUNCATE TABLE benchmark_test", ()).unwrap();
-    {
-        let mut tx = conn.start_transaction(TxOpts::default()).unwrap();
-        for i in 0..n {
-            tx.exec_drop(
-                "INSERT INTO benchmark_test (name, age, email, score, description)
-                       VALUES (?, ?, ?, ?, ?)",
-                (
-                    format!("user_{i}"),
-                    20 + (i % 50),
-                    format!("user{i}@example.com"),
-                    (i % 100) as f32,
-                    format!("User description {i}"),
-                ),
-            )
-            .unwrap();
-        }
-        tx.commit().unwrap();
-    }
+fn populate_table(py: Python, n: usize) {
+    py.run(
+        c"pyro_pop_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
+        None,
+        None,
+    )
+    .unwrap();
+    py.run(
+        c"pyro_pop_conn.query_drop('TRUNCATE TABLE benchmark_test')",
+        None,
+        None,
+    )
+    .unwrap();
+
+    let insert_code = format!(
+        r#"
+for i in range({}):
+    pyro_pop_conn.exec_drop(
+        "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
+        (f"user_{{i}}", 20 + (i % 50), f"user{{i}}@example.com", float(i % 100), f"User description {{i}}")
+    )
+"#,
+        n
+    );
+    let c_insert_code = std::ffi::CString::new(insert_code).unwrap();
+    py.run(c_insert_code.as_c_str(), None, None).unwrap();
+    py.run(c"pyro_pop_conn.close()", None, None).unwrap();
 }
 
 pub fn bench(c: &mut Criterion) {
-    setup_db();
-
     Python::attach(|py| {
         Python::run(py, c_str!(include_str!("./bench.py")), None, None).unwrap();
+        setup_db(py);
     });
 
     for select_size in [1, 10, 100, 1000] {
         let mut group = c.benchmark_group(format!("SELECT_{}", select_size));
-        populate_table(select_size);
+        Python::attach(|py| populate_table(py, select_size));
 
         for (name, setup, statement) in [
             (
@@ -76,34 +102,14 @@ pub fn bench(c: &mut Criterion) {
                 c"select_mariadb(mariadb_conn)",
             ),
             (
-                "pyro/mysql (sync)",
+                "pyro (sync)",
                 cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
                 c"select_pyro_sync(pyro_sync_conn)",
             ),
             (
-                "pyro/diesel (sync)",
-                cr"pyro_diesel_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test', backend='diesel')",
-                c"select_pyro_sync(pyro_diesel_conn)",
-            ),
-            (
-                "pyro/zero (sync)",
-                cr"pyro_zero_mysql_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test', backend='zero')",
-                c"select_pyro_sync(pyro_zero_mysql_conn)",
-            ),
-            (
-                "pyro/mysql (async)",
+                "pyro (async)",
                 cr"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
                 c"loop.run_until_complete(select_pyro_async(pyro_async_conn))",
-            ),
-            (
-                "pyro/wtx (async)",
-                cr"pyro_wtx_conn = loop.run_until_complete(create_pyro_async_conn('wtx'))",
-                c"loop.run_until_complete(select_pyro_async(pyro_wtx_conn))",
-            ),
-            (
-                "pyro/zero (async)",
-                cr"pyro_zero_mysql_async_conn = loop.run_until_complete(create_pyro_async_conn('zero'))",
-                c"loop.run_until_complete(select_pyro_async(pyro_zero_mysql_async_conn))",
             ),
             (
                 "asyncmy (async)",
@@ -149,44 +155,24 @@ pub fn bench(c: &mut Criterion) {
                 "insert_mariadb_bulk(mariadb_bulk_conn, {})",
             ),
             (
-                "pyro/mysql (sync)",
+                "pyro (sync)",
                 cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
                 "insert_pyro_sync(pyro_sync_conn, {})",
             ),
             (
-                "pyro/diesel (sync)",
-                cr"pyro_diesel_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test', backend='diesel')",
-                "insert_pyro_sync(pyro_diesel_conn, {})",
+                "pyro (sync, bulk)",
+                cr"pyro_sync_bulk_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
+                "insert_pyro_sync_bulk(pyro_sync_bulk_conn, {})",
             ),
             (
-                "pyro/zero (sync)",
-                cr"pyro_zero_mysql_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test', backend='zero')",
-                "insert_pyro_sync(pyro_zero_mysql_conn, {})",
-            ),
-            (
-                "pyro/zero (sync, bulk)",
-                cr"pyro_zero_mysql_bulk_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test', backend='zero')",
-                "insert_pyro_sync_bulk(pyro_zero_mysql_bulk_conn, {})",
-            ),
-            (
-                "pyro/mysql (async)",
+                "pyro (async)",
                 cr"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
                 "loop.run_until_complete(insert_pyro_async(pyro_async_conn, {}))",
             ),
             (
-                "pyro/wtx (async)",
-                cr"pyro_wtx_conn = loop.run_until_complete(create_pyro_async_conn('wtx'))",
-                "loop.run_until_complete(insert_pyro_async(pyro_wtx_conn, {}))",
-            ),
-            (
-                "pyro/zero (async)",
-                cr"pyro_zero_mysql_async_conn = loop.run_until_complete(create_pyro_async_conn('zero'))",
-                "loop.run_until_complete(insert_pyro_async(pyro_zero_mysql_async_conn, {}))",
-            ),
-            (
-                "pyro/zero (async, bulk)",
-                cr"pyro_zero_mysql_async_bulk_conn = loop.run_until_complete(create_pyro_async_conn('zero'))",
-                "loop.run_until_complete(insert_pyro_async_bulk(pyro_zero_mysql_async_bulk_conn, {}))",
+                "pyro (async, bulk)",
+                cr"pyro_async_bulk_conn = loop.run_until_complete(create_pyro_async_conn())",
+                "loop.run_until_complete(insert_pyro_async_bulk(pyro_async_bulk_conn, {}))",
             ),
             (
                 "asyncmy (async)",
@@ -205,7 +191,7 @@ pub fn bench(c: &mut Criterion) {
                     b.iter_custom(|iters| {
                         let mut sum = std::time::Duration::ZERO;
                         for g in 0..((iters-1)/10000+1) {
-                            clear_table();
+                            clear_table(py);
                             let start = g * 10000;
                             let end = iters.min(start+10000);
 

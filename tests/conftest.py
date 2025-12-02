@@ -137,20 +137,8 @@ def sync_conn_with_table():
     cleanup_test_table_sync(conn)
 
 
-@pytest.fixture(params=["mysql", "zero"])
-def backend(request):
-    """Fixture that provides mysql, diesel, and zero backends for parameterized tests."""
-    return request.param
-
-
-@pytest.fixture(params=["mysql", "zero"])
-def async_backend(request):
-    """Fixture that provides mysql_async, wtx, and zero backends for parameterized async tests."""
-    return request.param
-
-
-async def get_async_conn_with_backend(url_or_opts, backend: str):
-    """Helper function to create async connection with specified backend."""
+async def get_async_conn(url_or_opts):
+    """Helper function to create async connection."""
     from pyro_mysql.async_ import Conn
 
-    return await Conn.new(url_or_opts, backend=backend)
+    return await Conn.new(url_or_opts)

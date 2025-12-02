@@ -9,7 +9,6 @@ pub mod isolation_level;
 pub mod opts;
 pub mod params;
 pub mod py_imports;
-pub mod row;
 pub mod sync;
 pub mod tokio_thread;
 pub mod util;

@@ -45,22 +45,6 @@ impl From<crate::error::Error> for DbApiError {
     fn from(err: crate::error::Error) -> Self {
         Self(match err {
             crate::error::Error::IncorrectApiUsageError(s) => Error::new_err(s),
-            crate::error::Error::SyncUrlError(url_error) => Error::new_err(url_error.to_string()),
-            crate::error::Error::AsyncUrlError(url_error) => Error::new_err(url_error.to_string()),
-            crate::error::Error::SyncError(error) => {
-                if let mysql::Error::MySqlError(mysql_error) = &error {
-                    map_mysql_error_to_dbapi(mysql_error, error.to_string())
-                } else {
-                    Error::new_err(error.to_string())
-                }
-            }
-            crate::error::Error::AsyncError(error) => {
-                if let mysql_async::Error::Server(server_error) = &error {
-                    map_mysql_async_error_to_dbapi(server_error, error.to_string())
-                } else {
-                    Error::new_err(error.to_string())
-                }
-            }
             crate::error::Error::ConnectionClosedError => Error::new_err(err.to_string()),
             crate::error::Error::TransactionClosedError => Error::new_err(err.to_string()),
             crate::error::Error::BuilderConsumedError => Error::new_err(err.to_string()),
@@ -71,7 +55,6 @@ impl From<crate::error::Error> for DbApiError {
             crate::error::Error::PoisonError(s) => Error::new_err(s),
             crate::error::Error::PythonObjectCreationError(e) => Error::new_err(e.to_string()),
             crate::error::Error::IoError(s) => Error::new_err(format!("IO Error: {}", s)),
-            crate::error::Error::WtxError(s) => Error::new_err(format!("Wtx Error: {}", s)),
             crate::error::Error::ZeroMysqlError(e) => match &e {
                 zero_mysql::error::Error::ServerError(err_payload) => map_server_error_to_dbapi(
                     &err_payload.sql_state,
@@ -104,17 +87,6 @@ fn map_server_error_to_dbapi(state: &str, code: u16, error_msg: String) -> PyErr
             }
         }
     }
-}
-
-fn map_mysql_error_to_dbapi(mysql_error: &mysql::MySqlError, error_msg: String) -> PyErr {
-    map_server_error_to_dbapi(mysql_error.state.as_str(), mysql_error.code, error_msg)
-}
-
-fn map_mysql_async_error_to_dbapi(
-    server_error: &mysql_async::ServerError,
-    error_msg: String,
-) -> PyErr {
-    map_server_error_to_dbapi(server_error.state.as_str(), server_error.code, error_msg)
 }
 
 impl From<PyErr> for DbApiError {

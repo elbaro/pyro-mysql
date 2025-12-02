@@ -7,9 +7,8 @@ use pyo3::{
 use tokio::sync::RwLock;
 
 use crate::{
-    r#async::backend::ZeroMysqlConn,
     dbapi::{
-        async_conn::AsyncDbApiConn,
+        async_conn::{AsyncDbApiConn, DbApiAsyncZeroConn},
         async_zero_handler::AsyncDbApiHandler,
         error::{DbApiError, DbApiResult},
     },
@@ -232,7 +231,7 @@ impl AsyncCursor {
 
 /// Execute a query with the AsyncDbApiHandler
 async fn execute_with_handler(
-    conn: &mut ZeroMysqlConn,
+    conn: &mut DbApiAsyncZeroConn,
     query: &str,
     params: Params,
 ) -> PyroResult<AsyncDbApiHandler> {
@@ -247,6 +246,7 @@ async fn execute_with_handler(
             let stmt = conn.inner.prepare(query).await?;
             conn.stmt_cache.insert(query.to_string(), stmt);
         }
+        #[expect(clippy::unwrap_used)]
         let stmt = conn.stmt_cache.get_mut(query).unwrap();
 
         let params_adapter = ParamsAdapter::new(&params);

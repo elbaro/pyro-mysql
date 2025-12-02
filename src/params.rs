@@ -16,18 +16,6 @@ pub enum Params {
 }
 
 impl Params {
-    /// Convert to mysql_common::params::Params for mysql backend
-    pub fn to_mysql_params(self) -> mysql_common::params::Params {
-        match self {
-            Params::Empty => mysql_common::params::Params::Empty,
-            Params::Positional(values) => {
-                let mysql_values: Vec<mysql_async::Value> =
-                    values.into_iter().map(|v| v.to_mysql_value()).collect();
-                mysql_common::params::Params::Positional(mysql_values)
-            }
-        }
-    }
-
     /// Check if parameters are empty
     pub fn is_empty(&self) -> bool {
         matches!(self, Params::Empty)
@@ -72,11 +60,5 @@ impl FromPyObject<'_, '_> for Params {
                 type_name
             )))
         }
-    }
-}
-
-impl From<Params> for mysql_common::params::Params {
-    fn from(params: Params) -> Self {
-        params.to_mysql_params()
     }
 }
