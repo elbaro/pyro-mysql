@@ -6,8 +6,10 @@ use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
 
+use crate::from_raw_value::PyValue;
 use crate::util::PyTupleBuilder;
-use crate::zero_mysql_util::{decode_binary_bytes_to_python, decode_text_value_to_python};
+use crate::zero_mysql_util::decode_text_value_to_python;
+use zero_mysql::raw::parse_value;
 
 pub struct TupleHandler<'py> {
     py: Python<'py>,
@@ -56,14 +58,10 @@ impl<'py> BinaryResultSetHandler for TupleHandler<'py> {
         let tuple = PyTupleBuilder::new(self.py, cols.len());
 
         for (i, col) in cols.iter().enumerate() {
-            if row.null_bitmap().is_null(i) {
-                tuple.set(i, self.py.None().into_bound(self.py));
-            } else {
-                let py_value;
-                (py_value, bytes) = decode_binary_bytes_to_python(self.py, col.tail, bytes)
-                    .map_err(|e| zero_mysql::error::Error::LibraryBug(e.into()))?;
-                tuple.set(i, py_value);
-            }
+            let is_null = row.null_bitmap().is_null(i);
+            let (py_value, rest) = parse_value::<PyValue>(col.tail, is_null, bytes)?;
+            tuple.set(i, py_value.0.bind(self.py).clone());
+            bytes = rest;
         }
 
         self.rows
@@ -228,16 +226,14 @@ impl<'py> BinaryResultSetHandler for DictHandler<'py> {
         let dict = PyDict::new(self.py);
 
         for (i, col) in cols.iter().enumerate() {
-            let py_value = if row.null_bitmap().is_null(i) {
-                self.py.None().into_bound(self.py)
-            } else {
-                let val;
-                (val, bytes) = decode_binary_bytes_to_python(self.py, col.tail, bytes)
-                    .map_err(|e| zero_mysql::error::Error::LibraryBug(e.into()))?;
-                val
-            };
-            dict.set_item(std::str::from_utf8(col.name_alias).unwrap_or(""), py_value)
-                .unwrap();
+            let is_null = row.null_bitmap().is_null(i);
+            let (py_value, rest) = parse_value::<PyValue>(col.tail, is_null, bytes)?;
+            dict.set_item(
+                std::str::from_utf8(col.name_alias).unwrap_or(""),
+                py_value.0.bind(self.py).clone(),
+            )
+            .unwrap();
+            bytes = rest;
         }
 
         self.rows.bind(self.py).append(dict).expect("OOM");

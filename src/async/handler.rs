@@ -6,7 +6,9 @@ use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
 
-use crate::zero_mysql_util::{decode_binary_bytes_to_python, decode_text_value_to_python};
+use crate::from_raw_value::PyValue;
+use crate::zero_mysql_util::decode_text_value_to_python;
+use zero_mysql::raw::parse_value;
 
 enum RawRow {
     Binary { bytes: Vec<u8>, is_null: Vec<bool> },
@@ -52,14 +54,13 @@ impl TupleHandler {
                     RawRow::Binary { bytes, is_null } => {
                         let mut bytes_slice = &bytes[..];
                         for (i, &is_null_val) in is_null.iter().enumerate() {
-                            if is_null_val {
-                                values.push(py.None().into_bound(py));
-                            } else {
-                                let py_value;
-                                (py_value, bytes_slice) =
-                                    decode_binary_bytes_to_python(py, &rs.cols[i], bytes_slice)?;
-                                values.push(py_value);
-                            }
+                            let (py_value, rest) =
+                                parse_value::<PyValue>(&rs.cols[i], is_null_val, bytes_slice)
+                                    .map_err(|e| {
+                                        PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string())
+                                    })?;
+                            values.push(py_value.0.bind(py).clone());
+                            bytes_slice = rest;
                         }
                     }
                     RawRow::Text(bytes) => {
@@ -253,15 +254,13 @@ impl DictHandler {
                     RawRow::Binary { bytes, is_null } => {
                         let mut bytes_slice = &bytes[..];
                         for (i, &is_null_val) in is_null.iter().enumerate() {
-                            let py_value = if is_null_val {
-                                py.None().into_bound(py)
-                            } else {
-                                let val;
-                                (val, bytes_slice) =
-                                    decode_binary_bytes_to_python(py, &rs.cols[i], bytes_slice)?;
-                                val
-                            };
-                            dict.set_item(&rs.col_names[i], py_value)?;
+                            let (py_value, rest) =
+                                parse_value::<PyValue>(&rs.cols[i], is_null_val, bytes_slice)
+                                    .map_err(|e| {
+                                        PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string())
+                                    })?;
+                            dict.set_item(&rs.col_names[i], py_value.0.bind(py).clone())?;
+                            bytes_slice = rest;
                         }
                     }
                     RawRow::Text(bytes) => {

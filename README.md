@@ -126,19 +126,17 @@ conn = await Conn.new(url, backend="mysql")
 |-------------|------------|
 | `NULL` | `None` |
 | `INT` / `TINYINT` / `SMALLINT` / `MEDIUMINT` / `BIGINT` / `YEAR` | `int` |
-| `FLOAT` | `float` |
-| `DOUBLE` | `float` |
+| `FLOAT` / `DOUBLE` | `float` |
 | `DECIMAL` / `NUMERIC` | `decimal.Decimal` |
-| `DATE` | `datetime.date` |
+| `DATE` | `datetime.date` or `None` (0000-00-00) |
+| `DATETIME` / `TIMESTAMP` | `datetime.datetime` or `None` (0000-00-00 00:00:00) |
 | `TIME` | `datetime.timedelta` |
-| `DATETIME` | `datetime.datetime` |
-| `TIMESTAMP` | `datetime.datetime` |
 | `CHAR` / `VARCHAR` / `TEXT` / `TINYTEXT` / `MEDIUMTEXT` / `LONGTEXT` | `str` |
 | `BINARY` / `VARBINARY` / `BLOB` / `TINYBLOB` / `MEDIUMBLOB` / `LONGBLOB` | `bytes` |
-| `JSON` | the result of json.loads() |
+| `JSON` | `str` or the result of `json.loads()` |
 | `ENUM` / `SET` | `str` |
 | `BIT` | `bytes` |
-| `GEOMETRY` | `bytes` (WKB format) |
+| `GEOMETRY` | `bytes` |
 
 ## Logging
 

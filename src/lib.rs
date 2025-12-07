@@ -5,6 +5,7 @@ pub mod r#async;
 pub mod capability_flags;
 pub mod dbapi;
 pub mod error;
+pub mod from_raw_value;
 pub mod isolation_level;
 pub mod opts;
 pub mod params;

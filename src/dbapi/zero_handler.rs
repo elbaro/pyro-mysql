@@ -8,10 +8,11 @@ use zero_mysql::protocol::BinaryRowPayload;
 use zero_mysql::protocol::command::{ColumnDefinition, ColumnDefinitionTail};
 use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::r#trait::BinaryResultSetHandler;
+use zero_mysql::raw::parse_value;
 
 use crate::dbapi::conn::{DbApiExecResult, DbApiRow};
+use crate::from_raw_value::PyValue;
 use crate::util::PyTupleBuilder;
-use crate::zero_mysql_util::decode_binary_bytes_to_python;
 
 /// Column info for building DB-API description
 struct ColumnInfo {
@@ -122,7 +123,7 @@ impl<'a> BinaryResultSetHandler for DbApiHandler<'a> {
 
             self.col_infos.push(ColumnInfo {
                 name,
-                type_code: tail.type_and_flags()?.column_type as u8,
+                type_code: tail.column_type()? as u8,
                 column_length: tail.column_length(),
                 null_ok,
             });
@@ -138,20 +139,13 @@ impl<'a> BinaryResultSetHandler for DbApiHandler<'a> {
         let tuple = PyTupleBuilder::new(self.py, self.cols.len());
 
         for i in 0..self.cols.len() {
-            if row.null_bitmap().is_null(i) {
-                tuple.set(i, self.py.None().into_bound(self.py));
-            } else {
-                let py_value;
-                (py_value, bytes) = decode_binary_bytes_to_python(self.py, &self.cols[i], bytes)
-                    .map_err(|e| zero_mysql::error::Error::LibraryBug(e.into()))?;
-                tuple.set(i, py_value);
-            }
+            let is_null = row.null_bitmap().is_null(i);
+            let (py_value, rest) = parse_value::<PyValue>(&self.cols[i], is_null, bytes)?;
+            tuple.set(i, py_value.0.bind(self.py).clone());
+            bytes = rest;
         }
 
-        // Store the tuple as a DbApiRow
-        let py_tuple = tuple.build(self.py);
-        self.rows.push(DbApiRow(py_tuple.unbind()));
-
+        self.rows.push(DbApiRow(tuple.build(self.py).unbind()));
         Ok(())
     }
 

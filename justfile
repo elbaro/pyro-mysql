@@ -1,6 +1,6 @@
 build:
     cargo build --release --lib
-    mv target/release/libpyro_mysql.so pyro_mysql/pyro_mysql.abi3.so
+    mv target/release/libpyro_mysql.so pyro_mysql/pyro_mysql.abi3.so || true
 
 check: build
     cargo fmt --check

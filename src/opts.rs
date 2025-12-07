@@ -92,7 +92,7 @@ impl Opts {
     /// # Arguments
     /// * `hostname` - The hostname or IP address to connect to
     fn host(mut self_: PyRefMut<Self>, hostname: String) -> PyRefMut<Self> {
-        self_.inner.host = Some(hostname);
+        self_.inner.host = hostname;
         self_
     }
 
@@ -128,7 +128,7 @@ impl Opts {
     /// # Arguments
     /// * `password` - The password
     fn password(mut self_: PyRefMut<Self>, password: Option<String>) -> PyRefMut<Self> {
-        self_.inner.password = password;
+        self_.inner.password = password.unwrap_or_default();
         self_
     }
 

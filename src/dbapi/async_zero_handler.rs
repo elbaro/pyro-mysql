@@ -10,8 +10,10 @@ use zero_mysql::protocol::response::{OkPayload, OkPayloadBytes};
 use zero_mysql::protocol::r#trait::{BinaryResultSetHandler, TextResultSetHandler};
 use zero_mysql::protocol::{BinaryRowPayload, TextRowPayload};
 
+use crate::from_raw_value::PyValue;
 use crate::util::PyTupleBuilder;
-use crate::zero_mysql_util::{decode_binary_bytes_to_python, decode_text_value_to_python};
+use crate::zero_mysql_util::decode_text_value_to_python;
+use zero_mysql::raw::parse_value;
 
 /// Column info for building DB-API description
 struct ColumnInfo {
@@ -102,14 +104,13 @@ impl AsyncDbApiHandler {
                     RawRow::Binary { bytes, is_null } => {
                         let mut bytes_slice = &bytes[..];
                         for (i, &is_null_val) in is_null.iter().enumerate() {
-                            if is_null_val {
-                                tuple.set(i, py.None().into_bound(py));
-                            } else {
-                                let py_value;
-                                (py_value, bytes_slice) =
-                                    decode_binary_bytes_to_python(py, &rs.cols[i], bytes_slice)?;
-                                tuple.set(i, py_value);
-                            }
+                            let (py_value, rest) =
+                                parse_value::<PyValue>(&rs.cols[i], is_null_val, bytes_slice)
+                                    .map_err(|e| {
+                                        PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string())
+                                    })?;
+                            tuple.set(i, py_value.0.bind(py).clone());
+                            bytes_slice = rest;
                         }
                     }
                     RawRow::Text(bytes) => {
@@ -171,7 +172,7 @@ impl BinaryResultSetHandler for AsyncDbApiHandler {
 
             self.col_infos.push(ColumnInfo {
                 name,
-                type_code: tail.type_and_flags()?.column_type as u8,
+                type_code: tail.column_type()? as u8,
                 column_length: tail.column_length(),
                 null_ok,
             });
@@ -234,7 +235,7 @@ impl TextResultSetHandler for AsyncDbApiHandler {
 
             self.col_infos.push(ColumnInfo {
                 name,
-                type_code: tail.type_and_flags()?.column_type as u8,
+                type_code: tail.column_type()? as u8,
                 column_length: tail.column_length(),
                 null_ok,
             });
