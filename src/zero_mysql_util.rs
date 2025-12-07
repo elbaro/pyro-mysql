@@ -47,12 +47,12 @@ pub fn decode_text_value_to_python<'py>(
     col: &ColumnDefinitionTail,
     text_value: &[u8],
 ) -> PyResult<Bound<'py, PyAny>> {
-    let column_type = col.column_type().map_err(|_| {
-        PyErr::new::<pyo3::exceptions::PyException, _>("Failed to get column_type")
-    })?;
-    let flags = col.flags().map_err(|_| {
-        PyErr::new::<pyo3::exceptions::PyException, _>("Failed to get flags")
-    })?;
+    let column_type = col
+        .column_type()
+        .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>("Failed to get column_type"))?;
+    let flags = col
+        .flags()
+        .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>("Failed to get flags"))?;
     let is_unsigned = flags.contains(ColumnFlags::UNSIGNED_FLAG);
     let is_binary_charset = col.charset() == BINARY_CHARSET;
 

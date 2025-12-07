@@ -107,7 +107,9 @@ impl AsyncDbApiHandler {
                             let (py_value, rest) =
                                 parse_value::<PyValue>(&rs.cols[i], is_null_val, bytes_slice)
                                     .map_err(|e| {
-                                        PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string())
+                                        PyErr::new::<pyo3::exceptions::PyException, _>(
+                                            e.to_string(),
+                                        )
                                     })?;
                             tuple.set(i, py_value.0.bind(py).clone());
                             bytes_slice = rest;

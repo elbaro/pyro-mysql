@@ -1101,7 +1101,7 @@ dependencies = [
 
 [[package]]
 name = "pyro-mysql"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "criterion",
@@ -1944,6 +1944,8 @@ dependencies = [
 [[package]]
 name = "zero-mysql"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9667987b530ab8162d6842d28df16ff2b2e09a1dc5c3dace4f157ccdbc796b1"
 dependencies = [
  "auto_impl",
  "bitflags",

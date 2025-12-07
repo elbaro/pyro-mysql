@@ -1,4 +1,3 @@
-import datetime
 from types import TracebackType
 from typing import Any, Literal, Self, Sequence, overload
 
@@ -254,4 +253,4 @@ class Conn:
         """
         ...
 
-    def server_version(self) -> PyroFuture[tuple[int, int, int]]: ...
+    def server_version(self) -> PyroFuture[str]: ...

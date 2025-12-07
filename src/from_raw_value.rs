@@ -1,9 +1,9 @@
+use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyString};
-use pyo3::IntoPyObjectExt;
 use zero_mysql::error::{Error, Result};
 use zero_mysql::raw::FromRawValue;
-use zero_mysql::value::{Time12, Time8, Timestamp11, Timestamp4, Timestamp7};
+use zero_mysql::value::{Time8, Time12, Timestamp4, Timestamp7, Timestamp11};
 
 use crate::py_imports::{
     get_date_class, get_datetime_class, get_decimal_class, get_timedelta_class,
@@ -28,42 +28,52 @@ fn py_err(e: PyErr) -> Error {
 }
 
 impl FromRawValue<'_> for PyValue {
+    #[inline]
     fn from_null() -> Result<Self> {
         Ok(PyValue(py().None()))
     }
 
+    #[inline]
     fn from_i8(v: i8) -> Result<Self> {
-        Ok(PyValue((v as i64).into_py_any(py()).map_err(py_err)?))
+        Ok(PyValue(v.into_py_any(py()).map_err(py_err)?))
     }
 
+    #[inline]
     fn from_i16(v: i16) -> Result<Self> {
-        Ok(PyValue((v as i64).into_py_any(py()).map_err(py_err)?))
+        Ok(PyValue(v.into_py_any(py()).map_err(py_err)?))
     }
 
+    #[inline]
     fn from_i32(v: i32) -> Result<Self> {
-        Ok(PyValue((v as i64).into_py_any(py()).map_err(py_err)?))
+        Ok(PyValue(v.into_py_any(py()).map_err(py_err)?))
     }
 
+    #[inline]
     fn from_i64(v: i64) -> Result<Self> {
         Ok(PyValue(v.into_py_any(py()).map_err(py_err)?))
     }
 
+    #[inline]
     fn from_u8(v: u8) -> Result<Self> {
-        Ok(PyValue((v as u64).into_py_any(py()).map_err(py_err)?))
+        Ok(PyValue(v.into_py_any(py()).map_err(py_err)?))
     }
 
+    #[inline]
     fn from_u16(v: u16) -> Result<Self> {
-        Ok(PyValue((v as u64).into_py_any(py()).map_err(py_err)?))
+        Ok(PyValue(v.into_py_any(py()).map_err(py_err)?))
     }
 
+    #[inline]
     fn from_u32(v: u32) -> Result<Self> {
-        Ok(PyValue((v as u64).into_py_any(py()).map_err(py_err)?))
+        Ok(PyValue(v.into_py_any(py()).map_err(py_err)?))
     }
 
+    #[inline]
     fn from_u64(v: u64) -> Result<Self> {
         Ok(PyValue(v.into_py_any(py()).map_err(py_err)?))
     }
 
+    #[inline]
     fn from_float(v: f32) -> Result<Self> {
         // Convert f32 to f64 via ryu to maintain precision
         let mut buffer = ryu::Buffer::new();
@@ -71,14 +81,19 @@ impl FromRawValue<'_> for PyValue {
         Ok(PyValue(f64_val.into_py_any(py()).map_err(py_err)?))
     }
 
+    #[inline]
     fn from_double(v: f64) -> Result<Self> {
         Ok(PyValue(v.into_py_any(py()).map_err(py_err)?))
     }
 
+    #[inline]
     fn from_bytes(v: &[u8]) -> Result<Self> {
-        Ok(PyValue(PyBytes::new(py(), v).into_py_any(py()).map_err(py_err)?))
+        Ok(PyValue(
+            PyBytes::new(py(), v).into_py_any(py()).map_err(py_err)?,
+        ))
     }
 
+    #[inline]
     fn from_str(v: &[u8]) -> Result<Self> {
         let s = PyString::from_bytes(py(), v).map_err(py_err)?;
         Ok(PyValue(s.into_py_any(py()).map_err(py_err)?))
@@ -99,7 +114,9 @@ impl FromRawValue<'_> for PyValue {
     fn from_date4(v: &Timestamp4) -> Result<Self> {
         let py = py();
         let date_class = get_date_class(py).map_err(py_err)?;
-        let date = date_class.call1((v.year(), v.month, v.day)).map_err(py_err)?;
+        let date = date_class
+            .call1((v.year(), v.month, v.day))
+            .map_err(py_err)?;
         Ok(PyValue(date.into_py_any(py).map_err(py_err)?))
     }
 

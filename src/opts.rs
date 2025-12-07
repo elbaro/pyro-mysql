@@ -162,6 +162,15 @@ impl Opts {
         self_
     }
 
+    /// Enable or disable TLS for the connection.
+    ///
+    /// # Arguments
+    /// * `enable` - Whether to enable TLS (default: false)
+    fn tls(mut self_: PyRefMut<Self>, enable: bool) -> PyRefMut<Self> {
+        self_.inner.tls = enable;
+        self_
+    }
+
     /// Enable or disable automatic upgrade from TCP to Unix socket.
     ///
     /// When enabled and connected via TCP, the driver will query `SELECT @@socket`
@@ -199,6 +208,33 @@ impl Opts {
     fn capabilities(mut self_: PyRefMut<Self>, capabilities: u32) -> PyRefMut<Self> {
         self_.inner.capabilities =
             zero_mysql::constant::CapabilityFlags::from_bits_truncate(capabilities);
+        self_
+    }
+
+    /// Enable or disable connection reset when returning to pool.
+    ///
+    /// # Arguments
+    /// * `enable` - Whether to reset connection state (default: true)
+    fn pool_reset_conn(mut self_: PyRefMut<Self>, enable: bool) -> PyRefMut<Self> {
+        self_.inner.pool_reset_conn = enable;
+        self_
+    }
+
+    /// Set the maximum number of idle connections in the pool.
+    ///
+    /// # Arguments
+    /// * `count` - Maximum idle connections (default: 100)
+    fn pool_max_idle_conn(mut self_: PyRefMut<Self>, count: usize) -> PyRefMut<Self> {
+        self_.inner.pool_max_idle_conn = count;
+        self_
+    }
+
+    /// Set the maximum number of concurrent connections (active + idle).
+    ///
+    /// # Arguments
+    /// * `count` - Maximum concurrent connections, or None for unlimited (default: None)
+    fn pool_max_concurrency(mut self_: PyRefMut<Self>, count: Option<usize>) -> PyRefMut<Self> {
+        self_.inner.pool_max_concurrency = count;
         self_
     }
 

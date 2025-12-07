@@ -57,7 +57,9 @@ impl TupleHandler {
                             let (py_value, rest) =
                                 parse_value::<PyValue>(&rs.cols[i], is_null_val, bytes_slice)
                                     .map_err(|e| {
-                                        PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string())
+                                        PyErr::new::<pyo3::exceptions::PyException, _>(
+                                            e.to_string(),
+                                        )
                                     })?;
                             values.push(py_value.0.bind(py).clone());
                             bytes_slice = rest;
@@ -257,7 +259,9 @@ impl DictHandler {
                             let (py_value, rest) =
                                 parse_value::<PyValue>(&rs.cols[i], is_null_val, bytes_slice)
                                     .map_err(|e| {
-                                        PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string())
+                                        PyErr::new::<pyo3::exceptions::PyException, _>(
+                                            e.to_string(),
+                                        )
                                     })?;
                             dict.set_item(&rs.col_names[i], py_value.0.bind(py).clone())?;
                             bytes_slice = rest;

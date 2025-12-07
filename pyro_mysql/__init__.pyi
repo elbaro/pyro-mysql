@@ -107,6 +107,10 @@ class Opts:
         """Enable or disable compression for the connection."""
         ...
 
+    def tls(self, enable: bool) -> "Opts":
+        """Enable or disable TLS for the connection."""
+        ...
+
     def upgrade_to_unix_socket(self, enable: bool) -> "Opts":
         """Enable or disable automatic upgrade from TCP to Unix socket."""
         ...
@@ -121,6 +125,18 @@ class Opts:
 
     def capabilities(self, capabilities: int) -> "Opts":
         """Set MySQL client capability flags."""
+        ...
+
+    def pool_reset_conn(self, enable: bool) -> "Opts":
+        """Enable or disable connection reset when returning to pool."""
+        ...
+
+    def pool_max_idle_conn(self, count: int) -> "Opts":
+        """Set the maximum number of idle connections in the pool."""
+        ...
+
+    def pool_max_concurrency(self, count: int | None) -> "Opts":
+        """Set the maximum number of concurrent connections (active + idle)."""
         ...
 
 JsonEncodable = (
@@ -184,7 +200,8 @@ class IsolationLevel:
     RepeatableRead: "IsolationLevel"
     Serializable: "IsolationLevel"
 
-    def as_str(self) -> str:
+    @property
+    def name(self) -> str:
         """Return the isolation level as a string."""
         ...
 

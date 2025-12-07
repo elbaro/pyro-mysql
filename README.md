@@ -25,25 +25,26 @@ from pyro_mysql import AsyncConn
 # Sync
 from pyro_mysql.sync import Conn
 from pyro_mysql import SyncConn
-````
+```
 
 ### 1. Connection
 
 
 ```py
-from pyro_mysql.async_ import Conn, Opts
+from pyro_mysql.async_ import Conn
+from pyro_mysql import Opts
 
-def example():
+async def example():
     conn1 = await Conn.new(f"mysql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
     conn2 = await Conn.new(
         Opts(f"mysql://{USER}:{PASSWORD}@localhost")
-            .tcp_nodelay(false)
+            .tcp_nodelay(False)
     )
     conn3 = await Conn.new(
         Opts()
             .socket("../unix.socket")
             .user("username")
-            .db_name("db")
+            .db("db")
     )
 ```
 
@@ -57,13 +58,13 @@ def example():
 def query(self, query: str, *, as_dict: bool = False) -> Awaitable[list[tuple] | list[dict]]: ...
 def query_first(self, query: str, *, as_dict: bool = False) -> Awaitable[tuple | dict | None]: ...
 def query_drop(self, query: str) -> Awaitable[None]: ...
-def query_batch(self, query: str) -> Awaitable[None]: ...
 
 # Binary Protocols - supports arguments but no multiple statement
 def exec(self, query: str, params: Params = None, *, as_dict: bool = False) -> Awaitable[list[tuple] | list[dict]]: ...
 def exec_first(self, query: str, params: Params = None, *, as_dict: bool = False) -> Awaitable[tuple | dict | None]: ...
 def exec_drop(self, query: str, params: Params = None) -> Awaitable[None]: ...
-def exec_batch(self, query: str, params: Iterable[Params] = []) -> Awaitable[None]: ...
+def exec_batch(self, query: str, params: Sequence[Params] = []) -> Awaitable[None]: ...
+def exec_bulk(self, query: str, params: Sequence[Params] = [], *, as_dict: bool = False) -> Awaitable[list[tuple] | list[dict]]: ...
 
 # Examples
 rows = await conn.exec("SELECT * FROM my_table WHERE a=? AND b=?", (a, b))  # returns list of tuples
@@ -80,25 +81,14 @@ await conn.exec_batch("SELECT * FROM my_table WHERE a=? AND b=?", [(a1, b1), (a2
 async with conn.start_transaction() as tx:
     await conn.exec('INSERT ..')
     await conn.exec('INSERT ..')
-    await tx.commit(conn)
+    await tx.commit()
 
 # sync API
 with conn.start_transaction() as tx:
     conn.exec('INSERT ..')
     conn.exec('INSERT ..')
-    tx.rollback(conn)
+    tx.rollback()
 ```
-
-### 4. Choosing a backend
-```
-conn = Conn(url)
-conn = Conn(url, backend="mysql")
-conn = await Conn.new(url, backend="mysql")
-```
-
-- Sync backends: `zero` (use `zero-mysql` crate), `mysql` (use `mysql` crate)
-- Async backends: `zero` (use `zero-mysql` crate), `mysql` (use `mysql_async` crate)
-
 
 ## DataType Mapping
 
@@ -173,7 +163,7 @@ In sqlalchemy, the following dialects are supported.
 - `mysql+pyro_mysql_async://` (async)
 - `mariadb+pyro_mysql_async://` (async)
 
-The supported connection parameters are [the docs](https://docs.rs/mysql/latest/mysql/struct.Opts.html#method.from_hash_map) and [`capabilities`](https://docs.rs/mysql/latest/mysql/consts/struct.CapabilityFlags.html) (default 2).
+Connection options can be configured using the `Opts` builder class. See `pyro_mysql.Opts` for available options.
 
 ```py
 from sqlalchemy import create_engine, text
@@ -217,16 +207,16 @@ There is no auto-generated API Reference. *.pyi files are manually synced.
 .
 └── pyro_mysql/
     ├── (common classes)/
+    │   ├── Opts
+    │   ├── BufferPool
     │   ├── IsolationLevel
     │   ├── CapabilityFlags
     │   └── PyroFuture
     ├── sync/
     │   ├── Conn
-    │   ├── Opts
     │   └── Transaction
     ├── async_/
     │   ├── Conn
-    │   ├── Opts
     │   └── Transaction
     ├── dbapi/
     │   ├── connect()
