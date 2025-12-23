@@ -261,4 +261,5 @@ There is no auto-generated API Reference. *.pyi files are manually synced.
 - Prefer UnixSocket to TCP
 - Use BufferPool to reuse allocations between connections
 - Use Conn.exec_bulk to group 2~1000 INSERTs or UPDATEs
-- Wait for Python 3.14 + mature free-threaded build for faster asyncio performance
+- The async API is fast but still far from optimal due to GIL. Wait for Python 3.14 + mature free-threaded build for faster asyncio performance
+- The sync API is optimized for single-thread. The library does not actively release the GIL during operations. When free-threaded python gets mature, the optimal API will be reconsidered.
