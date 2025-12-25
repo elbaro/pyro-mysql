@@ -101,7 +101,7 @@ jobs:
 
       - name: Run tests
         env:
-          TEST_DATABASE_URL: mysql://test:1234@127.0.0.1:3306/test
+          DATABASE_URL: mysql://test:1234@127.0.0.1/test
         run: |
           source venv/bin/activate
           pytest -v
