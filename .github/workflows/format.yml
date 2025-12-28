@@ -9,25 +9,25 @@ on:
 jobs:
   format:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      
+
       - name: Install Black
         run: pip install black
-      
+
       - name: Check Python formatting with Black
         run: black --check --diff .
-      
+
       - name: Check Rust formatting with rustfmt
         run: cargo fmt -- --check
