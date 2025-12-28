@@ -1,10 +1,8 @@
+/book/book
+.claude
 /.cargo
 /target
-/.devenv
-/.devenv.flake.nix
-/devenv.nix
-devenv.lock
-/CLAUDE.md
+CLAUDE.md
 /uv.lock
 __pycache__
 /.direnv/
