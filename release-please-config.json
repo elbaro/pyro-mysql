@@ -1,0 +1,7 @@
+{
+  "packages": {
+    ".": {}
+  },
+  "pull-request-title-pattern": "release: v${version}",
+  "label": "release"
+}
