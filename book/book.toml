@@ -1,0 +1,5 @@
+[book]
+authors = ["elbaro"]
+language = "en"
+src = "src"
+title = "pyro-mysql Documentation"
