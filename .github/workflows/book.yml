@@ -1,4 +1,4 @@
-name: Deploy book to Pages
+name: Docs
 
 on:
   push:

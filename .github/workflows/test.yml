@@ -67,9 +67,10 @@ jobs:
           name: wheel
           path: wheel
       - uses: astral-sh/setup-uv@v4
-      - run: uv sync --python ${{ matrix.python-version }}
+      - run: uv sync --no-install-project --python ${{ matrix.python-version }}
       - run: uv pip install wheel/*.whl
-      - run: uv run pytest
+      - run: rm -rf pyro_mysql
+      - run: uv run --no-sync pytest
         env:
           DATABASE_URL: mysql://test:1234@127.0.0.1/test
 
