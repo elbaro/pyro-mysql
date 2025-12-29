@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/elbaro/pyro-mysql/compare/v0.2.3...v0.2.4) (2025-12-29)
+
+
+### Bug Fixes
+
+* trigger release ci ([89e4293](https://github.com/elbaro/pyro-mysql/commit/89e4293f59d458b0c38c02a8fb85b0f61182a275))
+
 ## [0.2.3](https://github.com/elbaro/pyro-mysql/compare/v0.2.2...v0.2.3) (2025-12-29)
 
 
