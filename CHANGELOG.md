@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.9](https://github.com/elbaro/pyro-mysql/compare/v0.2.8...v0.2.9) (2025-12-29)
+
+
+### Bug Fixes
+
+* **ci:** build with python 3.14 ([d4efe23](https://github.com/elbaro/pyro-mysql/commit/d4efe236fdd4a9afbe575d1bf97278d4fc2e85d7))
+
 ## [0.2.8](https://github.com/elbaro/pyro-mysql/compare/v0.2.7...v0.2.8) (2025-12-29)
 
 
