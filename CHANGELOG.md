@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.11](https://github.com/elbaro/pyro-mysql/compare/v0.2.10...v0.2.11) (2025-12-29)
+
+
+### Bug Fixes
+
+* **ci:** set OPENSSL_DIR to cross-compilable openssl ([0d81831](https://github.com/elbaro/pyro-mysql/commit/0d81831aa6176d234c133f5b8961dcbefb4d4ec5))
+
 ## [0.2.10](https://github.com/elbaro/pyro-mysql/compare/v0.2.9...v0.2.10) (2025-12-29)
 
 
