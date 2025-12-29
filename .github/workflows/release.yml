@@ -45,8 +45,8 @@ jobs:
               apt-get update &&
               apt-get install -y libssl-dev:arm64 pkg-config
             docker-options: |
-              -e PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
-              -e PKG_CONFIG_ALLOW_CROSS=1
+              -e AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu
+              -e AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_INCLUDE_DIR=/usr/include
           - os: macos-latest
             target: x86_64-apple-darwin
           - os: macos-latest
