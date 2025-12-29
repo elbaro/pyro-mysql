@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.8](https://github.com/elbaro/pyro-mysql/compare/v0.2.7...v0.2.8) (2025-12-29)
+
+
+### Bug Fixes
+
+* **ci:** use arm64 image for arm64 build, add windows arm64 ([3931202](https://github.com/elbaro/pyro-mysql/commit/393120250b9cd8d73c12349ff1e7a21109021082))
+
 ## [0.2.7](https://github.com/elbaro/pyro-mysql/compare/v0.2.6...v0.2.7) (2025-12-29)
 
 
