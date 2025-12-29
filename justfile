@@ -2,22 +2,6 @@ build:
     cargo build --release --lib
     mv target/release/libpyro_mysql.so pyro_mysql/pyro_mysql.abi3.so || true
 
-check: build
-    cargo fmt --check
-    black --check pyro_mysql
-    PYTHONPATH=. pytest
-
-publish: check
-    rm -rf target/wheels
-    maturin build --release
-    7z e target/wheels/*.whl pyro_mysql/pyro_mysql.abi3.so -otarget/wheels/pyro_mysql
-    patchelf --remove-rpath target/wheels/pyro_mysql/pyro_mysql.abi3.so
-    cd target/wheels && 7z u *.whl pyro_mysql/pyro_mysql.abi3.so
-    maturin upload target/wheels/*.whl
-
-# bump:
-#     git cliff --bump
-
 update-violin:
     cp 'target/criterion/INSERT/report/violin.svg' 'report/INSERT.svg'
     cp 'target/criterion/SELECT_1/report/violin.svg' 'report/SELECT_1.svg'
