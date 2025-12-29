@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.13](https://github.com/elbaro/pyro-mysql/compare/v0.2.12...v0.2.13) (2025-12-29)
+
+
+### Bug Fixes
+
+* **ci:** apt-get update fails due to some urls ([d2f93dc](https://github.com/elbaro/pyro-mysql/commit/d2f93dc380e42b5b545bc0a23e62297b2a6ea684))
+
 ## [0.2.12](https://github.com/elbaro/pyro-mysql/compare/v0.2.11...v0.2.12) (2025-12-29)
 
 
