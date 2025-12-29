@@ -35,14 +35,14 @@ class Conn:
   def exec_first(self, query: str, params = (), *, as_dict: bool = False) -> tuple | dict | None: ...
   def exec_drop(self, query: str, params = ()) -> None: ...
   def exec_batch(self, query: str, params_list = []) -> None: ...
-  def exec_bulk(self, query: str, params_list = [], *, as_dict: bool = False) -> list[tuple] | list[dict]: ...
+  def exec_bulk_insert_or_update(self, query: str, params_list = [], *, as_dict: bool = False) -> list[tuple] | list[dict]: ...
 ```
 
 - `exec`: execute a prepared statement and return the list of rows
 - `exec_first`: execute a prepared statement and return the first row (or None)
 - `exec_drop`: execute a prepared statement and discard the result
 - `exec_batch`: execute a prepared statement multiple times with different parameters
-- `exec_bulk`: execute a prepared statement with bulk parameters (MariaDB only, single round trip)
+- `exec_bulk_insert_or_update`: execute a prepared statement with bulk parameters (MariaDB only, single round trip)
 
 ### Example: basic
 
@@ -72,7 +72,7 @@ conn.exec_batch("INSERT INTO users (age, name) VALUES (?, ?)", [
 MariaDB supports bulk execution which sends all parameters in a single packet:
 
 ```py
-conn.exec_bulk("INSERT INTO users (age, name) VALUES (?, ?)", [
+conn.exec_bulk_insert_or_update("INSERT INTO users (age, name) VALUES (?, ?)", [
     (20, "Alice"),
     (21, "Bob"),
     (22, "Charlie"),

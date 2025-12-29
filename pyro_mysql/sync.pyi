@@ -180,7 +180,7 @@ class Conn:
         ...
 
     @overload
-    def exec_bulk(
+    def exec_bulk_insert_or_update(
         self,
         query: str,
         params_list: Sequence[Params] = [],
@@ -188,10 +188,10 @@ class Conn:
         as_dict: Literal[False] = False,
     ) -> list[tuple[Any, ...]]: ...
     @overload
-    def exec_bulk(
+    def exec_bulk_insert_or_update(
         self, query: str, params_list: Sequence[Params] = [], *, as_dict: Literal[True]
     ) -> list[dict[str, Any]]: ...
-    def exec_bulk(
+    def exec_bulk_insert_or_update(
         self, query: str, params_list: Sequence[Params] = [], *, as_dict: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         """

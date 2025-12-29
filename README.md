@@ -64,7 +64,7 @@ def exec(self, query: str, params: Params = None, *, as_dict: bool = False) -> A
 def exec_first(self, query: str, params: Params = None, *, as_dict: bool = False) -> Awaitable[tuple | dict | None]: ...
 def exec_drop(self, query: str, params: Params = None) -> Awaitable[None]: ...
 def exec_batch(self, query: str, params: Sequence[Params] = []) -> Awaitable[None]: ...
-def exec_bulk(self, query: str, params: Sequence[Params] = [], *, as_dict: bool = False) -> Awaitable[list[tuple] | list[dict]]: ...
+def exec_bulk_insert_or_update(self, query: str, params: Sequence[Params] = [], *, as_dict: bool = False) -> Awaitable[list[tuple] | list[dict]]: ...
 
 # Examples
 rows = await conn.exec("SELECT * FROM my_table WHERE a=? AND b=?", (a, b))  # returns list of tuples
@@ -260,6 +260,6 @@ There is no auto-generated API Reference. *.pyi files are manually synced.
 - Prefer MariaDB to MySQL
 - Prefer UnixSocket to TCP
 - Use BufferPool to reuse allocations between connections
-- Use Conn.exec_bulk to group 2~1000 INSERTs or UPDATEs
+- Use Conn.exec_bulk_insert_or_update to group 2~1000 INSERTTs or UPDATEEs
 - The async API is fast but still far from optimal due to GIL. Wait for Python 3.14 + mature free-threaded build for faster asyncio performance
 - The sync API is optimized for single-thread. The library does not actively release the GIL during operations. When free-threaded python gets mature, the optimal API will be reconsidered.

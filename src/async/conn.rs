@@ -430,7 +430,7 @@ impl AsyncConn {
     }
 
     #[pyo3(signature = (query, params=vec![], *, as_dict=false))]
-    fn exec_bulk<'py>(
+    fn exec_bulk_insert_or_update<'py>(
         &self,
         py: Python<'py>,
         query: PyBackedStr,

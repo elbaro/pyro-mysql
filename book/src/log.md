@@ -1,29 +1,21 @@
 # Logging
 
-pyro-mysql sends Rust logs to the Python logging system.
+pyro_mysql uses Python's standard `logging` module. The logs from Rust code are automatically bridged to Python logging when the module is imported.
 
-## Setup
+The logger name is `pyro_mysql`.
 
-Configure logging using Python's standard logging module:
+## Basic Setup
+
+```py
+import logging
+from pyro_mysql.sync import Conn
+
+logging.basicConfig(level=logging.DEBUG)
+conn = Conn("mysql://test:1234@localhost:3306/test_db")  # logs will appear
+```
 
 ```py
 import logging
 
-# Enable debug logging for pyro-mysql
-logging.getLogger("pyro_mysql").setLevel(logging.DEBUG)
-
-# Or configure with a handler
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(name)s - %(levelname)s - %(message)s'))
-logging.getLogger("pyro_mysql").addHandler(handler)
-logging.getLogger("pyro_mysql").setLevel(logging.DEBUG)
+logger = logging.getLogger("pyro_mysql")
 ```
-
-## Log Levels
-
-| Level | Content |
-|-------|---------|
-| `DEBUG` | Query execution, connection events |
-| `INFO` | Connection establishment, pool events |
-| `WARNING` | Transaction auto-rollback, deprecation warnings |
-| `ERROR` | Query failures, connection errors |

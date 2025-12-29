@@ -76,12 +76,12 @@ async def insert_pyro_async(conn, n):
 
 
 async def insert_pyro_async_bulk(conn, n):
-    """Insert using exec_bulk with batches of up to 1000 rows"""
+    """Insert using exec_bulk_insert_or_update with batches of up to 1000 rows"""
     batch_size = 1000
     for batch_start in range(0, n, batch_size):
         batch_end = min(batch_start + batch_size, n)
         batch_data = [DATA[i % 10000] for i in range(batch_start, batch_end)]
-        await conn.exec_bulk(
+        await conn.exec_bulk_insert_or_update(
             "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
             batch_data,
         )
@@ -96,12 +96,12 @@ def insert_pyro_sync(conn, n):
 
 
 def insert_pyro_sync_bulk(conn, n):
-    """Insert using exec_bulk with batches of up to 1000 rows"""
+    """Insert using exec_bulk_insert_or_update with batches of up to 1000 rows"""
     batch_size = 1000
     for batch_start in range(0, n, batch_size):
         batch_end = min(batch_start + batch_size, n)
         batch_data = [DATA[i % 10000] for i in range(batch_start, batch_end)]
-        conn.exec_bulk(
+        conn.exec_bulk_insert_or_update(
             "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (?, ?, ?, ?, ?)",
             batch_data,
         )

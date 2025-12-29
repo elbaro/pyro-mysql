@@ -16,10 +16,8 @@ class Transaction:
   def rollback(self) -> None: ...
 ```
 
-## Context Manager
-
-The recommended way to use transactions is with a context manager.
-If neither `commit()` nor `rollback()` is called before exit, the transaction is rolled back automatically.
+The transactions should be entered as a context manager.
+You must call `commit()` explicitly. If neither `commit()` nor `rollback()` is called, the transaction rolls back on exit.
 
 ```py
 with conn.start_transaction() as tx:
@@ -33,12 +31,13 @@ with conn.start_transaction() as tx:
 with conn.start_transaction() as tx:
     conn.exec_drop("INSERT INTO users (name) VALUES (?)", ("Alice",))
     raise ValueError("oops")
-# auto-rolled back, no data inserted
+# rolled back, no data inserted
 ```
 
 ## Explicit Commit / Rollback
 
-You can call `commit()` or `rollback()` inside the context manager:
+You can call `commit()` or `rollback()` explicitly inside the context manager.
+After the call, the transaction object cannot be used anymore.
 
 ```py
 with conn.start_transaction() as tx:
@@ -51,8 +50,6 @@ with conn.start_transaction() as tx:
 
 ## Isolation Level
 
-MySQL supports four isolation levels. Pass `isolation_level` to `start_transaction()`.
-
 ```py
 from pyro_mysql import IsolationLevel
 
@@ -64,9 +61,19 @@ with conn.start_transaction(isolation_level=IsolationLevel.Serializable) as tx:
 | Level | Description |
 |-------|-------------|
 | `ReadUncommitted` | Allows dirty reads |
-| `ReadCommitted` | Default. Only sees committed data |
+| `ReadCommitted` | Only sees committed data |
 | `RepeatableRead` | Snapshot at transaction start (InnoDB default) |
 | `Serializable` | Full serializability |
+
+You can also create isolation levels from strings:
+
+```py
+level = IsolationLevel("READ COMMITTED")
+level = IsolationLevel("repeatable_read")
+level = IsolationLevel("sErIaLiZaBle")
+
+assert level.as_str() == "SERIALIZABLE"
+```
 
 ## Read-Only Transactions
 
@@ -90,20 +97,6 @@ with conn.start_transaction(consistent_snapshot=True) as tx:
 
 This executes `START TRANSACTION WITH CONSISTENT SNAPSHOT`.
 
-## Combining Options
-
-You can combine isolation level, readonly, and consistent snapshot:
-
-```py
-with conn.start_transaction(
-    isolation_level=IsolationLevel.RepeatableRead,
-    readonly=True,
-    consistent_snapshot=True
-) as tx:
-    ...
-    tx.commit()
-```
-
 ## Async
 
 For async connections, use `async with` and `await`:
@@ -113,7 +106,7 @@ async with conn.start_transaction() as tx:
     await conn.exec_drop("INSERT INTO users (name) VALUES (?)", ("Alice",))
     await tx.commit()
 
-# explicit commit/rollback
+# explicit rollback
 async with conn.start_transaction() as tx:
     await conn.exec_drop("INSERT INTO users (name) VALUES (?)", ("Alice",))
     await tx.rollback()

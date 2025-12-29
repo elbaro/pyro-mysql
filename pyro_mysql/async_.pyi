@@ -210,7 +210,7 @@ class Conn:
         ...
 
     @overload
-    def exec_bulk(
+    def exec_bulk_insert_or_update(
         self,
         query: str,
         params: Sequence[Params] = [],
@@ -218,10 +218,10 @@ class Conn:
         as_dict: Literal[False] = False,
     ) -> PyroFuture[list[tuple[Any, ...]]]: ...
     @overload
-    def exec_bulk(
+    def exec_bulk_insert_or_update(
         self, query: str, params: Sequence[Params] = [], *, as_dict: Literal[True]
     ) -> PyroFuture[list[dict[str, Any]]]: ...
-    def exec_bulk(
+    def exec_bulk_insert_or_update(
         self, query: str, params: Sequence[Params] = [], *, as_dict: bool = False
     ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
         """
