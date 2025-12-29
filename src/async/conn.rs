@@ -470,7 +470,7 @@ impl AsyncConn {
             if as_dict {
                 let mut handler = dict_handler.write().await;
                 handler.clear();
-                conn.exec_bulk(stmt, bulk_params, flags, &mut *handler)
+                conn.exec_bulk_insert_or_update(stmt, bulk_params, flags, &mut *handler)
                     .await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
@@ -481,7 +481,7 @@ impl AsyncConn {
             } else {
                 let mut handler = tuple_handler.write().await;
                 handler.clear();
-                conn.exec_bulk(stmt, bulk_params, flags, &mut *handler)
+                conn.exec_bulk_insert_or_update(stmt, bulk_params, flags, &mut *handler)
                     .await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();

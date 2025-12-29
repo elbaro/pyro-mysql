@@ -320,13 +320,13 @@ impl SyncConn {
 
         if as_dict {
             let mut handler = DictHandler::new(py);
-            conn.exec_bulk(stmt, bulk_params, flags, &mut handler)?;
+            conn.exec_bulk_insert_or_update(stmt, bulk_params, flags, &mut handler)?;
             *self.affected_rows.write() = handler.affected_rows();
             *self.last_insert_id.write() = handler.last_insert_id();
             Ok(handler.into_rows())
         } else {
             let mut handler = TupleHandler::new(py);
-            conn.exec_bulk(stmt, bulk_params, flags, &mut handler)?;
+            conn.exec_bulk_insert_or_update(stmt, bulk_params, flags, &mut handler)?;
             *self.affected_rows.write() = handler.affected_rows();
             *self.last_insert_id.write() = handler.last_insert_id();
             Ok(handler.into_rows())
