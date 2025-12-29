@@ -36,7 +36,8 @@ jobs:
             before-script-linux: yum install -y openssl-devel pkgconfig
           - os: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
-            before-script-linux: apt-get update && apt-get install -y libssl-dev pkg-config
+            before-script-linux: dpkg --add-architecture arm64 && apt-get update && apt-get install -y libssl-dev:arm64 pkg-config
+            openssl_dir: /usr/aarch64-unknown-linux-gnu/
           - os: macos-latest
             target: x86_64-apple-darwin
           - os: macos-latest
@@ -52,6 +53,8 @@ jobs:
         with:
           python-version: "3.14"
       - uses: PyO3/maturin-action@v1
+        env:
+          OPENSSL_DIR: ${{ matrix.openssl_dir }}
         with:
           target: ${{ matrix.target }}
           args: --release --out dist
