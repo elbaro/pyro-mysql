@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.12](https://github.com/elbaro/pyro-mysql/compare/v0.2.11...v0.2.12) (2025-12-29)
+
+
+### Bug Fixes
+
+* **ci:** add ubuntu arm64 repos, point pkg-config to arm64 dir ([cf39e68](https://github.com/elbaro/pyro-mysql/commit/cf39e6810534bcadd0307b6049ae7574de978204))
+
 ## [0.2.11](https://github.com/elbaro/pyro-mysql/compare/v0.2.10...v0.2.11) (2025-12-29)
 
 
