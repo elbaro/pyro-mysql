@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.10](https://github.com/elbaro/pyro-mysql/compare/v0.2.9...v0.2.10) (2025-12-29)
+
+
+### Bug Fixes
+
+* **ci:** add pkg-config ([db0118a](https://github.com/elbaro/pyro-mysql/commit/db0118a956be7ee492dbb43c55b4ff5f84ba0b0c))
+
 ## [0.2.9](https://github.com/elbaro/pyro-mysql/compare/v0.2.8...v0.2.9) (2025-12-29)
 
 
