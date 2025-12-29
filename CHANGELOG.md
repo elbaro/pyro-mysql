@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/elbaro/pyro-mysql/compare/v0.2.4...v0.2.5) (2025-12-29)
+
+
+### Bug Fixes
+
+* use python 3.10 instead of 3.9 in windows ci ([5775b98](https://github.com/elbaro/pyro-mysql/commit/5775b986742516c0f1c2ac682b975a600fd406b9))
+
 ## [0.2.4](https://github.com/elbaro/pyro-mysql/compare/v0.2.3...v0.2.4) (2025-12-29)
 
 
