@@ -53,7 +53,7 @@ jobs:
           args: --release --out dist
           rust-toolchain: nightly
           manylinux: auto
-          before-script-linux: yum install -y openssl-devel
+          before-script-linux: DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y libssl-dev
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.target }}
