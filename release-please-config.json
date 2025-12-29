@@ -1,8 +1,47 @@
 {
-  "release-type": "python",
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "rust",
+  "pull-request-title-pattern": "release: v${version}",
+  "pull-request-header": " ",
+  "pull-request-footer": " ",
+  "label": "release",
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "changelog-sections": [
+    {
+      "type": "feat",
+      "section": "Features"
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "Performance"
+    },
+    {
+      "type": "docs",
+      "section": "Documentation"
+    },
+    {
+      "type": "tidy",
+      "hidden": true
+    },
+    {
+      "type": "infra",
+      "hidden": true
+    },
+    {
+      "type": "revert",
+      "hidden": true
+    },
+    {
+      "type": "release",
+      "hidden": true
+    }
+  ],
   "packages": {
     ".": {}
-  },
-  "pull-request-title-pattern": "release: v${version}",
-  "label": "release"
+  }
 }
