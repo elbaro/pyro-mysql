@@ -47,6 +47,7 @@ jobs:
             docker-options: |
               -e AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu
               -e AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_INCLUDE_DIR=/usr/include
+              -e CFLAGS_aarch64_unknown_linux_gnu=-I/usr/include/aarch64-linux-gnu
           - os: macos-latest
             target: x86_64-apple-darwin
           - os: macos-latest
