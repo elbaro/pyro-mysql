@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.16](https://github.com/elbaro/pyro-mysql/compare/v0.2.15...v0.2.16) (2025-12-29)
+
+
+### Bug Fixes
+
+* update zero-mysql to ignore unix socket in windows ([1747674](https://github.com/elbaro/pyro-mysql/commit/174767423027fbc358bd63625b178b317defeaf2))
+
 ## [0.2.15](https://github.com/elbaro/pyro-mysql/compare/v0.2.14...v0.2.15) (2025-12-29)
 
 
