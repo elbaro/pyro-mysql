@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.15](https://github.com/elbaro/pyro-mysql/compare/v0.2.14...v0.2.15) (2025-12-29)
+
+
+### Bug Fixes
+
+* **ci:** ubuntu arm64 CFLAGS ([f95dd87](https://github.com/elbaro/pyro-mysql/commit/f95dd8740aea8e348b0ad5ea9bc4caddcf6f862e))
+
 ## [0.2.14](https://github.com/elbaro/pyro-mysql/compare/v0.2.13...v0.2.14) (2025-12-29)
 
 
