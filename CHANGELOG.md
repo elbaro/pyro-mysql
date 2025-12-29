@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.7](https://github.com/elbaro/pyro-mysql/compare/v0.2.6...v0.2.7) (2025-12-29)
+
+
+### Bug Fixes
+
+* **ci:** support both centos/debian manylinux images ([dcf03cc](https://github.com/elbaro/pyro-mysql/commit/dcf03cc462dc02042ac581c12978e1daa0e6edd1))
+
 ## [0.2.6](https://github.com/elbaro/pyro-mysql/compare/v0.2.5...v0.2.6) (2025-12-29)
 
 
