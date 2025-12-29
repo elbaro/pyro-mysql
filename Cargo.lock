@@ -1099,7 +1099,7 @@ dependencies = [
 
 [[package]]
 name = "pyro-mysql"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "chrono",
  "criterion",
