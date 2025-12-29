@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.14](https://github.com/elbaro/pyro-mysql/compare/v0.2.13...v0.2.14) (2025-12-29)
+
+
+### Bug Fixes
+
+* **ci:** specify AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_* ([512b169](https://github.com/elbaro/pyro-mysql/commit/512b1696add7be7d9ac8586e2a036334215c4131))
+
 ## [0.2.13](https://github.com/elbaro/pyro-mysql/compare/v0.2.12...v0.2.13) (2025-12-29)
 
 
