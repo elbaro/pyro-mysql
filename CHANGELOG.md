@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.17](https://github.com/elbaro/pyro-mysql/compare/v0.2.16...v0.2.17) (2025-12-30)
+
+
+### Bug Fixes
+
+* cleanup CHANGELOG ([59f10cf](https://github.com/elbaro/pyro-mysql/commit/59f10cfd8ae69e7b9321e5c09e9303341dcbca7d))
+
 ## [0.2.16](https://github.com/elbaro/pyro-mysql/compare/v0.2.2...v0.2.16) (2025-12-30)
 
 ### Bug Fixes
