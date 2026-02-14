@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360">
+  <style>
+    .title { font: bold 14px sans-serif; fill: #333; }
+    .label { font: 11px sans-serif; fill: #666; }
+    .value { font: 10px sans-serif; fill: #333; }
+    .axis { font: 10px sans-serif; fill: #666; }
+    .legend { font: 11px sans-serif; fill: #333; }
+    .grid { stroke: #e0e0e0; stroke-width: 1; }
+  </style>
+
+  <rect width="960" height="360" fill="#fafafa" rx="8"/>
+  <text x="480" y="25" text-anchor="middle" class="title">SQLAlchemy Benchmark (lower is better)</text>
+
+  <rect x="277" y="40" width="12" height="12" fill="#4CAF50" rx="2"/>
+  <text x="294" y="50" class="legend">pyro-mysql</text>
+  <rect x="412" y="40" width="12" height="12" fill="#2196F3" rx="2"/>
+  <text x="429" y="50" class="legend">mysqldb</text>
+  <rect x="547" y="40" width="12" height="12" fill="#FF9800" rx="2"/>
+  <text x="564" y="50" class="legend">pymysql</text>
+
+  <line x1="90" y1="80.0" x2="910" y2="80.0" class="grid"/>
+  <text x="82" y="84.0" text-anchor="end" class="axis">50</text>
+  <line x1="90" y1="124.0" x2="910" y2="124.0" class="grid"/>
+  <text x="82" y="128.0" text-anchor="end" class="axis">40</text>
+  <line x1="90" y1="168.0" x2="910" y2="168.0" class="grid"/>
+  <text x="82" y="172.0" text-anchor="end" class="axis">30</text>
+  <line x1="90" y1="212.0" x2="910" y2="212.0" class="grid"/>
+  <text x="82" y="216.0" text-anchor="end" class="axis">20</text>
+  <line x1="90" y1="256.0" x2="910" y2="256.0" class="grid"/>
+  <text x="82" y="260.0" text-anchor="end" class="axis">10</text>
+  <line x1="90" y1="300.0" x2="910" y2="300.0" class="grid"/>
+  <text x="82" y="304.0" text-anchor="end" class="axis">0</text>
+  <text x="25" y="190" text-anchor="middle" class="label" transform="rotate(-90, 25, 190)">Time (ms)</text>
+  <g>
+    <rect x="124.0" y="270.5" width="28" height="29.5" fill="#4CAF50" rx="2"/>
+    <text x="138.0" y="266.5" text-anchor="middle" class="value">6.7</text>
+    <rect x="158.0" y="271.2" width="28" height="28.8" fill="#2196F3" rx="2"/>
+    <text x="172.0" y="267.2" text-anchor="middle" class="value">6.5</text>
+    <rect x="192.0" y="266.1" width="28" height="33.9" fill="#FF9800" rx="2"/>
+    <text x="206.0" y="262.1" text-anchor="middle" class="value">7.7</text>
+    <text x="172.0" y="320.0" text-anchor="middle" class="label">INSERT</text>
+    <text x="172.0" y="336.0" text-anchor="middle" class="value" fill="#4CAF50">1.02x slower</text>
+  </g>
+  <g>
+    <rect x="288.0" y="177.0" width="28" height="123.0" fill="#4CAF50" rx="2"/>
+    <text x="302.0" y="173.0" text-anchor="middle" class="value">28.0</text>
+    <rect x="322.0" y="154.1" width="28" height="145.9" fill="#2196F3" rx="2"/>
+    <text x="336.0" y="150.1" text-anchor="middle" class="value">33.1</text>
+    <rect x="356.0" y="115.0" width="28" height="185.0" fill="#FF9800" rx="2"/>
+    <text x="370.0" y="111.0" text-anchor="middle" class="value">42.0</text>
+    <text x="336.0" y="320.0" text-anchor="middle" class="label">SELECT_1</text>
+    <text x="336.0" y="336.0" text-anchor="middle" class="value" fill="#4CAF50">1.19x faster</text>
+  </g>
+  <g>
+    <rect x="452.0" y="180.0" width="28" height="120.0" fill="#4CAF50" rx="2"/>
+    <text x="466.0" y="176.0" text-anchor="middle" class="value">27.3</text>
+    <rect x="486.0" y="158.8" width="28" height="141.2" fill="#2196F3" rx="2"/>
+    <text x="500.0" y="154.8" text-anchor="middle" class="value">32.1</text>
+    <rect x="520.0" y="125.5" width="28" height="174.5" fill="#FF9800" rx="2"/>
+    <text x="534.0" y="121.5" text-anchor="middle" class="value">39.7</text>
+    <text x="500.0" y="320.0" text-anchor="middle" class="label">SELECT_10</text>
+    <text x="500.0" y="336.0" text-anchor="middle" class="value" fill="#4CAF50">1.18x faster</text>
+  </g>
+  <g>
+    <rect x="616.0" y="184.3" width="28" height="115.7" fill="#4CAF50" rx="2"/>
+    <text x="630.0" y="180.3" text-anchor="middle" class="value">26.3</text>
+    <rect x="650.0" y="161.5" width="28" height="138.5" fill="#2196F3" rx="2"/>
+    <text x="664.0" y="157.5" text-anchor="middle" class="value">31.5</text>
+    <rect x="684.0" y="125.9" width="28" height="174.1" fill="#FF9800" rx="2"/>
+    <text x="698.0" y="121.9" text-anchor="middle" class="value">39.6</text>
+    <text x="664.0" y="320.0" text-anchor="middle" class="label">SELECT_100</text>
+    <text x="664.0" y="336.0" text-anchor="middle" class="value" fill="#4CAF50">1.20x faster</text>
+  </g>
+  <g>
+    <rect x="780.0" y="164.3" width="28" height="135.7" fill="#4CAF50" rx="2"/>
+    <text x="794.0" y="160.3" text-anchor="middle" class="value">30.8</text>
+    <rect x="814.0" y="147.8" width="28" height="152.2" fill="#2196F3" rx="2"/>
+    <text x="828.0" y="143.8" text-anchor="middle" class="value">34.6</text>
+    <rect x="848.0" y="142.6" width="28" height="157.4" fill="#FF9800" rx="2"/>
+    <text x="862.0" y="138.6" text-anchor="middle" class="value">35.8</text>
+    <text x="828.0" y="320.0" text-anchor="middle" class="label">UPDATE</text>
+    <text x="828.0" y="336.0" text-anchor="middle" class="value" fill="#4CAF50">1.12x faster</text>
+  </g>
+</svg>

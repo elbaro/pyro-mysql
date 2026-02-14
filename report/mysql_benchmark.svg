@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360">
+  <style>
+    .title { font: bold 14px sans-serif; fill: #333; }
+    .label { font: 11px sans-serif; fill: #666; }
+    .value { font: 10px sans-serif; fill: #333; }
+    .axis { font: 10px sans-serif; fill: #666; }
+    .legend { font: 11px sans-serif; fill: #333; }
+    .grid { stroke: #e0e0e0; stroke-width: 1; }
+  </style>
+
+  <rect width="960" height="360" fill="#fafafa" rx="8"/>
+  <text x="480" y="25" text-anchor="middle" class="title">MySQL Benchmark (lower is better)</text>
+
+  <rect x="75" y="40" width="12" height="12" fill="#4CAF50" rx="2"/>
+  <text x="92" y="50" class="legend">pyro-mysql (sync)</text>
+  <rect x="210" y="40" width="12" height="12" fill="#2196F3" rx="2"/>
+  <text x="227" y="50" class="legend">mysqlclient (sync)</text>
+  <rect x="345" y="40" width="12" height="12" fill="#FF9800" rx="2"/>
+  <text x="362" y="50" class="legend">pymysql (sync)</text>
+  <rect x="480" y="40" width="12" height="12" fill="#26A69A" rx="2"/>
+  <text x="497" y="50" class="legend">pyro-mysql (async)</text>
+  <rect x="615" y="40" width="12" height="12" fill="#EC407A" rx="2"/>
+  <text x="632" y="50" class="legend">aiomysql (async)</text>
+  <rect x="750" y="40" width="12" height="12" fill="#5C6BC0" rx="2"/>
+  <text x="767" y="50" class="legend">asyncmy (async)</text>
+
+  <line x1="90" y1="80.0" x2="910" y2="80.0" class="grid"/>
+  <text x="82" y="84.0" text-anchor="end" class="axis">30</text>
+  <line x1="90" y1="124.0" x2="910" y2="124.0" class="grid"/>
+  <text x="82" y="128.0" text-anchor="end" class="axis">24</text>
+  <line x1="90" y1="168.0" x2="910" y2="168.0" class="grid"/>
+  <text x="82" y="172.0" text-anchor="end" class="axis">18</text>
+  <line x1="90" y1="212.0" x2="910" y2="212.0" class="grid"/>
+  <text x="82" y="216.0" text-anchor="end" class="axis">12</text>
+  <line x1="90" y1="256.0" x2="910" y2="256.0" class="grid"/>
+  <text x="82" y="260.0" text-anchor="end" class="axis">6</text>
+  <line x1="90" y1="300.0" x2="910" y2="300.0" class="grid"/>
+  <text x="82" y="304.0" text-anchor="end" class="axis">0</text>
+  <text x="25" y="190" text-anchor="middle" class="label" transform="rotate(-90, 25, 190)">Time (ms)</text>
+  <g>
+    <rect x="93.5" y="261.4" width="28" height="38.6" fill="#4CAF50" rx="2"/>
+    <text x="107.5" y="257.4" text-anchor="middle" class="value">5.3</text>
+    <rect x="127.5" y="237.4" width="28" height="62.6" fill="#2196F3" rx="2"/>
+    <text x="141.5" y="233.4" text-anchor="middle" class="value">8.5</text>
+    <rect x="161.5" y="174.6" width="28" height="125.4" fill="#FF9800" rx="2"/>
+    <text x="175.5" y="170.6" text-anchor="middle" class="value">17.1</text>
+    <rect x="195.5" y="203.6" width="28" height="96.4" fill="#26A69A" rx="2"/>
+    <text x="209.5" y="199.6" text-anchor="middle" class="value">13.1</text>
+    <rect x="229.5" y="165.6" width="28" height="134.4" fill="#EC407A" rx="2"/>
+    <text x="243.5" y="161.6" text-anchor="middle" class="value">18.3</text>
+    <rect x="263.5" y="152.3" width="28" height="147.7" fill="#5C6BC0" rx="2"/>
+    <text x="277.5" y="148.3" text-anchor="middle" class="value">20.1</text>
+    <text x="192.5" y="320.0" text-anchor="middle" class="label">SELECT_1</text>
+    <text x="192.5" y="336.0" text-anchor="middle" class="value" fill="#4CAF50">1.62x faster</text>
+  </g>
+  <g>
+    <rect x="298.5" y="260.9" width="28" height="39.1" fill="#4CAF50" rx="2"/>
+    <text x="312.5" y="256.9" text-anchor="middle" class="value">5.3</text>
+    <rect x="332.5" y="239.9" width="28" height="60.1" fill="#2196F3" rx="2"/>
+    <text x="346.5" y="235.9" text-anchor="middle" class="value">8.2</text>
+    <rect x="366.5" y="178.1" width="28" height="121.9" fill="#FF9800" rx="2"/>
+    <text x="380.5" y="174.1" text-anchor="middle" class="value">16.6</text>
+    <rect x="400.5" y="200.9" width="28" height="99.1" fill="#26A69A" rx="2"/>
+    <text x="414.5" y="196.9" text-anchor="middle" class="value">13.5</text>
+    <rect x="434.5" y="169.6" width="28" height="130.4" fill="#EC407A" rx="2"/>
+    <text x="448.5" y="165.6" text-anchor="middle" class="value">17.8</text>
+    <rect x="468.5" y="150.8" width="28" height="149.2" fill="#5C6BC0" rx="2"/>
+    <text x="482.5" y="146.8" text-anchor="middle" class="value">20.3</text>
+    <text x="397.5" y="320.0" text-anchor="middle" class="label">SELECT_10</text>
+    <text x="397.5" y="336.0" text-anchor="middle" class="value" fill="#4CAF50">1.54x faster</text>
+  </g>
+  <g>
+    <rect x="503.5" y="264.7" width="28" height="35.3" fill="#4CAF50" rx="2"/>
+    <text x="517.5" y="260.7" text-anchor="middle" class="value">4.8</text>
+    <rect x="537.5" y="240.2" width="28" height="59.8" fill="#2196F3" rx="2"/>
+    <text x="551.5" y="236.2" text-anchor="middle" class="value">8.2</text>
+    <rect x="571.5" y="183.3" width="28" height="116.7" fill="#FF9800" rx="2"/>
+    <text x="585.5" y="179.3" text-anchor="middle" class="value">15.9</text>
+    <rect x="605.5" y="211.2" width="28" height="88.8" fill="#26A69A" rx="2"/>
+    <text x="619.5" y="207.2" text-anchor="middle" class="value">12.1</text>
+    <rect x="639.5" y="173.3" width="28" height="126.7" fill="#EC407A" rx="2"/>
+    <text x="653.5" y="169.3" text-anchor="middle" class="value">17.3</text>
+    <rect x="673.5" y="157.9" width="28" height="142.1" fill="#5C6BC0" rx="2"/>
+    <text x="687.5" y="153.9" text-anchor="middle" class="value">19.4</text>
+    <text x="602.5" y="320.0" text-anchor="middle" class="label">SELECT_100</text>
+    <text x="602.5" y="336.0" text-anchor="middle" class="value" fill="#4CAF50">1.69x faster</text>
+  </g>
+  <g>
+    <rect x="708.5" y="276.9" width="28" height="23.1" fill="#4CAF50" rx="2"/>
+    <text x="722.5" y="272.9" text-anchor="middle" class="value">3.2</text>
+    <rect x="742.5" y="257.2" width="28" height="42.8" fill="#2196F3" rx="2"/>
+    <text x="756.5" y="253.2" text-anchor="middle" class="value">5.8</text>
+    <rect x="776.5" y="250.6" width="28" height="49.4" fill="#FF9800" rx="2"/>
+    <text x="790.5" y="246.6" text-anchor="middle" class="value">6.7</text>
+    <rect x="810.5" y="229.1" width="28" height="70.9" fill="#26A69A" rx="2"/>
+    <text x="824.5" y="225.1" text-anchor="middle" class="value">9.7</text>
+    <rect x="844.5" y="239.2" width="28" height="60.8" fill="#EC407A" rx="2"/>
+    <text x="858.5" y="235.2" text-anchor="middle" class="value">8.3</text>
+    <rect x="878.5" y="230.9" width="28" height="69.1" fill="#5C6BC0" rx="2"/>
+    <text x="892.5" y="226.9" text-anchor="middle" class="value">9.4</text>
+    <text x="807.5" y="320.0" text-anchor="middle" class="label">INSERT</text>
+    <text x="807.5" y="336.0" text-anchor="middle" class="value" fill="#4CAF50">1.85x faster</text>
+  </g>
+</svg>
