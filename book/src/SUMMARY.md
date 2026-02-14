@@ -17,6 +17,7 @@
 
 # Advanced Topics
 
+- [Performance Tips](perf-tips.md)
 - [Client-side Type Checking]()
 - [Protocol]()
 

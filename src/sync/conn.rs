@@ -220,7 +220,7 @@ impl SyncConn {
         let params_adapter = ParamsAdapter::new(&params);
         if as_dict {
             let mut handler = DictHandler::new(py);
-            conn.exec_first(stmt, params_adapter, &mut handler)?;
+            conn.exec(stmt, params_adapter, &mut handler)?;
             *self.affected_rows.write() = handler.affected_rows();
             *self.last_insert_id.write() = handler.last_insert_id();
             let rows = handler.into_rows();
@@ -231,7 +231,7 @@ impl SyncConn {
             })
         } else {
             let mut handler = TupleHandler::new(py);
-            conn.exec_first(stmt, params_adapter, &mut handler)?;
+            conn.exec(stmt, params_adapter, &mut handler)?;
             *self.affected_rows.write() = handler.affected_rows();
             *self.last_insert_id.write() = handler.last_insert_id();
             let rows = handler.into_rows();

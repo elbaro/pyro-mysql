@@ -327,7 +327,7 @@ impl AsyncConn {
             if as_dict {
                 let mut handler = dict_handler.write().await;
                 handler.clear();
-                conn.exec_first(stmt, params_adapter, &mut *handler).await?;
+                conn.exec(stmt, params_adapter, &mut *handler).await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
                 Python::attach(|py| {
@@ -337,7 +337,7 @@ impl AsyncConn {
             } else {
                 let mut handler = tuple_handler.write().await;
                 handler.clear();
-                conn.exec_first(stmt, params_adapter, &mut *handler).await?;
+                conn.exec(stmt, params_adapter, &mut *handler).await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
                 Python::attach(|py| {

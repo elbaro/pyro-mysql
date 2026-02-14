@@ -1926,9 +1926,9 @@ dependencies = [
 
 [[package]]
 name = "zero-mysql"
-version = "0.2.1"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d0d637592a35b506e488a7a9f5b44623adf0d3ead89b8999cebd59c8198b009"
+checksum = "1b0fe6e9ab04291a44d989eb46a91c49cf8e7db70456873bcc7c08294a918d88"
 dependencies = [
  "auto_impl",
  "bitflags",
@@ -1946,7 +1946,19 @@ dependencies = [
  "tokio-native-tls",
  "tracing",
  "url",
+ "zero-mysql-derive",
  "zerocopy",
+]
+
+[[package]]
+name = "zero-mysql-derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0582eb12709bb6f17e6ec15e2b2325642c165171dae7d2c55c0072cd663b5c20"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
