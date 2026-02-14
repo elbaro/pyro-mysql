@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.17](https://github.com/elbaro/pyro-mysql/compare/v0.2.16...v0.2.17) (2026-02-14)
+
+
+### Bug Fixes
+
+* cleanup CHANGELOG ([59f10cf](https://github.com/elbaro/pyro-mysql/commit/59f10cfd8ae69e7b9321e5c09e9303341dcbca7d))
+
+
+### Documentation
+
+* redraw benchmarks as svg ([724238b](https://github.com/elbaro/pyro-mysql/commit/724238b083485f85d9fbb2affffbe8940791b0bd))
+* update README.md ([8b63c3c](https://github.com/elbaro/pyro-mysql/commit/8b63c3c00353293d34f81e77e1400917590e8007))
+
 ## [0.2.16](https://github.com/elbaro/pyro-mysql/compare/v0.2.2...v0.2.16) (2025-12-30)
 
 ### Bug Fixes
