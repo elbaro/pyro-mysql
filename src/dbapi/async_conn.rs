@@ -102,7 +102,7 @@ impl AsyncDbApiConn {
     // ─── Pep249 ──────────────────────────────────────────────────────────
 
     fn close<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let arc = self.0.clone();
+        let arc = Arc::clone(&self.0);
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             *arc.write().await = None;
             Ok(())
@@ -110,7 +110,7 @@ impl AsyncDbApiConn {
     }
 
     fn commit<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let arc = self.0.clone();
+        let arc = Arc::clone(&self.0);
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let mut guard = arc.write().await;
             let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
@@ -120,7 +120,7 @@ impl AsyncDbApiConn {
     }
 
     fn rollback<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let arc = self.0.clone();
+        let arc = Arc::clone(&self.0);
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let mut guard = arc.write().await;
             let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
@@ -137,7 +137,7 @@ impl AsyncDbApiConn {
     // ─── Helper ──────────────────────────────────────────────────────────
 
     pub async fn set_autocommit(&self, on: bool) -> PyroResult<()> {
-        let arc = self.0.clone();
+        let arc = Arc::clone(&self.0);
         let mut guard = arc.write().await;
         let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
         let query = if on {
@@ -150,7 +150,7 @@ impl AsyncDbApiConn {
     }
 
     async fn ping(&self) -> DbApiResult<()> {
-        let arc = self.0.clone();
+        let arc = Arc::clone(&self.0);
         tokio_spawn_as_abort_on_drop(async move {
             let mut guard = arc.write().await;
             let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
@@ -163,7 +163,7 @@ impl AsyncDbApiConn {
 
     /// Returns 0 if there was no last insert id.
     fn last_insert_id<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let arc = self.0.clone();
+        let arc = Arc::clone(&self.0);
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let guard = arc.read().await;
             let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
@@ -174,7 +174,7 @@ impl AsyncDbApiConn {
     }
 
     fn is_closed<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let arc = self.0.clone();
+        let arc = Arc::clone(&self.0);
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let guard = arc.read().await;
             Ok(guard.is_none()) // Fixed: is_none for closed, not is_some

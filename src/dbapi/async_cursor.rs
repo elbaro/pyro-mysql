@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::sync::Arc;
 
 use pyo3::{
     prelude::*,
@@ -102,7 +103,7 @@ impl AsyncCursor {
                 .conn
                 .as_ref()
                 .ok_or_else(|| Error::ConnectionClosedError)?;
-            Python::attach(|py| conn.borrow(py).0.clone())
+            Python::attach(|py| Arc::clone(&conn.borrow(py).0))
         };
 
         // Extract params while we have the GIL
@@ -155,7 +156,7 @@ impl AsyncCursor {
                 .conn
                 .as_ref()
                 .ok_or_else(|| Error::ConnectionClosedError)?;
-            Python::attach(|py| conn.borrow(py).0.clone())
+            Python::attach(|py| Arc::clone(&conn.borrow(py).0))
         };
 
         // Extract all params while we have the GIL

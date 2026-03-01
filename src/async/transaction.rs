@@ -65,7 +65,7 @@ impl AsyncTransaction {
             })?;
 
             // Get the inner connection reference for async operations
-            let inner = Python::attach(|py| conn.borrow(py).inner.clone());
+            let inner = Python::attach(|py| Arc::clone(&conn.borrow(py).inner));
 
             // Set isolation level if specified (must be done before START TRANSACTION)
             if let Some(level) = isolation_level {
@@ -108,7 +108,7 @@ impl AsyncTransaction {
                 let conn_ref = conn.borrow(py);
                 (
                     conn_ref.in_transaction.load(Ordering::SeqCst),
-                    conn_ref.inner.clone(),
+                    Arc::clone(&conn_ref.inner),
                 )
             });
 
@@ -136,7 +136,7 @@ impl AsyncTransaction {
                 if !conn_ref.in_transaction.load(Ordering::SeqCst) {
                     return Err(Error::TransactionClosedError);
                 }
-                Ok(conn_ref.inner.clone())
+                Ok(Arc::clone(&conn_ref.inner))
             })?;
 
             execute_query_drop(&inner, "COMMIT").await?;
@@ -160,7 +160,7 @@ impl AsyncTransaction {
                 if !conn_ref.in_transaction.load(Ordering::SeqCst) {
                     return Err(Error::TransactionClosedError);
                 }
-                Ok(conn_ref.inner.clone())
+                Ok(Arc::clone(&conn_ref.inner))
             })?;
 
             execute_query_drop(&inner, "ROLLBACK").await?;

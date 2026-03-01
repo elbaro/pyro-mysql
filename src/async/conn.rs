@@ -111,7 +111,7 @@ impl AsyncConn {
     }
 
     fn server_version<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
+        let inner = Arc::clone(&self.inner);
         rust_future_into_py(py, async move {
             let guard = inner.read().await;
             let conn = guard.as_ref().ok_or_else(|| Error::ConnectionClosedError)?;
@@ -121,7 +121,7 @@ impl AsyncConn {
     }
 
     fn ping<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
+        let inner = Arc::clone(&self.inner);
         rust_future_into_py(py, async move {
             let mut guard = inner.write().await;
             let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
@@ -138,11 +138,11 @@ impl AsyncConn {
         query: String,
         as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
-        let tuple_handler = self.tuple_handler.clone();
-        let dict_handler = self.dict_handler.clone();
-        let affected_rows_arc = self.affected_rows.clone();
-        let last_insert_id_arc = self.last_insert_id.clone();
+        let inner = Arc::clone(&self.inner);
+        let tuple_handler = Arc::clone(&self.tuple_handler);
+        let dict_handler = Arc::clone(&self.dict_handler);
+        let affected_rows_arc = Arc::clone(&self.affected_rows);
+        let last_insert_id_arc = Arc::clone(&self.last_insert_id);
 
         rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut guard = inner.write().await;
@@ -179,11 +179,11 @@ impl AsyncConn {
         query: String,
         as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
-        let tuple_handler = self.tuple_handler.clone();
-        let dict_handler = self.dict_handler.clone();
-        let affected_rows_arc = self.affected_rows.clone();
-        let last_insert_id_arc = self.last_insert_id.clone();
+        let inner = Arc::clone(&self.inner);
+        let tuple_handler = Arc::clone(&self.tuple_handler);
+        let dict_handler = Arc::clone(&self.dict_handler);
+        let affected_rows_arc = Arc::clone(&self.affected_rows);
+        let last_insert_id_arc = Arc::clone(&self.last_insert_id);
 
         rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut guard = inner.write().await;
@@ -214,9 +214,9 @@ impl AsyncConn {
     }
 
     fn query_drop<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
-        let affected_rows_arc = self.affected_rows.clone();
-        let last_insert_id_arc = self.last_insert_id.clone();
+        let inner = Arc::clone(&self.inner);
+        let affected_rows_arc = Arc::clone(&self.affected_rows);
+        let last_insert_id_arc = Arc::clone(&self.last_insert_id);
 
         rust_future_into_py::<_, ()>(py, async move {
             let mut guard = inner.write().await;
@@ -246,12 +246,12 @@ impl AsyncConn {
             .unwrap_or_default();
         let query_string = query.to_string();
 
-        let inner = self.inner.clone();
-        let stmt_cache = self.stmt_cache.clone();
-        let tuple_handler = self.tuple_handler.clone();
-        let dict_handler = self.dict_handler.clone();
-        let affected_rows_arc = self.affected_rows.clone();
-        let last_insert_id_arc = self.last_insert_id.clone();
+        let inner = Arc::clone(&self.inner);
+        let stmt_cache = Arc::clone(&self.stmt_cache);
+        let tuple_handler = Arc::clone(&self.tuple_handler);
+        let dict_handler = Arc::clone(&self.dict_handler);
+        let affected_rows_arc = Arc::clone(&self.affected_rows);
+        let last_insert_id_arc = Arc::clone(&self.last_insert_id);
 
         rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut guard = inner.write().await;
@@ -304,12 +304,12 @@ impl AsyncConn {
             .unwrap_or_default();
         let query_string = query.to_string();
 
-        let inner = self.inner.clone();
-        let stmt_cache = self.stmt_cache.clone();
-        let tuple_handler = self.tuple_handler.clone();
-        let dict_handler = self.dict_handler.clone();
-        let affected_rows_arc = self.affected_rows.clone();
-        let last_insert_id_arc = self.last_insert_id.clone();
+        let inner = Arc::clone(&self.inner);
+        let stmt_cache = Arc::clone(&self.stmt_cache);
+        let tuple_handler = Arc::clone(&self.tuple_handler);
+        let dict_handler = Arc::clone(&self.dict_handler);
+        let affected_rows_arc = Arc::clone(&self.affected_rows);
+        let last_insert_id_arc = Arc::clone(&self.last_insert_id);
 
         rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut guard = inner.write().await;
@@ -361,10 +361,10 @@ impl AsyncConn {
             .unwrap_or_default();
         let query_string = query.to_string();
 
-        let inner = self.inner.clone();
-        let stmt_cache = self.stmt_cache.clone();
-        let affected_rows_arc = self.affected_rows.clone();
-        let last_insert_id_arc = self.last_insert_id.clone();
+        let inner = Arc::clone(&self.inner);
+        let stmt_cache = Arc::clone(&self.stmt_cache);
+        let affected_rows_arc = Arc::clone(&self.affected_rows);
+        let last_insert_id_arc = Arc::clone(&self.last_insert_id);
 
         rust_future_into_py::<_, ()>(py, async move {
             let mut guard = inner.write().await;
@@ -401,10 +401,10 @@ impl AsyncConn {
         }
         let query_string = query.to_string();
 
-        let inner = self.inner.clone();
-        let stmt_cache = self.stmt_cache.clone();
-        let affected_rows_arc = self.affected_rows.clone();
-        let last_insert_id_arc = self.last_insert_id.clone();
+        let inner = Arc::clone(&self.inner);
+        let stmt_cache = Arc::clone(&self.stmt_cache);
+        let affected_rows_arc = Arc::clone(&self.affected_rows);
+        let last_insert_id_arc = Arc::clone(&self.last_insert_id);
 
         rust_future_into_py::<_, ()>(py, async move {
             let mut guard = inner.write().await;
@@ -443,12 +443,12 @@ impl AsyncConn {
         }
         let query_string = query.to_string();
 
-        let inner = self.inner.clone();
-        let stmt_cache = self.stmt_cache.clone();
-        let tuple_handler = self.tuple_handler.clone();
-        let dict_handler = self.dict_handler.clone();
-        let affected_rows_arc = self.affected_rows.clone();
-        let last_insert_id_arc = self.last_insert_id.clone();
+        let inner = Arc::clone(&self.inner);
+        let stmt_cache = Arc::clone(&self.stmt_cache);
+        let tuple_handler = Arc::clone(&self.tuple_handler);
+        let dict_handler = Arc::clone(&self.dict_handler);
+        let affected_rows_arc = Arc::clone(&self.affected_rows);
+        let last_insert_id_arc = Arc::clone(&self.last_insert_id);
 
         rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut guard = inner.write().await;
