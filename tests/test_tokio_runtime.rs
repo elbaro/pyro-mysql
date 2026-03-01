@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
 #[test]
-fn test_basic_spawn() {
+fn basic_spawn() {
     let tokio_thread = TokioThread::new();
 
     let handle = tokio_thread.spawn(async {
@@ -17,7 +17,7 @@ fn test_basic_spawn() {
 }
 
 #[test]
-fn test_multiple_spawns() {
+fn multiple_spawns() {
     let tokio_thread = TokioThread::new();
 
     let handle1 = tokio_thread.spawn(async { 1 });
@@ -34,7 +34,7 @@ fn test_multiple_spawns() {
 }
 
 #[test]
-fn test_concurrent_tasks() {
+fn concurrent_tasks() {
     let tokio_thread = TokioThread::new();
     let counter = Arc::new(AtomicU32::new(0));
 
@@ -56,7 +56,7 @@ fn test_concurrent_tasks() {
 }
 
 #[test]
-fn test_async_computation() {
+fn async_computation() {
     let tokio_thread = TokioThread::new();
 
     let handle = tokio_thread.spawn(async {
@@ -72,7 +72,7 @@ fn test_async_computation() {
 }
 
 #[test]
-fn test_spawn_with_tokio_features() {
+fn spawn_with_tokio_features() {
     let tokio_thread = TokioThread::new();
 
     let handle = tokio_thread.spawn(async {
@@ -90,7 +90,7 @@ fn test_spawn_with_tokio_features() {
 }
 
 #[test]
-fn test_spawn_with_shared_state() {
+fn spawn_with_shared_state() {
     let tokio_thread = TokioThread::new();
     let data = Arc::new(AtomicU32::new(0));
 
@@ -113,7 +113,7 @@ fn test_spawn_with_shared_state() {
 }
 
 #[test]
-fn test_multiple_tokio_threads() {
+fn multiple_tokio_threads() {
     let thread1 = TokioThread::new();
     let thread2 = TokioThread::new();
 
@@ -128,7 +128,7 @@ fn test_multiple_tokio_threads() {
 }
 
 #[test]
-fn test_drop_cleanup() {
+fn drop_cleanup() {
     // Create and immediately drop
     {
         let tokio_thread = TokioThread::new();
@@ -141,7 +141,7 @@ fn test_drop_cleanup() {
 }
 
 #[test]
-fn test_spawn_returns_result() {
+fn spawn_returns_result() {
     let tokio_thread = TokioThread::new();
 
     let handle = tokio_thread.spawn(async {
@@ -157,7 +157,7 @@ fn test_spawn_returns_result() {
 }
 
 #[test]
-fn test_nested_async_operations() {
+fn nested_async_operations() {
     let tokio_thread = TokioThread::new();
 
     let handle = tokio_thread.spawn(async {

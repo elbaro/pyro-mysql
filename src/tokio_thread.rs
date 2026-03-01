@@ -94,7 +94,7 @@ mod tests {
     use std::time::Duration;
 
     #[test]
-    fn test_tokio_thread_spawn() {
+    fn tokio_thread_spawn() {
         let tokio_thread = TokioThread::new();
 
         let handle = tokio_thread.spawn(async {
@@ -108,7 +108,7 @@ mod tests {
     }
 
     #[test]
-    fn test_multiple_spawns() {
+    fn multiple_spawns() {
         let tokio_thread = TokioThread::new();
 
         let handle1 = tokio_thread.spawn(async { 1 });
