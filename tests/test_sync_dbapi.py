@@ -13,15 +13,13 @@ def test_update_rowcount():
 
     # Create test table
     cursor.execute("DROP TABLE IF EXISTS test_dbapi")
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE test_dbapi (
             id INT PRIMARY KEY AUTO_INCREMENT,
             name VARCHAR(255),
             age INT
         )
-        """
-    )
+        """)
     assert cursor.rowcount == 0
 
     # Insert test data
@@ -56,15 +54,13 @@ def test_delete_rowcount():
 
     # Create test table
     cursor.execute("DROP TABLE IF EXISTS test_dbapi")
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE test_dbapi (
             id INT PRIMARY KEY AUTO_INCREMENT,
             name VARCHAR(255),
             age INT
         )
-        """
-    )
+        """)
 
     # Insert test data
     cursor.execute(
@@ -93,15 +89,13 @@ def test_select_rowcount():
 
     # Create test table
     cursor.execute("DROP TABLE IF EXISTS test_dbapi")
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE test_dbapi (
             id INT PRIMARY KEY AUTO_INCREMENT,
             name VARCHAR(255),
             age INT
         )
-        """
-    )
+        """)
 
     # Insert test data
     cursor.execute(
@@ -133,15 +127,13 @@ def test_executemany_rowcount():
 
     # Create test table
     cursor.execute("DROP TABLE IF EXISTS test_dbapi")
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE test_dbapi (
             id INT PRIMARY KEY AUTO_INCREMENT,
             name VARCHAR(255),
             age INT
         )
-        """
-    )
+        """)
 
     # Insert using executemany
     cursor.executemany(
@@ -164,14 +156,12 @@ def test_cursor_lastrowid():
 
     # Create test table
     cursor.execute("DROP TABLE IF EXISTS test_dbapi")
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE test_dbapi (
             id INT PRIMARY KEY AUTO_INCREMENT,
             name VARCHAR(255)
         )
-        """
-    )
+        """)
     assert cursor.lastrowid is None
 
     # Insert and check lastrowid

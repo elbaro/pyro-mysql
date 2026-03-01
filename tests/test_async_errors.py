@@ -44,14 +44,12 @@ async def test_duplicate_key_error():
     conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_unique")
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_unique (
             id INT PRIMARY KEY,
             name VARCHAR(100)
         )
-    """
-    )
+    """)
 
     # First insert should succeed
     await conn.exec_drop(
@@ -74,13 +72,11 @@ async def test_data_too_long_error():
     conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_varchar")
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_varchar (
             short_text VARCHAR(10)
         )
-    """
-    )
+    """)
 
     # Should fail because string is too long
     with pytest.raises(Exception):
@@ -101,24 +97,20 @@ async def test_foreign_key_constraint_error():
     await conn.query_drop("DROP TABLE IF EXISTS test_child")
     await conn.query_drop("DROP TABLE IF EXISTS test_parent")
 
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_parent (
             id INT PRIMARY KEY,
             name VARCHAR(100)
         )
-    """
-    )
+    """)
 
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_child (
             id INT PRIMARY KEY,
             parent_id INT,
             FOREIGN KEY (parent_id) REFERENCES test_parent(id)
         )
-    """
-    )
+    """)
 
     # Should fail because parent doesn't exist
     with pytest.raises(Exception):

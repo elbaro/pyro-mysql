@@ -12,8 +12,7 @@ async def test_integer_types():
     conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_int_types")
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_int_types (
             tiny_int TINYINT,
             small_int SMALLINT,
@@ -22,8 +21,7 @@ async def test_integer_types():
             big_int BIGINT,
             unsigned_int INT UNSIGNED
         )
-    """
-    )
+    """)
 
     await conn.exec_drop(
         "INSERT INTO test_int_types VALUES (?, ?, ?, ?, ?, ?)",
@@ -57,14 +55,12 @@ async def test_float_types():
     conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_float_types")
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_float_types (
             float_val FLOAT,
             double_val DOUBLE
         )
-    """
-    )
+    """)
 
     await conn.exec_drop(
         "INSERT INTO test_float_types VALUES (?, ?)", (3.14159, 2.718281828)
@@ -86,16 +82,14 @@ async def test_string_types():
     conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_string_types")
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_string_types (
             varchar_val VARCHAR(255),
             char_val CHAR(10),
             text_val TEXT,
             longtext_val LONGTEXT
         )
-    """
-    )
+    """)
 
     await conn.exec_drop(
         "INSERT INTO test_string_types VALUES (?, ?, ?, ?)",
@@ -126,16 +120,14 @@ async def test_date_time_types():
     conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_datetime_types")
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_datetime_types (
             date_val DATE,
             time_val TIME,
             datetime_val DATETIME,
             timestamp_val TIMESTAMP
         )
-    """
-    )
+    """)
 
     test_date = date(2023, 12, 25)
     test_time = time(15, 30, 45)
@@ -159,15 +151,13 @@ async def test_decimal_types():
     conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_decimal_types")
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_decimal_types (
             from_bigint DECIMAL(40,2),
             decimal_val DECIMAL(10,2),
             numeric_val NUMERIC(15,4)
         )
-    """
-    )
+    """)
 
     await conn.exec_drop(
         "INSERT INTO test_decimal_types VALUES (?, ?, ?)",
@@ -192,15 +182,13 @@ async def test_binary_types():
     conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_binary_types")
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_binary_types (
             binary_val BINARY(10),
             varbinary_val VARBINARY(255),
             blob_val BLOB
         )
-    """
-    )
+    """)
 
     binary_data = b"Hello\x00\x01\x02\x03\x04"
     blob_data = b"This is binary blob data"
@@ -223,15 +211,13 @@ async def test_null_values():
     conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_null_types")
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_null_types (
             int_val INT,
             string_val VARCHAR(255),
             date_val DATE
         )
-    """
-    )
+    """)
 
     await conn.exec_drop(
         "INSERT INTO test_null_types VALUES (?, ?, ?)", (None, None, None)
@@ -251,13 +237,11 @@ async def test_boolean_type():
     conn = await get_async_conn(get_test_db_url())
 
     await conn.query_drop("DROP TABLE IF EXISTS test_boolean_types")
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_boolean_types (
             bool_val BOOLEAN
         )
-    """
-    )
+    """)
 
     await conn.exec_drop(
         "INSERT INTO test_boolean_types VALUES (?), (?)", (True, False)

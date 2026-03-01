@@ -23,15 +23,13 @@ async def conn_with_table(conn):
 
     # Create test table
     await cursor.execute("DROP TABLE IF EXISTS test_async_dbapi")
-    await cursor.execute(
-        """
+    await cursor.execute("""
         CREATE TABLE test_async_dbapi (
             id INT PRIMARY KEY AUTO_INCREMENT,
             name VARCHAR(255),
             age INT
         )
-        """
-    )
+        """)
 
     yield conn
 

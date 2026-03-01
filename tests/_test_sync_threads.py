@@ -15,16 +15,14 @@ def sync_conn():
     """Create a sync connection for testing."""
     conn = SyncConn(get_test_db_url())
     # Create test table
-    conn.exec_drop(
-        """
+    conn.exec_drop("""
         CREATE TABLE IF NOT EXISTS test_threads (
             id INT AUTO_INCREMENT PRIMARY KEY,
             thread_id VARCHAR(50),
             value INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """
-    )
+    """)
     conn.exec_drop("TRUNCATE TABLE test_threads")
     yield conn
     # Cleanup

@@ -73,31 +73,27 @@ def sync_conn():
 async def setup_test_table_async(conn):
     """Set up a test table for async tests."""
     await conn.query_drop("DROP TABLE IF EXISTS test_table")
-    await conn.query_drop(
-        """
+    await conn.query_drop("""
         CREATE TABLE test_table (
             id INT PRIMARY KEY AUTO_INCREMENT,
             name VARCHAR(255),
             age INT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
-    """
-    )
+    """)
 
 
 def setup_test_table_sync(conn):
     """Set up a test table for sync tests."""
     conn.query_drop("DROP TABLE IF EXISTS test_table")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_table (
             id INT PRIMARY KEY AUTO_INCREMENT,
             name VARCHAR(255),
             age INT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
-    """
-    )
+    """)
 
 
 async def cleanup_test_table_async(conn):

@@ -12,15 +12,13 @@ def test_none_type():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_none_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_none_types (
             int_val INT,
             string_val VARCHAR(255),
             date_val DATE
         )
-    """
-    )
+    """)
 
     conn.exec_drop("INSERT INTO test_none_types VALUES (?, ?, ?)", (None, None, None))
 
@@ -37,15 +35,13 @@ def test_int_type():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_int_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_int_types (
             small_val SMALLINT,
             regular_val INT,
             big_val BIGINT
         )
-    """
-    )
+    """)
 
     test_values = (42, 2147483647, 9223372036854775807)
     conn.exec_drop("INSERT INTO test_int_types VALUES (?, ?, ?)", test_values)
@@ -63,14 +59,12 @@ def test_float_type():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_float_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_float_types (
             float_val FLOAT,
             double_val DOUBLE
         )
-    """
-    )
+    """)
 
     test_values1 = (3.14159, 2.718281828459045)
     conn.exec_drop("INSERT INTO test_float_types VALUES (?, ?)", test_values1)
@@ -101,8 +95,7 @@ def test_str_type():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_str_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_str_types (
             varchar_val VARCHAR(255),
             text_val TEXT,
@@ -110,8 +103,7 @@ def test_str_type():
             int_val INT,
             float_val FLOAT
         )
-    """
-    )
+    """)
 
     test_values = (
         b"Hello, World!",
@@ -140,14 +132,12 @@ def test_bytearray_type():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_bytearray_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_bytearray_types (
             binary_val VARBINARY(255),
             blob_val BLOB
         )
-    """
-    )
+    """)
 
     test_data = bytearray(b"Hello\x00\x01\x02\x03World")
     conn.exec_drop(
@@ -170,15 +160,13 @@ def test_tuple_type():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_tuple_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_tuple_types (
             val1 INT,
             val2 VARCHAR(255),
             val3 FLOAT
         )
-    """
-    )
+    """)
 
     test_tuple = (42, "hello", 3.14)
     conn.exec_drop("INSERT INTO test_tuple_types VALUES (?, ?, ?)", test_tuple)
@@ -197,15 +185,13 @@ def test_list_type():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_list_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_list_types (
             val1 INT,
             val2 VARCHAR(255),
             val3 FLOAT
         )
-    """
-    )
+    """)
 
     test_list = [100, "world", 2.718]
     conn.exec_drop("INSERT INTO test_list_types VALUES (?, ?, ?)", test_list)
@@ -224,14 +210,12 @@ def test_set_type():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_set_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_set_types (
             val1 INT,
             val2 VARCHAR(255)
         )
-    """
-    )
+    """)
 
     # Convert set to list for consistent ordering
     test_set = {123, "test"}
@@ -257,14 +241,12 @@ def test_frozenset_type():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_frozenset_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_frozenset_types (
             val1 INT,
             val2 VARCHAR(255)
         )
-    """
-    )
+    """)
 
     # Convert frozenset to list for consistent ordering
     test_frozenset = frozenset({456, "frozen"})
@@ -290,15 +272,13 @@ def test_dict_type():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_dict_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_dict_types (
             name VARCHAR(255),
             age INT,
             score FLOAT
         )
-    """
-    )
+    """)
 
     conn.exec_drop(
         "INSERT INTO test_dict_types (name, age, score) VALUES (?, ?, ?)",
@@ -319,15 +299,13 @@ def test_datetime_types():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_datetime_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_datetime_types (
             date_val DATE,
             time_val TIME,
             datetime_val DATETIME
         )
-    """
-    )
+    """)
 
     test_date = date(2023, 12, 25)
     test_time = dt_time(15, 30, 45)
@@ -364,13 +342,11 @@ def test_struct_time_type():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_struct_time_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_struct_time_types (
             timestamp_val TIMESTAMP
         )
-    """
-    )
+    """)
 
     # Create a struct_time and convert to datetime for insertion
     test_struct_time = time.struct_time((2023, 12, 25, 15, 30, 45, 0, 359, 0))
@@ -399,14 +375,12 @@ def test_decimal_type():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_decimal_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_decimal_types (
             decimal_val DECIMAL(10,2),
             numeric_val NUMERIC(15,4)
         )
-    """
-    )
+    """)
 
     test_decimal = Decimal("123.45")
     test_numeric = Decimal("12345.6789")
@@ -433,8 +407,7 @@ def test_combined_data_types():
     conn = Conn(get_test_db_url())
 
     conn.query_drop("DROP TABLE IF EXISTS test_combined_types")
-    conn.query_drop(
-        """
+    conn.query_drop("""
         CREATE TABLE test_combined_types (
             null_val INT,
             int_val INT,
@@ -445,8 +418,7 @@ def test_combined_data_types():
             datetime_val DATETIME,
             decimal_val DECIMAL(10,2)
         )
-    """
-    )
+    """)
 
     test_values = (
         None,

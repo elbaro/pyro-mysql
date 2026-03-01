@@ -5,8 +5,7 @@ def test_float_rounding(sync_conn):
     conn.exec_drop("DROP TABLE IF EXISTS test_float_rounding")
 
     # Create a test table with FLOAT and DOUBLE columns with specific decimal places
-    conn.exec_drop(
-        """
+    conn.exec_drop("""
         CREATE TABLE test_float_rounding (
             id INT PRIMARY KEY,
             float_val FLOAT(10, 3),
@@ -14,24 +13,19 @@ def test_float_rounding(sync_conn):
             float_no_spec FLOAT,
             double_no_spec DOUBLE
         )
-    """
-    )
+    """)
 
     # Insert test data
-    conn.exec_drop(
-        """
+    conn.exec_drop("""
         INSERT INTO test_float_rounding VALUES
         (1, 46.58300018310547, 46.58300018310547, 46.58300018310547, 46.58300018310547)
-    """
-    )
+    """)
 
     # Also test with 46.183
-    conn.exec_drop(
-        """
+    conn.exec_drop("""
         INSERT INTO test_float_rounding VALUES
         (2, 46.183, 46.183, 46.183, 46.183)
-    """
-    )
+    """)
 
     # Query the data back
     rows = conn.exec("SELECT * FROM test_float_rounding WHERE id = 1")
