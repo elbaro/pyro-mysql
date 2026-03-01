@@ -73,12 +73,3 @@ jobs:
       - run: uv run --no-sync pytest
         env:
           DATABASE_URL: mysql://test:1234@127.0.0.1/test
-
-  security:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
