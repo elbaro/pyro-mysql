@@ -35,8 +35,8 @@ jobs:
           name: wheel
           path: target/wheels/*.whl
 
-  test:
-    name: Pytest (${{ matrix.python-version }})
+  test-python-versions:
+    name: Pytest / Python ${{ matrix.python-version }}
     needs: build
     runs-on: ubuntu-latest
     strategy:
@@ -44,19 +44,19 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     services:
       mysql:
-        image: mariadb:latest
+        image: mariadb:12.3
         env:
-          MARIADB_RANDOM_ROOT_PASSWORD: yes
-          MARIADB_USER: test
-          MARIADB_PASSWORD: "1234"
-          MARIADB_DATABASE: test
+          MYSQL_USER: test
+          MYSQL_PASSWORD: "1234"
+          MYSQL_DATABASE: test
+          MYSQL_ALLOW_EMPTY_ROOT_PASSWORD: "yes"
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mariadb-admin ping --user=test --password=1234"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -68,6 +68,59 @@ jobs:
           path: wheel
       - uses: astral-sh/setup-uv@v4
       - run: uv sync --no-install-project --python ${{ matrix.python-version }}
+      - run: uv pip install wheel/*.whl
+      - run: rm -rf pyro_mysql
+      - run: uv run --no-sync pytest
+        env:
+          DATABASE_URL: mysql://test:1234@127.0.0.1/test
+
+  test-db-backends:
+    name: Pytest / ${{ matrix.db-image }}
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - db-image: mariadb:10.11
+            health-cmd: "healthcheck.sh --connect --innodb_initialized"
+          - db-image: mariadb:11.4
+            health-cmd: "healthcheck.sh --connect --innodb_initialized"
+          - db-image: mariadb:12.3
+            health-cmd: "healthcheck.sh --connect --innodb_initialized"
+          - db-image: percona/percona-server:8.0
+            health-cmd: "mysqladmin ping -h 127.0.0.1 -u root"
+          - db-image: percona/percona-server:8.4
+            health-cmd: "mysqladmin ping -h 127.0.0.1 -u root"
+          - db-image: mysql:8.0
+            health-cmd: "mysqladmin ping -h 127.0.0.1 -u root"
+          - db-image: mysql:8.4
+            health-cmd: "mysqladmin ping -h 127.0.0.1 -u root"
+    services:
+      mysql:
+        image: ${{ matrix.db-image }}
+        env:
+          MYSQL_USER: test
+          MYSQL_PASSWORD: "1234"
+          MYSQL_DATABASE: test
+          MYSQL_ALLOW_EMPTY_ROOT_PASSWORD: "yes"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "${{ matrix.health-cmd }}"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: wheel
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --no-install-project --python "3.10"
       - run: uv pip install wheel/*.whl
       - run: rm -rf pyro_mysql
       - run: uv run --no-sync pytest
