@@ -44,12 +44,17 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     services:
       mysql:
-        image: mariadb:12.3
+        image: mariadb:12.3-rc
         env:
           MYSQL_USER: test
           MYSQL_PASSWORD: "1234"
           MYSQL_DATABASE: test
           MYSQL_ALLOW_EMPTY_ROOT_PASSWORD: "yes"
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MARIADB_USER: test
+          MARIADB_PASSWORD: "1234"
+          MARIADB_DATABASE: test
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: "yes"
         ports:
           - 3306:3306
         options: >-
@@ -85,7 +90,7 @@ jobs:
             health-cmd: "healthcheck.sh --connect --innodb_initialized"
           - db-image: mariadb:11.4
             health-cmd: "healthcheck.sh --connect --innodb_initialized"
-          - db-image: mariadb:12.3
+          - db-image: mariadb:12.3-rc
             health-cmd: "healthcheck.sh --connect --innodb_initialized"
           - db-image: percona/percona-server:8.0
             health-cmd: "mysqladmin ping -h 127.0.0.1 -u root"
@@ -103,6 +108,11 @@ jobs:
           MYSQL_PASSWORD: "1234"
           MYSQL_DATABASE: test
           MYSQL_ALLOW_EMPTY_ROOT_PASSWORD: "yes"
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MARIADB_USER: test
+          MARIADB_PASSWORD: "1234"
+          MARIADB_DATABASE: test
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: "yes"
         ports:
           - 3306:3306
         options: >-
