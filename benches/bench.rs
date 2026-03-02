@@ -125,7 +125,7 @@ pub fn bench(c: &mut Criterion) {
             group.bench_function(name, |b| {
                 Python::attach(|py| {
                     Python::run(py, setup, None, None).unwrap();
-                    b.iter(|| py.run(&statement, None, None).unwrap());
+                    b.iter(|| py.run(statement, None, None).unwrap());
                 });
             });
         }

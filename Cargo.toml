@@ -29,13 +29,16 @@ thiserror = "2"
 tokio = "1"
 tokio-util = { version = "0.7", features = ["rt"] }
 zerocopy = { version = "0.8", features = ["derive"] }
-zero-mysql = { version = "0.3", features = [
+zero-mysql = { version = "0.5.1", features = [
   "sync",
   "sync-tls",
   "tokio",
   "tokio-tls",
 ] }
 
+
+[dev-dependencies]
+mysql = "26"
 
 [features]
 extension-module = ["pyo3/extension-module"]
@@ -117,7 +120,6 @@ shadow_unrelated = "warn"
 string_add = "warn"
 string_lit_chars_any = "warn"
 suspicious_xor_used_as_pow = "warn"
-tests_outside_test_module = "warn"
 todo = "warn"
 undocumented_unsafe_blocks = "warn"
 unimplemented = "warn"
