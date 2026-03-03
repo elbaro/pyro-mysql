@@ -1,6 +1,12 @@
 #![allow(async_fn_in_trait)]
 #![feature(likely_unlikely)]
 #![feature(once_cell_try)]
+#![warn(
+    clippy::expect_used,
+    clippy::get_unwrap,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
 
 pub mod r#async;
 pub mod capability_flags;

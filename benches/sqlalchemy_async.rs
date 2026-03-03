@@ -1,4 +1,3 @@
-#![allow(clippy::unwrap_used)]
 use criterion::{Criterion, criterion_group, criterion_main};
 use mysql::{TxOpts, prelude::Queryable};
 use pyo3::{ffi::c_str, prelude::*};
