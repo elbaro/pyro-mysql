@@ -108,7 +108,7 @@ async def test_nested_transactions():
             "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Alice", 30)
         )
 
-        await conn.exec_drop("SAVEPOINT sp1")
+        await conn.query_drop("SAVEPOINT sp1")
 
         await conn.exec_drop(
             "INSERT INTO test_table (name, age) VALUES (?, ?)", ("Bob", 25)
@@ -118,7 +118,7 @@ async def test_nested_transactions():
         assert count
         assert count[0] == 2
 
-        await conn.exec_drop("ROLLBACK TO SAVEPOINT sp1")
+        await conn.query_drop("ROLLBACK TO SAVEPOINT sp1")
 
         count = await conn.query_first("SELECT COUNT(*) FROM test_table")
         assert count

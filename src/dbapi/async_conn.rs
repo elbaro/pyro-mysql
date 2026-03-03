@@ -10,7 +10,10 @@ use zero_mysql::tokio::Conn;
 
 use crate::{
     r#async::handler::DropHandler,
-    dbapi::{async_cursor::AsyncCursor, error::DbApiResult},
+    dbapi::{
+        async_cursor::{AsyncCursor, new_async_cursor},
+        error::DbApiResult,
+    },
     error::{Error, PyroResult},
     params::Params,
     util::tokio_spawn_as_abort_on_drop,
@@ -77,22 +80,6 @@ impl DbApiAsyncZeroConn {
 #[pyclass(module = "pyro_mysql.dbapi_async", name = "Connection")]
 pub struct AsyncDbApiConn(pub Arc<RwLock<Option<DbApiAsyncZeroConn>>>);
 
-impl AsyncDbApiConn {
-    pub async fn exec_batch(&self, query: &str, params: Vec<Params>) -> DbApiResult<u64> {
-        let mut guard = self.0.write().await;
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-
-        log::debug!("execute {query}");
-
-        let mut affected = 0;
-        for p in params {
-            conn.exec_drop(query.to_string(), p).await?;
-            affected += conn.affected_rows();
-        }
-        Ok(affected)
-    }
-}
-
 // Protocols:
 // - sqlalchemy.connectors.AsyncAdapt_terminate
 // - sqlalchemy.connectors.AsyncAdapt_dbapi_connection
@@ -131,7 +118,7 @@ impl AsyncDbApiConn {
 
     /// Cursor instances hold a reference to the python connection object.
     fn cursor(slf: Py<AsyncDbApiConn>) -> AsyncCursor {
-        AsyncCursor::new(slf)
+        new_async_cursor(slf)
     }
 
     // ─── Helper ──────────────────────────────────────────────────────────

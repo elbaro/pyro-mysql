@@ -9,6 +9,7 @@ pub enum IsolationLevel {
     Serializable,
 }
 
+#[pymethods]
 impl IsolationLevel {
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -18,10 +19,7 @@ impl IsolationLevel {
             IsolationLevel::Serializable => "SERIALIZABLE",
         }
     }
-}
 
-#[pymethods]
-impl IsolationLevel {
     #[getter]
     fn name(&self) -> &'static str {
         self.as_str()

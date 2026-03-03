@@ -108,10 +108,11 @@ pub fn bench_sqlalchemy(c: &mut Criterion) {
                         let mut sum = std::time::Duration::ZERO;
                         for g in 0..((iters - 1) / 10000 + 1) {
                             clear_table();
-                            let start = g * 10000;
-                            let end = iters.min(start + 10000);
+                            let group_start = g * 10000;
+                            let end = iters.min(group_start + 10000);
 
-                            let statement = stmt_template.replace("{}", &(end - start).to_string());
+                            let statement =
+                                stmt_template.replace("{}", &(end - group_start).to_string());
                             let c_statement = std::ffi::CString::new(statement).unwrap();
 
                             let start = std::time::Instant::now();

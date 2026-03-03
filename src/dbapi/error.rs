@@ -82,7 +82,7 @@ fn map_server_error_to_dbapi(state: &str, code: u16, error_msg: String) -> PyErr
                 1927 | 2006 | 2013 | 2014 | 2045 | 2055 | 4031 => {
                     OperationalError::new_err(error_msg)
                 }
-                code if code < 1000 => InternalError::new_err(error_msg),
+                c if c < 1000 => InternalError::new_err(error_msg),
                 _ => OperationalError::new_err(error_msg),
             }
         }

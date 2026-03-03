@@ -47,12 +47,12 @@ pub fn decode_text_value_to_python<'py>(
     col: &ColumnDefinitionTail,
     text_value: &[u8],
 ) -> PyResult<Bound<'py, PyAny>> {
-    let column_type = col
-        .column_type()
-        .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>("Failed to get column_type"))?;
-    let flags = col
-        .flags()
-        .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>("Failed to get flags"))?;
+    let column_type = col.column_type().map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to get column_type: {e}"))
+    })?;
+    let flags = col.flags().map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to get flags: {e}"))
+    })?;
     let is_unsigned = flags.contains(ColumnFlags::UNSIGNED_FLAG);
     let is_binary_charset = col.charset() == BINARY_CHARSET;
 
@@ -66,30 +66,36 @@ pub fn decode_text_value_to_python<'py>(
         | ColumnType::MYSQL_TYPE_LONGLONG
         | ColumnType::MYSQL_TYPE_YEAR => {
             // Convert bytes to str for parsing
-            let text_str = std::str::from_utf8(text_value).map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in integer value")
+            let text_str = std::str::from_utf8(text_value).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Invalid UTF-8 in integer value: {e}"
+                ))
             })?;
 
             if is_unsigned {
-                let val: u64 = text_str.parse().map_err(|_| {
-                    PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid unsigned integer")
+                let val: u64 = text_str.parse().map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                        "Invalid unsigned integer: {e}"
+                    ))
                 })?;
                 Ok(val.into_bound_py_any(py)?)
             } else {
-                let val: i64 = text_str.parse().map_err(|_| {
-                    PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid integer")
+                let val: i64 = text_str.parse().map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid integer: {e}"))
                 })?;
                 Ok(val.into_bound_py_any(py)?)
             }
         }
 
         ColumnType::MYSQL_TYPE_FLOAT => {
-            let text_str = std::str::from_utf8(text_value).map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in float value")
+            let text_str = std::str::from_utf8(text_value).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Invalid UTF-8 in float value: {e}"
+                ))
             })?;
-            let val: f32 = text_str
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid float"))?;
+            let val: f32 = text_str.parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid float: {e}"))
+            })?;
             // Convert f32 to f64 via string to maintain precision
             let mut buffer = ryu::Buffer::new();
             let f64_val = buffer.format(val).parse::<f64>().unwrap();
@@ -97,19 +103,23 @@ pub fn decode_text_value_to_python<'py>(
         }
 
         ColumnType::MYSQL_TYPE_DOUBLE => {
-            let text_str = std::str::from_utf8(text_value).map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in double value")
+            let text_str = std::str::from_utf8(text_value).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Invalid UTF-8 in double value: {e}"
+                ))
             })?;
-            let val: f64 = text_str
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid double"))?;
+            let val: f64 = text_str.parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid double: {e}"))
+            })?;
             Ok(val.into_bound_py_any(py)?)
         }
 
         ColumnType::MYSQL_TYPE_DATE | ColumnType::MYSQL_TYPE_NEWDATE => {
             // Format: YYYY-MM-DD
-            let text_str = std::str::from_utf8(text_value).map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in date value")
+            let text_str = std::str::from_utf8(text_value).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Invalid UTF-8 in date value: {e}"
+                ))
             })?;
 
             if unlikely(text_str == "0000-00-00") {
@@ -121,15 +131,15 @@ pub fn decode_text_value_to_python<'py>(
                     "Invalid date format",
                 ));
             }
-            let year: u16 = parts[0]
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid year"))?;
-            let month: u8 = parts[1]
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid month"))?;
-            let day: u8 = parts[2]
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid day"))?;
+            let year: u16 = parts[0].parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid year: {e}"))
+            })?;
+            let month: u8 = parts[1].parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid month: {e}"))
+            })?;
+            let day: u8 = parts[2].parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid day: {e}"))
+            })?;
             let date_class = get_date_class(py)?;
             date_class.call1((year, month, day))
         }
@@ -139,8 +149,10 @@ pub fn decode_text_value_to_python<'py>(
         | ColumnType::MYSQL_TYPE_TIMESTAMP
         | ColumnType::MYSQL_TYPE_TIMESTAMP2 => {
             // Format: YYYY-MM-DD HH:MM:SS[.ffffff]
-            let text_str = std::str::from_utf8(text_value).map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in datetime value")
+            let text_str = std::str::from_utf8(text_value).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Invalid UTF-8 in datetime value: {e}"
+                ))
             })?;
 
             if unlikely(text_str.starts_with("0000-00-00")) {
@@ -161,15 +173,15 @@ pub fn decode_text_value_to_python<'py>(
                     "Invalid date format",
                 ));
             }
-            let year: u16 = date_parts[0]
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid year"))?;
-            let month: u8 = date_parts[1]
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid month"))?;
-            let day: u8 = date_parts[2]
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid day"))?;
+            let year: u16 = date_parts[0].parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid year: {e}"))
+            })?;
+            let month: u8 = date_parts[1].parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid month: {e}"))
+            })?;
+            let day: u8 = date_parts[2].parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid day: {e}"))
+            })?;
 
             // Parse time part
             let time_parts: Vec<&str> = parts[1].split(':').collect();
@@ -178,23 +190,25 @@ pub fn decode_text_value_to_python<'py>(
                     "Invalid time format",
                 ));
             }
-            let hour: u8 = time_parts[0]
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid hour"))?;
-            let minute: u8 = time_parts[1]
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid minute"))?;
+            let hour: u8 = time_parts[0].parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid hour: {e}"))
+            })?;
+            let minute: u8 = time_parts[1].parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid minute: {e}"))
+            })?;
 
             // Handle seconds with optional microseconds
             let second_parts: Vec<&str> = time_parts[2].split('.').collect();
-            let second: u8 = second_parts[0]
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid second"))?;
+            let second: u8 = second_parts[0].parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid second: {e}"))
+            })?;
 
             let datetime_class = get_datetime_class(py)?;
             if second_parts.len() > 1 {
-                let microsecond: u32 = second_parts[1].parse().map_err(|_| {
-                    PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid microsecond")
+                let microsecond: u32 = second_parts[1].parse().map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                        "Invalid microsecond: {e}"
+                    ))
                 })?;
                 datetime_class.call1((year, month, day, hour, minute, second, microsecond))
             } else {
@@ -204,8 +218,10 @@ pub fn decode_text_value_to_python<'py>(
 
         ColumnType::MYSQL_TYPE_TIME | ColumnType::MYSQL_TYPE_TIME2 => {
             // Format: [-][H]HH:MM:SS[.ffffff]
-            let text_str = std::str::from_utf8(text_value).map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in time value")
+            let text_str = std::str::from_utf8(text_value).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Invalid UTF-8 in time value: {e}"
+                ))
             })?;
 
             if unlikely(text_str == "00:00:00") {
@@ -227,22 +243,24 @@ pub fn decode_text_value_to_python<'py>(
                 ));
             }
 
-            let hours: u32 = parts[0]
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid hour"))?;
-            let minutes: u8 = parts[1]
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid minute"))?;
+            let hours: u32 = parts[0].parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid hour: {e}"))
+            })?;
+            let minutes: u8 = parts[1].parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid minute: {e}"))
+            })?;
 
             let second_parts: Vec<&str> = parts[2].split('.').collect();
-            let seconds: u8 = second_parts[0]
-                .parse()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid second"))?;
+            let seconds: u8 = second_parts[0].parse().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid second: {e}"))
+            })?;
 
             let timedelta_class = get_timedelta_class(py)?;
             let timedelta = if second_parts.len() > 1 {
-                let microsecond: u32 = second_parts[1].parse().map_err(|_| {
-                    PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid microsecond")
+                let microsecond: u32 = second_parts[1].parse().map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                        "Invalid microsecond: {e}"
+                    ))
                 })?;
                 timedelta_class.call1((
                     0,
@@ -273,8 +291,10 @@ pub fn decode_text_value_to_python<'py>(
         // Decimal types - parse with Decimal class
         ColumnType::MYSQL_TYPE_DECIMAL | ColumnType::MYSQL_TYPE_NEWDECIMAL => {
             let decimal_class = get_decimal_class(py)?;
-            let py_str = pyo3::types::PyString::from_bytes(py, text_value).map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid UTF-8 in decimal value")
+            let py_str = pyo3::types::PyString::from_bytes(py, text_value).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Invalid UTF-8 in decimal value: {e}"
+                ))
             })?;
             decimal_class.call1((py_str,))
         }

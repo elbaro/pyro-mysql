@@ -85,16 +85,16 @@ where
 
             // tokio::task::spawn_blocking(move || {
 
-            Python::attach(|py| {
-                let bound_future = py_future.bind(py);
+            Python::attach(|py2| {
+                let bound_future = py_future.bind(py2);
                 match result {
                     Ok(value) => {
                         call_soon_threadsafe
                             .call1(
-                                py,
+                                py2,
                                 (
-                                    bound_future.getattr(intern!(py, "set_result")).unwrap(),
-                                    value.into_py_any(py).unwrap(),
+                                    bound_future.getattr(intern!(py2, "set_result")).unwrap(),
+                                    value.into_py_any(py2).unwrap(),
                                 ),
                             )
                             .unwrap();
@@ -102,10 +102,10 @@ where
                     Err(err) => {
                         call_soon_threadsafe
                             .call1(
-                                py,
+                                py2,
                                 (
-                                    bound_future.getattr(intern!(py, "set_exception")).unwrap(),
-                                    pyo3::PyErr::from(err).into_bound_py_any(py).unwrap(),
+                                    bound_future.getattr(intern!(py2, "set_exception")).unwrap(),
+                                    pyo3::PyErr::from(err).into_bound_py_any(py2).unwrap(),
                                 ),
                             )
                             .unwrap();

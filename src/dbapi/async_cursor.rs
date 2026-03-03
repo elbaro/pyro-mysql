@@ -22,10 +22,8 @@ use crate::{
 #[pyclass(module = "pyro_mysql.dbapi_async", name = "Cursor")]
 pub struct AsyncCursor(pub RwLock<AsyncCursorImpl>);
 
-impl AsyncCursor {
-    pub fn new(conn: Py<AsyncDbApiConn>) -> Self {
-        Self(RwLock::new(AsyncCursorImpl::new(conn)))
-    }
+pub(crate) fn new_async_cursor(conn: Py<AsyncDbApiConn>) -> AsyncCursor {
+    AsyncCursor(RwLock::new(AsyncCursorImpl::new(conn)))
 }
 
 pub struct AsyncCursorImpl {

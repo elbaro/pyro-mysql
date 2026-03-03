@@ -75,10 +75,10 @@ impl TupleHandler {
                                 data = &data[1..];
                             } else {
                                 let (value_bytes, rest) =
-                                    read_string_lenenc(data).map_err(|_| {
-                                        PyErr::new::<pyo3::exceptions::PyException, _>(
-                                            "Failed to read string",
-                                        )
+                                    read_string_lenenc(data).map_err(|e| {
+                                        PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                                            "Failed to read string: {e}"
+                                        ))
                                     })?;
                                 let py_value =
                                     decode_text_value_to_python(py, &rs.cols[i], value_bytes)?;
@@ -277,10 +277,10 @@ impl DictHandler {
                                 py.None().into_bound(py)
                             } else {
                                 let (value_bytes, rest) =
-                                    read_string_lenenc(data).map_err(|_| {
-                                        PyErr::new::<pyo3::exceptions::PyException, _>(
-                                            "Failed to read string",
-                                        )
+                                    read_string_lenenc(data).map_err(|e| {
+                                        PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                                            "Failed to read string: {e}"
+                                        ))
                                     })?;
                                 let val =
                                     decode_text_value_to_python(py, &rs.cols[i], value_bytes)?;

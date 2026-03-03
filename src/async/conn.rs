@@ -11,7 +11,7 @@ use zero_mysql::PreparedStatement;
 use zero_mysql::tokio::Conn;
 
 use crate::r#async::handler::{DictHandler, DropHandler, TupleHandler};
-use crate::r#async::transaction::AsyncTransaction;
+use crate::r#async::transaction::{AsyncTransaction, new_async_transaction};
 use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
 use crate::opts::Opts;
@@ -75,7 +75,7 @@ impl AsyncConn {
         readonly: Option<bool>,
     ) -> AsyncTransaction {
         let isolation_level_str: Option<String> = isolation_level.map(|l| l.as_str().to_string());
-        AsyncTransaction::new(slf, consistent_snapshot, isolation_level_str, readonly)
+        new_async_transaction(slf, consistent_snapshot, isolation_level_str, readonly)
     }
 
     async fn id(&self) -> PyResult<u64> {
@@ -154,8 +154,8 @@ impl AsyncConn {
                 conn.query(&query, &mut *handler).await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().map(|d| d.into_any()).collect())
                 })
             } else {
@@ -164,8 +164,8 @@ impl AsyncConn {
                 conn.query(&query, &mut *handler).await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().map(|t| t.into_any()).collect())
                 })
             }
@@ -195,8 +195,8 @@ impl AsyncConn {
                 conn.query(&query, &mut *handler).await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
-                Python::attach(|py| {
-                    let rows = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().next().map(|d| d.into_any()))
                 })
             } else {
@@ -205,8 +205,8 @@ impl AsyncConn {
                 conn.query(&query, &mut *handler).await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
-                Python::attach(|py| {
-                    let rows = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().next().map(|t| t.into_any()))
                 })
             }
@@ -272,8 +272,8 @@ impl AsyncConn {
                 conn.exec(stmt, params_adapter, &mut *handler).await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().map(|d| d.into_any()).collect())
                 })
             } else {
@@ -282,8 +282,8 @@ impl AsyncConn {
                 conn.exec(stmt, params_adapter, &mut *handler).await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().map(|t| t.into_any()).collect())
                 })
             }
@@ -330,8 +330,8 @@ impl AsyncConn {
                 conn.exec(stmt, params_adapter, &mut *handler).await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
-                Python::attach(|py| {
-                    let rows = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().next().map(|d| d.into_any()))
                 })
             } else {
@@ -340,8 +340,8 @@ impl AsyncConn {
                 conn.exec(stmt, params_adapter, &mut *handler).await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
-                Python::attach(|py| {
-                    let rows = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().next().map(|t| t.into_any()))
                 })
             }
@@ -474,8 +474,8 @@ impl AsyncConn {
                     .await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().map(|d| d.into_any()).collect())
                 })
             } else {
@@ -485,26 +485,11 @@ impl AsyncConn {
                     .await?;
                 *affected_rows_arc.write().await = handler.affected_rows();
                 *last_insert_id_arc.write().await = handler.last_insert_id();
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().map(|t| t.into_any()).collect())
                 })
             }
         })
-    }
-}
-
-// Public methods for internal use (not exposed to Python via #[pymethods])
-impl AsyncConn {
-    pub async fn query_drop_internal(&self, query: String) -> PyroResult<()> {
-        let mut guard = self.inner.write().await;
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-
-        let mut handler = DropHandler::default();
-        conn.query(&query, &mut handler).await?;
-
-        *self.affected_rows.write().await = handler.affected_rows;
-        *self.last_insert_id.write().await = handler.last_insert_id;
-        Ok(())
     }
 }

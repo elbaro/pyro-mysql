@@ -26,19 +26,17 @@ pub struct AsyncTransaction {
     readonly: Option<bool>,
 }
 
-impl AsyncTransaction {
-    pub fn new(
-        conn: Py<AsyncConn>,
-        consistent_snapshot: bool,
-        isolation_level: Option<String>,
-        readonly: Option<bool>,
-    ) -> Self {
-        AsyncTransaction {
-            conn,
-            consistent_snapshot,
-            isolation_level,
-            readonly,
-        }
+pub(crate) fn new_async_transaction(
+    conn: Py<AsyncConn>,
+    consistent_snapshot: bool,
+    isolation_level: Option<String>,
+    readonly: Option<bool>,
+) -> AsyncTransaction {
+    AsyncTransaction {
+        conn,
+        consistent_snapshot,
+        isolation_level,
+        readonly,
     }
 }
 
@@ -52,8 +50,8 @@ impl AsyncTransaction {
         let slf_py: Py<AsyncTransaction> = slf.into();
 
         rust_future_into_py(py, async move {
-            Python::attach(|py| -> PyResult<()> {
-                let conn_ref = conn.borrow(py);
+            Python::attach(|py2| -> PyResult<()> {
+                let conn_ref = conn.borrow(py2);
                 if conn_ref.in_transaction.load(Ordering::SeqCst) {
                     return Err(Error::IncorrectApiUsageError(
                         "Connection is already in a transaction",
@@ -65,7 +63,7 @@ impl AsyncTransaction {
             })?;
 
             // Get the inner connection reference for async operations
-            let inner = Python::attach(|py| Arc::clone(&conn.borrow(py).inner));
+            let inner = Python::attach(|py2| Arc::clone(&conn.borrow(py2).inner));
 
             // Set isolation level if specified (must be done before START TRANSACTION)
             if let Some(level) = isolation_level {
@@ -104,8 +102,8 @@ impl AsyncTransaction {
         let conn = slf.borrow().conn.clone_ref(py);
 
         rust_future_into_py(py, async move {
-            let (should_rollback, inner) = Python::attach(|py| {
-                let conn_ref = conn.borrow(py);
+            let (should_rollback, inner) = Python::attach(|py2| {
+                let conn_ref = conn.borrow(py2);
                 (
                     conn_ref.in_transaction.load(Ordering::SeqCst),
                     Arc::clone(&conn_ref.inner),
@@ -116,8 +114,8 @@ impl AsyncTransaction {
                 log::warn!("commit() or rollback() was not called. Rolling back.");
                 execute_query_drop(&inner, "ROLLBACK").await?;
 
-                Python::attach(|py| {
-                    conn.borrow(py)
+                Python::attach(|py2| {
+                    conn.borrow(py2)
                         .in_transaction
                         .store(false, Ordering::SeqCst);
                 });
@@ -131,8 +129,8 @@ impl AsyncTransaction {
         let conn = self.conn.clone_ref(py);
 
         rust_future_into_py(py, async move {
-            let inner = Python::attach(|py| -> PyroResult<_> {
-                let conn_ref = conn.borrow(py);
+            let inner = Python::attach(|py2| -> PyroResult<_> {
+                let conn_ref = conn.borrow(py2);
                 if !conn_ref.in_transaction.load(Ordering::SeqCst) {
                     return Err(Error::TransactionClosedError);
                 }
@@ -141,8 +139,8 @@ impl AsyncTransaction {
 
             execute_query_drop(&inner, "COMMIT").await?;
 
-            Python::attach(|py| {
-                conn.borrow(py)
+            Python::attach(|py2| {
+                conn.borrow(py2)
                     .in_transaction
                     .store(false, Ordering::SeqCst);
             });
@@ -155,8 +153,8 @@ impl AsyncTransaction {
         let conn = self.conn.clone_ref(py);
 
         rust_future_into_py(py, async move {
-            let inner = Python::attach(|py| -> PyroResult<_> {
-                let conn_ref = conn.borrow(py);
+            let inner = Python::attach(|py2| -> PyroResult<_> {
+                let conn_ref = conn.borrow(py2);
                 if !conn_ref.in_transaction.load(Ordering::SeqCst) {
                     return Err(Error::TransactionClosedError);
                 }
@@ -165,8 +163,8 @@ impl AsyncTransaction {
 
             execute_query_drop(&inner, "ROLLBACK").await?;
 
-            Python::attach(|py| {
-                conn.borrow(py)
+            Python::attach(|py2| {
+                conn.borrow(py2)
                     .in_transaction
                     .store(false, Ordering::SeqCst);
             });

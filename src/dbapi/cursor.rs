@@ -7,7 +7,7 @@ use pyo3::{
 
 use crate::{
     dbapi::{
-        conn::{DbApiConn, DbApiExecResult, DbApiRow},
+        conn::{DbApiConn, DbApiExecResult, DbApiRow, dbapi_exec, dbapi_exec_batch},
         error::{DbApiError, DbApiResult},
     },
     error::Error,
@@ -34,16 +34,14 @@ pub struct Cursor {
     lastrowid: Option<u64>,
 }
 
-impl Cursor {
-    pub fn new(conn: Py<DbApiConn>) -> Self {
-        Self {
-            conn: Some(conn),
-            result: None,
-            arraysize: 1,
-            description: None,
-            rowcount: -1,
-            lastrowid: None,
-        }
+pub(crate) fn new_cursor(conn: Py<DbApiConn>) -> Cursor {
+    Cursor {
+        conn: Some(conn),
+        result: None,
+        arraysize: 1,
+        description: None,
+        rowcount: -1,
+        lastrowid: None,
     }
 }
 
@@ -65,12 +63,12 @@ impl Cursor {
     // TODO: parameter style?
     #[pyo3(signature = (query, params=Params::default()))]
     fn execute(&mut self, py: Python, query: &str, params: Params) -> DbApiResult<()> {
-        let conn = self
+        let conn_ref = self
             .conn
             .as_ref()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .borrow(py);
-        match conn.exec(query, params)? {
+        match dbapi_exec(&conn_ref.conn, query, params)? {
             DbApiExecResult::WithDescription {
                 rows,
                 description,
@@ -100,12 +98,12 @@ impl Cursor {
     }
 
     fn executemany(&mut self, py: Python, query: &str, params: Vec<Params>) -> DbApiResult<()> {
-        let conn = self
+        let conn_ref = self
             .conn
             .as_ref()
             .ok_or_else(|| Error::ConnectionClosedError)?
             .borrow(py);
-        let affected = conn.exec_batch(query, params)?;
+        let affected = dbapi_exec_batch(&conn_ref.conn, query, params)?;
         self.description = None;
         self.rowcount = affected as i64;
         self.result = None;

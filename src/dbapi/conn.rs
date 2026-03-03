@@ -9,7 +9,7 @@ use zero_mysql::PreparedStatement;
 use zero_mysql::sync::Conn;
 
 use crate::{
-    dbapi::{cursor::Cursor, error::DbApiResult, zero_handler::DbApiHandler},
+    dbapi::{cursor::new_cursor, error::DbApiResult, zero_handler::DbApiHandler},
     error::Error,
     opts::Opts as PyroOpts,
     params::Params,
@@ -76,7 +76,7 @@ impl DbApiZeroConn {
 
 #[pyclass(module = "pyro_mysql.dbapi", name = "Connection")]
 pub struct DbApiConn {
-    conn: RwLock<Option<DbApiZeroConn>>,
+    pub(crate) conn: RwLock<Option<DbApiZeroConn>>,
 }
 
 pub struct DbApiRow(pub Py<PyTuple>);
@@ -99,77 +99,89 @@ pub enum DbApiExecResult {
     },
 }
 
-impl DbApiConn {
-    pub fn new(url_or_opts: Either<String, PyRef<PyroOpts>>) -> DbApiResult<Self> {
-        let conn = match url_or_opts {
-            Either::Left(url) => DbApiZeroConn::new(&url)?,
-            Either::Right(opts) => DbApiZeroConn::new_with_opts(opts.inner.clone())?,
-        };
-        Ok(Self {
-            conn: RwLock::new(Some(conn)),
-        })
-    }
+pub(crate) fn new_dbapi_conn(
+    url_or_opts: Either<String, PyRef<PyroOpts>>,
+) -> DbApiResult<DbApiConn> {
+    let conn = match url_or_opts {
+        Either::Left(url) => DbApiZeroConn::new(&url)?,
+        Either::Right(opts) => DbApiZeroConn::new_with_opts(opts.inner.clone())?,
+    };
+    Ok(DbApiConn {
+        conn: RwLock::new(Some(conn)),
+    })
+}
 
-    fn with_conn<T, F>(&self, f: F) -> DbApiResult<T>
-    where
-        F: FnOnce(&mut DbApiZeroConn) -> DbApiResult<T>,
-    {
-        let mut guard = self.conn.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
-        f(conn)
-    }
+fn with_conn<T, F>(conn_lock: &RwLock<Option<DbApiZeroConn>>, f: F) -> DbApiResult<T>
+where
+    F: FnOnce(&mut DbApiZeroConn) -> DbApiResult<T>,
+{
+    let mut guard = conn_lock.write();
+    let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+    f(conn)
+}
 
-    pub fn exec(&self, query: &str, params: Params) -> DbApiResult<DbApiExecResult> {
-        self.with_conn(|conn| {
-            log::debug!("execute {query}");
+pub(crate) fn dbapi_exec(
+    conn_lock: &RwLock<Option<DbApiZeroConn>>,
+    query: &str,
+    params: Params,
+) -> DbApiResult<DbApiExecResult> {
+    with_conn(conn_lock, |conn| {
+        log::debug!("execute {query}");
 
-            // Prepare the statement (with caching)
-            if !conn.stmt_cache.contains_key(query) {
-                let stmt = conn.inner.prepare(query).map_err(Error::ZeroMysqlError)?;
-                conn.stmt_cache.insert(query.to_string(), stmt);
-            }
-            #[expect(clippy::unwrap_used)]
-            let stmt = conn.stmt_cache.get_mut(query).unwrap();
+        // Prepare the statement (with caching)
+        if !conn.stmt_cache.contains_key(query) {
+            let stmt = conn.inner.prepare(query).map_err(Error::ZeroMysqlError)?;
+            conn.stmt_cache.insert(query.to_string(), stmt);
+        }
+        #[expect(clippy::unwrap_used)]
+        let stmt = conn.stmt_cache.get_mut(query).unwrap();
 
-            // Execute with custom handler that captures description
-            let result: DbApiExecResult = Python::attach(|py| {
-                let mut handler = DbApiHandler::new(py);
-                let params_adapter = ParamsAdapter::new(&params);
+        // Execute with custom handler that captures description
+        let result: DbApiExecResult = Python::attach(|py| {
+            let mut handler = DbApiHandler::new(py);
+            let params_adapter = ParamsAdapter::new(&params);
 
-                log::debug!("About to call conn.inner.exec with stmt_id={}", stmt.id());
-                let exec_result = conn.inner.exec(stmt, params_adapter, &mut handler);
-                log::debug!("conn.inner.exec returned: {:?}", exec_result.is_ok());
-                exec_result.map_err(|e| {
-                    log::debug!("exec error: {:?}", e);
-                    Error::ZeroMysqlError(e)
-                })?;
-
-                Ok::<_, Error>(handler.into_result())
+            log::debug!("About to call conn.inner.exec with stmt_id={}", stmt.id());
+            let exec_result = conn.inner.exec(stmt, params_adapter, &mut handler);
+            log::debug!("conn.inner.exec returned: {:?}", exec_result.is_ok());
+            exec_result.map_err(|e| {
+                log::debug!("exec error: {:?}", e);
+                Error::ZeroMysqlError(e)
             })?;
 
-            Ok(result)
-        })
-    }
+            Ok::<_, Error>(handler.into_result())
+        })?;
 
-    fn exec_drop(&self, query: &str, params: Params) -> DbApiResult<()> {
-        self.with_conn(|conn| {
-            log::debug!("execute {query}");
-            conn.exec_drop(query.to_string(), params)?;
-            Ok(())
-        })
-    }
+        Ok(result)
+    })
+}
 
-    pub fn exec_batch(&self, query: &str, params: Vec<Params>) -> DbApiResult<u64> {
-        self.with_conn(|conn| {
-            log::debug!("execute {query}");
-            let mut affected = 0;
-            for params in params {
-                conn.exec_drop(query.to_string(), params)?;
-                affected += conn.affected_rows();
-            }
-            Ok(affected)
-        })
-    }
+fn dbapi_exec_drop(
+    conn_lock: &RwLock<Option<DbApiZeroConn>>,
+    query: &str,
+    params: Params,
+) -> DbApiResult<()> {
+    with_conn(conn_lock, |conn| {
+        log::debug!("execute {query}");
+        conn.exec_drop(query.to_string(), params)?;
+        Ok(())
+    })
+}
+
+pub(crate) fn dbapi_exec_batch(
+    conn_lock: &RwLock<Option<DbApiZeroConn>>,
+    query: &str,
+    params: Vec<Params>,
+) -> DbApiResult<u64> {
+    with_conn(conn_lock, |conn| {
+        log::debug!("execute {query}");
+        let mut affected = 0;
+        for param in params {
+            conn.exec_drop(query.to_string(), param)?;
+            affected += conn.affected_rows();
+        }
+        Ok(affected)
+    })
 }
 
 #[pymethods]
@@ -182,30 +194,30 @@ impl DbApiConn {
     }
 
     fn commit(&self) -> DbApiResult<()> {
-        self.exec_drop("COMMIT", Params::default())
+        dbapi_exec_drop(&self.conn, "COMMIT", Params::default())
     }
 
     fn rollback(&self) -> DbApiResult<()> {
-        self.exec_drop("ROLLBACK", Params::default())
+        dbapi_exec_drop(&self.conn, "ROLLBACK", Params::default())
     }
 
     /// Cursor instances hold a reference to the python connection object.
-    fn cursor(slf: Py<DbApiConn>) -> Cursor {
-        Cursor::new(slf)
+    fn cursor(slf: Py<DbApiConn>) -> crate::dbapi::cursor::Cursor {
+        new_cursor(slf)
     }
 
     // ─── Helper ──────────────────────────────────────────────────────────
 
     pub fn set_autocommit(&self, on: bool) -> DbApiResult<()> {
         if on {
-            self.exec_drop("SET autocommit=1", Params::default())
+            dbapi_exec_drop(&self.conn, "SET autocommit=1", Params::default())
         } else {
-            self.exec_drop("SET autocommit=0", Params::default())
+            dbapi_exec_drop(&self.conn, "SET autocommit=0", Params::default())
         }
     }
 
     fn ping(&self) -> DbApiResult<()> {
-        self.with_conn(|conn| {
+        with_conn(&self.conn, |conn| {
             conn.ping()?;
             Ok(())
         })

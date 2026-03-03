@@ -13,7 +13,7 @@ use crate::isolation_level::IsolationLevel;
 use crate::opts::Opts;
 use crate::params::Params;
 use crate::sync::handler::{DictHandler, DropHandler, TupleHandler};
-use crate::sync::transaction::SyncTransaction;
+use crate::sync::transaction::{SyncTransaction, new_sync_transaction};
 use crate::zero_params_adapter::{BulkParamsSetAdapter, ParamsAdapter};
 
 #[pyclass(module = "pyro_mysql.sync", name = "Conn")]
@@ -56,7 +56,7 @@ impl SyncConn {
         readonly: Option<bool>,
     ) -> SyncTransaction {
         let isolation_level_str: Option<String> = isolation_level.map(|l| l.as_str().to_string());
-        SyncTransaction::new(slf, consistent_snapshot, isolation_level_str, readonly)
+        new_sync_transaction(slf, consistent_snapshot, isolation_level_str, readonly)
     }
 
     fn id(&self) -> PyroResult<u64> {
@@ -353,17 +353,14 @@ impl SyncConn {
     }
 }
 
-// Public methods for internal use (not exposed to Python via #[pymethods])
-impl SyncConn {
-    pub fn query_drop_internal(&self, query: String) -> PyroResult<()> {
-        let mut guard = self.inner.write();
-        let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
+pub(crate) fn query_drop_internal(conn: &SyncConn, query: String) -> PyroResult<()> {
+    let mut guard = conn.inner.write();
+    let c = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
 
-        let mut handler = DropHandler::default();
-        conn.query(&query, &mut handler)?;
+    let mut handler = DropHandler::default();
+    c.query(&query, &mut handler)?;
 
-        *self.affected_rows.write() = handler.affected_rows;
-        *self.last_insert_id.write() = handler.last_insert_id;
-        Ok(())
-    }
+    *conn.affected_rows.write() = handler.affected_rows;
+    *conn.last_insert_id.write() = handler.last_insert_id;
+    Ok(())
 }

@@ -3,7 +3,7 @@ use std::sync::atomic::Ordering;
 use pyo3::prelude::*;
 
 use crate::error::{Error, PyroResult};
-use crate::sync::conn::SyncConn;
+use crate::sync::conn::{SyncConn, query_drop_internal};
 
 /// Transaction is a lightweight wrapper that only holds a reference to the Python Conn object.
 /// It does not use the backend's Transaction API. Instead, it uses SQL commands:
@@ -21,19 +21,17 @@ pub struct SyncTransaction {
     readonly: Option<bool>,
 }
 
-impl SyncTransaction {
-    pub fn new(
-        conn: Py<SyncConn>,
-        consistent_snapshot: bool,
-        isolation_level: Option<String>,
-        readonly: Option<bool>,
-    ) -> Self {
-        SyncTransaction {
-            conn,
-            consistent_snapshot,
-            isolation_level,
-            readonly,
-        }
+pub(crate) fn new_sync_transaction(
+    conn: Py<SyncConn>,
+    consistent_snapshot: bool,
+    isolation_level: Option<String>,
+    readonly: Option<bool>,
+) -> SyncTransaction {
+    SyncTransaction {
+        conn,
+        consistent_snapshot,
+        isolation_level,
+        readonly,
     }
 }
 
@@ -58,14 +56,17 @@ impl SyncTransaction {
         // Set isolation level if specified (must be done before START TRANSACTION)
         if let Some(level) = &slf_ref.isolation_level {
             let conn_ref = conn.borrow(py);
-            conn_ref.query_drop_internal(format!("SET TRANSACTION ISOLATION LEVEL {}", level))?;
+            query_drop_internal(
+                &conn_ref,
+                format!("SET TRANSACTION ISOLATION LEVEL {}", level),
+            )?;
         }
 
         // Set access mode if specified
         if let Some(ro) = slf_ref.readonly {
             let conn_ref = conn.borrow(py);
             let mode = if ro { "READ ONLY" } else { "READ WRITE" };
-            conn_ref.query_drop_internal(format!("SET TRANSACTION {}", mode))?;
+            query_drop_internal(&conn_ref, format!("SET TRANSACTION {}", mode))?;
         }
 
         // Build START TRANSACTION statement
@@ -78,7 +79,7 @@ impl SyncTransaction {
         // Execute START TRANSACTION
         {
             let conn_ref = conn.borrow(py);
-            conn_ref.query_drop_internal(sql)?;
+            query_drop_internal(&conn_ref, sql)?;
         }
 
         drop(slf_ref);
@@ -104,7 +105,7 @@ impl SyncTransaction {
         if should_rollback {
             log::warn!("commit() or rollback() was not called. Rolling back.");
             let conn_ref = conn.borrow(py);
-            conn_ref.query_drop_internal("ROLLBACK".to_string())?;
+            query_drop_internal(&conn_ref, "ROLLBACK".to_string())?;
             conn_ref.in_transaction.store(false, Ordering::SeqCst);
         }
 
@@ -120,7 +121,7 @@ impl SyncTransaction {
         }
 
         // Execute COMMIT
-        conn_ref.query_drop_internal("COMMIT".to_string())?;
+        query_drop_internal(&conn_ref, "COMMIT".to_string())?;
 
         // Clear in_transaction flag
         conn_ref.in_transaction.store(false, Ordering::SeqCst);
@@ -137,7 +138,7 @@ impl SyncTransaction {
         }
 
         // Execute ROLLBACK
-        conn_ref.query_drop_internal("ROLLBACK".to_string())?;
+        query_drop_internal(&conn_ref, "ROLLBACK".to_string())?;
 
         // Clear in_transaction flag
         conn_ref.in_transaction.store(false, Ordering::SeqCst);

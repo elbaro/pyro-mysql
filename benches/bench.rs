@@ -88,37 +88,37 @@ pub fn bench(c: &mut Criterion) {
         for (name, setup, statement) in [
             (
                 "mysqlclient (sync)",
-                cr"mysqldb_conn = MySQLdb.connect(host='localhost', port=3306, user='test', password='1234', database='test', autocommit=True)",
+                c"mysqldb_conn = MySQLdb.connect(host='localhost', port=3306, user='test', password='1234', database='test', autocommit=True)",
                 c"select_sync(mysqldb_conn)",
             ),
             (
                 "pymysql (sync)",
-                cr"pymysql_conn = pymysql.connect(host='localhost', port=3306, user='test', password='1234', database='test', autocommit=True)",
+                c"pymysql_conn = pymysql.connect(host='localhost', port=3306, user='test', password='1234', database='test', autocommit=True)",
                 c"select_sync(pymysql_conn)",
             ),
             (
                 "mariadb (sync)",
-                cr"mariadb_conn = create_mariadb_conn()",
+                c"mariadb_conn = create_mariadb_conn()",
                 c"select_mariadb(mariadb_conn)",
             ),
             (
                 "pyro (sync)",
-                cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
+                c"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
                 c"select_pyro_sync(pyro_sync_conn)",
             ),
             (
                 "pyro (async)",
-                cr"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
+                c"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
                 c"loop.run_until_complete(select_pyro_async(pyro_async_conn))",
             ),
             (
                 "asyncmy (async)",
-                cr"asyncmy_conn = loop.run_until_complete(create_asyncmy_conn())",
+                c"asyncmy_conn = loop.run_until_complete(create_asyncmy_conn())",
                 c"loop.run_until_complete(select_async(asyncmy_conn))",
             ),
             (
                 "aiomysql (async)",
-                cr"aiomysql_conn = loop.run_until_complete(create_aiomysql_conn())",
+                c"aiomysql_conn = loop.run_until_complete(create_aiomysql_conn())",
                 c"loop.run_until_complete(select_async(aiomysql_conn))",
             ),
         ] {
@@ -136,52 +136,52 @@ pub fn bench(c: &mut Criterion) {
         for (name, setup, stmt_template) in [
             (
                 "mysqlclient (sync)",
-                cr"mysqldb_conn = MySQLdb.connect(host='localhost', port=3306, user='test', password='1234', database='test', autocommit=True)",
+                c"mysqldb_conn = MySQLdb.connect(host='localhost', port=3306, user='test', password='1234', database='test', autocommit=True)",
                 "insert_sync(mysqldb_conn, {})",
             ),
             (
                 "pymysql (sync)",
-                cr"pymysql_conn = pymysql.connect(host='localhost', port=3306, user='test', password='1234', database='test', autocommit=True)",
+                c"pymysql_conn = pymysql.connect(host='localhost', port=3306, user='test', password='1234', database='test', autocommit=True)",
                 "insert_sync(pymysql_conn, {})",
             ),
             (
                 "mariadb (sync)",
-                cr"mariadb_conn = create_mariadb_conn()",
+                c"mariadb_conn = create_mariadb_conn()",
                 "insert_mariadb(mariadb_conn, {})",
             ),
             (
                 "mariadb (sync, bulk)",
-                cr"mariadb_bulk_conn = create_mariadb_conn()",
+                c"mariadb_bulk_conn = create_mariadb_conn()",
                 "insert_mariadb_bulk(mariadb_bulk_conn, {})",
             ),
             (
                 "pyro (sync)",
-                cr"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
+                c"pyro_sync_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
                 "insert_pyro_sync(pyro_sync_conn, {})",
             ),
             (
                 "pyro (sync, bulk)",
-                cr"pyro_sync_bulk_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
+                c"pyro_sync_bulk_conn = pyro_mysql.SyncConn('mysql://test:1234@localhost:3306/test')",
                 "insert_pyro_sync_bulk(pyro_sync_bulk_conn, {})",
             ),
             (
                 "pyro (async)",
-                cr"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
+                c"pyro_async_conn = loop.run_until_complete(create_pyro_async_conn())",
                 "loop.run_until_complete(insert_pyro_async(pyro_async_conn, {}))",
             ),
             (
                 "pyro (async, bulk)",
-                cr"pyro_async_bulk_conn = loop.run_until_complete(create_pyro_async_conn())",
+                c"pyro_async_bulk_conn = loop.run_until_complete(create_pyro_async_conn())",
                 "loop.run_until_complete(insert_pyro_async_bulk(pyro_async_bulk_conn, {}))",
             ),
             (
                 "asyncmy (async)",
-                cr"asyncmy_conn = loop.run_until_complete(create_asyncmy_conn())",
+                c"asyncmy_conn = loop.run_until_complete(create_asyncmy_conn())",
                 "loop.run_until_complete(insert_async(asyncmy_conn, {}))",
             ),
             (
                 "aiomysql (async)",
-                cr"aiomysql_conn = loop.run_until_complete(create_aiomysql_conn())",
+                c"aiomysql_conn = loop.run_until_complete(create_aiomysql_conn())",
                 "loop.run_until_complete(insert_async(aiomysql_conn, {}))",
             ),
         ] {
@@ -192,10 +192,10 @@ pub fn bench(c: &mut Criterion) {
                         let mut sum = std::time::Duration::ZERO;
                         for g in 0..((iters-1)/10000+1) {
                             clear_table(py);
-                            let start = g * 10000;
-                            let end = iters.min(start+10000);
+                            let group_start = g * 10000;
+                            let end = iters.min(group_start+10000);
 
-                            let statement = stmt_template.replace("{}", &(end-start).to_string());
+                            let statement = stmt_template.replace("{}", &(end-group_start).to_string());
                             let c_statement = std::ffi::CString::new(statement).unwrap();
 
                             let start = std::time::Instant::now();

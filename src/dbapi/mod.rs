@@ -13,7 +13,7 @@ use std::sync::Arc;
 use crate::{
     dbapi::{
         async_conn::{AsyncDbApiConn, DbApiAsyncZeroConn},
-        conn::DbApiConn,
+        conn::{DbApiConn, new_dbapi_conn},
         error::DbApiResult,
     },
     error::Error,
@@ -30,7 +30,7 @@ pub fn connect(
     url_or_opts: Either<String, PyRef<Opts>>,
     autocommit: Option<bool>,
 ) -> DbApiResult<DbApiConn> {
-    let conn = DbApiConn::new(url_or_opts)?;
+    let conn = new_dbapi_conn(url_or_opts)?;
     if let Some(on) = autocommit {
         conn.set_autocommit(on)?;
     }
