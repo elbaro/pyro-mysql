@@ -69,9 +69,10 @@ impl AsyncDbApiHandler {
     /// Build the DB-API description as a PyList (uses last result set's columns)
     /// Must be called with the GIL held
     pub fn build_description(&self, py: Python) -> PyResult<Py<PyList>> {
-        PyList::new(
-            py,
-            self.col_infos.iter().map(|info| {
+        let items: Vec<_> = self
+            .col_infos
+            .iter()
+            .map(|info| {
                 (
                     info.name.as_str(), // name
                     info.type_code,     // type_code
@@ -86,10 +87,9 @@ impl AsyncDbApiHandler {
                     }, // null_ok
                 )
                     .into_pyobject(py)
-                    .unwrap()
-            }),
-        )
-        .map(|bound| bound.unbind())
+            })
+            .collect::<PyResult<Vec<_>>>()?;
+        PyList::new(py, items).map(|bound| bound.unbind())
     }
 
     /// Convert collected raw rows to Python tuples
@@ -190,7 +190,9 @@ impl BinaryResultSetHandler for AsyncDbApiHandler {
     }
 
     fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: BinaryRowPayload<'_>) -> Result<()> {
-        let rs = self.result_sets.last_mut().unwrap();
+        let rs = self.result_sets.last_mut().ok_or_else(|| {
+            zero_mysql::error::Error::BadUsageError("no active result set".into())
+        })?;
         let is_null: Vec<bool> = (0..rs.cols.len())
             .map(|i| row.null_bitmap().is_null(i))
             .collect();
@@ -253,7 +255,9 @@ impl TextResultSetHandler for AsyncDbApiHandler {
     }
 
     fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: TextRowPayload<'_>) -> Result<()> {
-        let rs = self.result_sets.last_mut().unwrap();
+        let rs = self.result_sets.last_mut().ok_or_else(|| {
+            zero_mysql::error::Error::BadUsageError("no active result set".into())
+        })?;
         rs.rows.push(RawRow::Text(row.0.to_vec()));
         Ok(())
     }

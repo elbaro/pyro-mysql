@@ -31,7 +31,7 @@ impl BufferPool {
     }
 
     fn __repr__(&self) -> String {
-        format!("BufferPool({:?})", Arc::as_ptr(&self.inner))
+        format!("BufferPool({:p})", Arc::as_ptr(&self.inner))
     }
 }
 

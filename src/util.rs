@@ -49,12 +49,18 @@ impl PyroFutureIterator {
     }
 }
 
-pub fn tokio_spawn_as_abort_on_drop<F>(fut: F) -> AbortOnDropHandle<F::Output>
+pub fn tokio_spawn_as_abort_on_drop<F>(
+    fut: F,
+) -> Result<AbortOnDropHandle<F::Output>, crate::error::Error>
 where
     F: Future + Send + 'static,
     F::Output: Send + 'static,
 {
-    AbortOnDropHandle::new(crate::tokio_thread::get_tokio_thread().spawn(fut))
+    Ok(AbortOnDropHandle::new(
+        crate::tokio_thread::get_tokio_thread()
+            .map_err(crate::error::Error::IoError)?
+            .spawn(fut),
+    ))
 }
 
 /// == Coroutine::new(AbortOnDropHandle::new(pyo3_async_runtimes::tokio::get_runtime().spawn(fut)))
@@ -74,48 +80,52 @@ where
     let py_future = create_future.call0(py)?;
     {
         let py_future = py_future.clone_ref(py);
-        crate::tokio_thread::get_tokio_thread().spawn(async move {
-            let result = fut.await;
+        crate::tokio_thread::get_tokio_thread()
+            .map_err(crate::error::Error::IoError)?
+            .spawn(async move {
+                let result = fut.await;
 
-            // TODO: spawn_blocking or not?
-            //      - tokio::task::spawn_blocking slows down the microbench by 3~12%.
-            //      - The default GIL switch interval is 5 milliseconds (5000 microseconds).
-            //      - tokio considers 10~100us as a blocking operation
-            //      - Python::attach() here runs in 30-50us on uncontended situation
+                // TODO: spawn_blocking or not?
+                //      - tokio::task::spawn_blocking slows down the microbench by 3~12%.
+                //      - The default GIL switch interval is 5 milliseconds (5000 microseconds).
+                //      - tokio considers 10~100us as a blocking operation
+                //      - Python::attach() here runs in 30-50us on uncontended situation
 
-            // tokio::task::spawn_blocking(move || {
+                // tokio::task::spawn_blocking(move || {
 
-            Python::attach(|py2| {
-                let bound_future = py_future.bind(py2);
-                match result {
-                    Ok(value) => {
-                        call_soon_threadsafe
-                            .call1(
-                                py2,
-                                (
-                                    bound_future.getattr(intern!(py2, "set_result")).unwrap(),
-                                    value.into_py_any(py2).unwrap(),
-                                ),
-                            )
-                            .unwrap();
+                Python::attach(|py2| {
+                    let bound_future = py_future.bind(py2);
+                    let r: PyResult<()> = (|| {
+                        match result {
+                            Ok(value) => {
+                                call_soon_threadsafe.call1(
+                                    py2,
+                                    (
+                                        bound_future.getattr(intern!(py2, "set_result"))?,
+                                        value.into_py_any(py2)?,
+                                    ),
+                                )?;
+                            }
+                            Err(err) => {
+                                call_soon_threadsafe.call1(
+                                    py2,
+                                    (
+                                        bound_future.getattr(intern!(py2, "set_exception"))?,
+                                        pyo3::PyErr::from(err).into_bound_py_any(py2)?,
+                                    ),
+                                )?;
+                            }
+                        }
+                        Ok(())
+                    })();
+                    if let Err(e) = r {
+                        log::error!("Failed to resolve Python future: {e}");
                     }
-                    Err(err) => {
-                        call_soon_threadsafe
-                            .call1(
-                                py2,
-                                (
-                                    bound_future.getattr(intern!(py2, "set_exception")).unwrap(),
-                                    pyo3::PyErr::from(err).into_bound_py_any(py2).unwrap(),
-                                ),
-                            )
-                            .unwrap();
-                    }
-                }
+                });
+                // })
+                // .await
+                // .unwrap();
             });
-            // })
-            // .await
-            // .unwrap();
-        });
     }
 
     Ok(py_future)
@@ -127,21 +137,24 @@ pub struct PyTupleBuilder {
 
 impl PyTupleBuilder {
     pub fn new(_py: Python, len: usize) -> Self {
+        // SAFETY: GIL is held (enforced by `_py: Python` token), `len` is a valid size.
         let ptr = unsafe { pyo3::ffi::PyTuple_New(len as isize) };
         Self { ptr }
     }
 
     pub fn set<'py>(&self, index: usize, value: Bound<'py, PyAny>) {
-        // #[cfg(not(any(Py_LIMITED_API, PyPy, GraalPy)))]
-        // pyo3::ffi::PyTuple_SET_ITEM(self.ptr, index, value.into_ptr());
-        // #[cfg(any(Py_LIMITED_API, PyPy, GraalPy))]
+        // SAFETY: `self.ptr` is a valid PyTuple created by `PyTuple_New` in `new()`.
+        // `into_ptr()` transfers ownership to the tuple (steals the reference).
+        // Caller must ensure `index < len`.
         unsafe {
-            // TODO: raise if returns -1
             pyo3::ffi::PyTuple_SetItem(self.ptr, index as pyo3::ffi::Py_ssize_t, value.into_ptr());
         }
     }
 
     pub fn build<'py>(self, py: Python<'py>) -> Bound<'py, PyTuple> {
-        unsafe { Bound::from_owned_ptr(py, self.ptr).cast_into_unchecked() }
+        // SAFETY: `self.ptr` is a valid owned PyTuple created by `PyTuple_New`.
+        let obj = unsafe { Bound::from_owned_ptr(py, self.ptr) };
+        // SAFETY: `PyTuple_New` always returns a PyTuple object.
+        unsafe { obj.cast_into_unchecked() }
     }
 }

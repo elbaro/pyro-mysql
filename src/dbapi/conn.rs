@@ -149,7 +149,7 @@ pub(crate) fn dbapi_exec(
                 Error::ZeroMysqlError(e)
             })?;
 
-            Ok::<_, Error>(handler.into_result())
+            Ok::<_, Error>(handler.into_result()?)
         })?;
 
         Ok(result)

@@ -77,7 +77,11 @@ impl FromRawValue<'_> for PyValue {
     fn from_float(v: f32) -> Result<Self> {
         // Convert f32 to f64 via ryu to maintain precision
         let mut buffer = ryu::Buffer::new();
-        let f64_val: f64 = buffer.format(v).parse().expect("ryu format is valid");
+        let f64_val: f64 = buffer.format(v).parse().map_err(|e| {
+            zero_mysql::error::Error::LibraryBug(zero_mysql::error::eyre!(
+                "ryu produced invalid float string: {e}"
+            ))
+        })?;
         Ok(PyValue(f64_val.into_py_any(py()).map_err(py_err)?))
     }
 

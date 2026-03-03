@@ -14,54 +14,46 @@ static JSON_MODULE: PyOnceLock<Py<PyModule>> = PyOnceLock::new();
 
 pub fn get_datetime_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
     Ok(DATETIME_CLASS
-        .get_or_init(py, || {
-            PyModule::import(py, "datetime")
-                .unwrap()
-                .getattr("datetime")
-                .unwrap()
-                .unbind()
-        })
+        .get_or_try_init(py, || -> PyResult<_> {
+            Ok(PyModule::import(py, "datetime")?
+                .getattr("datetime")?
+                .unbind())
+        })?
         .bind(py))
 }
 
 pub fn get_date_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
     Ok(DATE_CLASS
-        .get_or_init(py, || {
-            PyModule::import(py, "datetime")
-                .unwrap()
-                .getattr("date")
-                .unwrap()
-                .unbind()
-        })
+        .get_or_try_init(py, || -> PyResult<_> {
+            Ok(PyModule::import(py, "datetime")?.getattr("date")?.unbind())
+        })?
         .bind(py))
 }
 
 pub fn get_timedelta_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
     Ok(TIMEDELTA_CLASS
-        .get_or_init(py, || {
-            PyModule::import(py, "datetime")
-                .unwrap()
-                .getattr("timedelta")
-                .unwrap()
-                .unbind()
-        })
+        .get_or_try_init(py, || -> PyResult<_> {
+            Ok(PyModule::import(py, "datetime")?
+                .getattr("timedelta")?
+                .unbind())
+        })?
         .bind(py))
 }
 
 pub fn get_decimal_class<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyAny>> {
     Ok(DECIMAL_CLASS
-        .get_or_init(py, || {
-            PyModule::import(py, "decimal")
-                .unwrap()
-                .getattr("Decimal")
-                .unwrap()
-                .unbind()
-        })
+        .get_or_try_init(py, || -> PyResult<_> {
+            Ok(PyModule::import(py, "decimal")?
+                .getattr("Decimal")?
+                .unbind())
+        })?
         .bind(py))
 }
 
 pub fn get_json_module<'py>(py: Python<'py>) -> PyResult<&'py Bound<'py, PyModule>> {
     Ok(JSON_MODULE
-        .get_or_init(py, || PyModule::import(py, "json").unwrap().unbind())
+        .get_or_try_init(py, || -> PyResult<_> {
+            Ok(PyModule::import(py, "json")?.unbind())
+        })?
         .bind(py))
 }

@@ -143,7 +143,7 @@ impl AsyncDbApiConn {
             let conn = guard.as_mut().ok_or_else(|| Error::ConnectionClosedError)?;
             conn.ping().await?;
             PyroResult::Ok(())
-        })
+        })?
         .await??;
         Ok(())
     }

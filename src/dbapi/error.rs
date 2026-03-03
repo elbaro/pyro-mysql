@@ -1,3 +1,5 @@
+#![allow(clippy::same_name_method)] // PyO3's create_exception! generates methods that shadow trait methods
+
 use pyo3::{PyErr, create_exception, exceptions::PyException};
 
 // important warnings like data truncations while inserting, etc

@@ -113,7 +113,9 @@ impl BinaryResultSetHandler for TupleHandler {
     }
 
     fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: BinaryRowPayload<'_>) -> Result<()> {
-        let rs = self.result_sets.last_mut().unwrap();
+        let rs = self.result_sets.last_mut().ok_or_else(|| {
+            zero_mysql::error::Error::BadUsageError("no active result set".into())
+        })?;
         let is_null: Vec<bool> = (0..rs.cols.len())
             .map(|i| row.null_bitmap().is_null(i))
             .collect();
@@ -149,7 +151,9 @@ impl TextResultSetHandler for TupleHandler {
     }
 
     fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: TextRowPayload<'_>) -> Result<()> {
-        let rs = self.result_sets.last_mut().unwrap();
+        let rs = self.result_sets.last_mut().ok_or_else(|| {
+            zero_mysql::error::Error::BadUsageError("no active result set".into())
+        })?;
         rs.rows.push(RawRow::Text(row.0.to_vec()));
         Ok(())
     }
@@ -320,7 +324,9 @@ impl BinaryResultSetHandler for DictHandler {
     }
 
     fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: BinaryRowPayload<'_>) -> Result<()> {
-        let rs = self.result_sets.last_mut().unwrap();
+        let rs = self.result_sets.last_mut().ok_or_else(|| {
+            zero_mysql::error::Error::BadUsageError("no active result set".into())
+        })?;
         let is_null: Vec<bool> = (0..rs.cols.len())
             .map(|i| row.null_bitmap().is_null(i))
             .collect();
@@ -360,7 +366,9 @@ impl TextResultSetHandler for DictHandler {
     }
 
     fn row(&mut self, _cols: &[ColumnDefinition<'_>], row: TextRowPayload<'_>) -> Result<()> {
-        let rs = self.result_sets.last_mut().unwrap();
+        let rs = self.result_sets.last_mut().ok_or_else(|| {
+            zero_mysql::error::Error::BadUsageError("no active result set".into())
+        })?;
         rs.rows.push(RawRow::Text(row.0.to_vec()));
         Ok(())
     }

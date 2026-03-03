@@ -33,22 +33,22 @@ impl Params {
 impl FromPyObject<'_, '_> for Params {
     type Error = PyErr;
 
-    fn extract(ob: Borrowed<PyAny>) -> Result<Self, Self::Error> {
+    fn extract(obj: Borrowed<PyAny>) -> Result<Self, Self::Error> {
         // Get the fully qualified type name and match against it
-        let py_type = ob.get_type();
+        let py_type = obj.get_type();
         let type_name = py_type.fully_qualified_name()?;
 
         if type_name == "NoneType" {
             Ok(Params::Empty)
         } else if type_name == "tuple" {
-            let tuple = ob.cast::<pyo3::types::PyTuple>()?;
+            let tuple = obj.cast::<pyo3::types::PyTuple>()?;
             let mut params = Vec::with_capacity(tuple.len());
             for item in tuple.iter() {
                 params.push(Value::extract(item.as_borrowed())?);
             }
             Ok(Params::Positional(params))
         } else if type_name == "list" {
-            let list = ob.cast::<pyo3::types::PyList>()?;
+            let list = obj.cast::<pyo3::types::PyList>()?;
             let mut params = Vec::with_capacity(list.len());
             for item in list.iter() {
                 params.push(Value::extract(item.as_borrowed())?);

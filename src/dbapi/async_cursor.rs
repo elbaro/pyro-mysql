@@ -122,9 +122,8 @@ impl AsyncCursor {
 
             // Execute with our handler
             execute_with_handler(zero_conn, &query, params).await
-        })
-        .await
-        .unwrap()?;
+        })?
+        .await??;
 
         // Convert the handler results to Python objects (with GIL)
         Python::attach(|py| {
@@ -177,9 +176,8 @@ impl AsyncCursor {
                 total_affected += zero_conn.affected_rows();
             }
             PyroResult::Ok(total_affected)
-        })
-        .await
-        .unwrap()?;
+        })?
+        .await??;
 
         cursor.description = None;
         cursor.rowcount = affected as i64;

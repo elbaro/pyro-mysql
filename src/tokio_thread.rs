@@ -9,8 +9,8 @@ use tokio::task::JoinHandle as TokioJoinHandle;
 static GLOBAL_TOKIO_THREAD: OnceLock<TokioThread> = OnceLock::new();
 
 /// Get or initialize the global TokioThread instance
-pub fn get_tokio_thread() -> &'static TokioThread {
-    GLOBAL_TOKIO_THREAD.get_or_init(TokioThread::new)
+pub fn get_tokio_thread() -> Result<&'static TokioThread, String> {
+    GLOBAL_TOKIO_THREAD.get_or_try_init(TokioThread::new)
 }
 
 /// A dedicated OS thread running a Tokio runtime with 'current_thread' flavor.
@@ -21,12 +21,12 @@ pub fn get_tokio_thread() -> &'static TokioThread {
 pub struct TokioThread {
     handle: Arc<Handle>,
     shutdown_tx: Option<oneshot::Sender<()>>,
-    thread: Option<JoinHandle<()>>,
+    thread: Option<JoinHandle<Result<(), String>>>,
 }
 
 impl TokioThread {
     /// Creates a new TokioThread with a dedicated OS thread running a Tokio runtime.
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self, String> {
         let (handle_tx, handle_rx) = std::sync::mpsc::channel::<Arc<Handle>>();
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
 
@@ -34,28 +34,32 @@ impl TokioThread {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
-                .expect("Failed to create Tokio runtime");
+                .map_err(|e| format!("Failed to create Tokio runtime: {e}"))?;
 
             let handle = Arc::new(rt.handle().clone());
 
             // Send the handle to the main thread
             handle_tx
                 .send(handle)
-                .expect("Failed to send runtime handle");
+                .map_err(|_send_err| "Failed to send runtime handle".to_string())?;
 
             // Block on shutdown signal
             rt.block_on(async {
                 let _ = shutdown_rx.await;
             });
+
+            Ok(())
         });
 
-        let handle = handle_rx.recv().expect("Failed to receive runtime handle");
+        let handle = handle_rx
+            .recv()
+            .map_err(|e| format!("Failed to receive runtime handle: {e}"))?;
 
-        TokioThread {
+        Ok(TokioThread {
             handle,
             shutdown_tx: Some(shutdown_tx),
             thread: Some(thread),
-        }
+        })
     }
 
     /// Spawns a future onto the Tokio runtime running on the dedicated thread.
@@ -83,11 +87,13 @@ impl Drop for TokioThread {
 }
 
 impl Default for TokioThread {
+    #[expect(clippy::expect_used)]
     fn default() -> Self {
-        Self::new()
+        Self::new().expect("Failed to create TokioThread")
     }
 }
 
+#[expect(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -95,7 +101,7 @@ mod tests {
 
     #[test]
     fn tokio_thread_spawn() {
-        let tokio_thread = TokioThread::new();
+        let tokio_thread = TokioThread::new().unwrap();
 
         let handle = tokio_thread.spawn(async {
             tokio::time::sleep(Duration::from_millis(10)).await;
@@ -109,7 +115,7 @@ mod tests {
 
     #[test]
     fn multiple_spawns() {
-        let tokio_thread = TokioThread::new();
+        let tokio_thread = TokioThread::new().unwrap();
 
         let handle1 = tokio_thread.spawn(async { 1 });
         let handle2 = tokio_thread.spawn(async { 2 });

@@ -46,7 +46,7 @@ impl<'a> DbApiHandler<'a> {
         }
     }
 
-    pub fn into_result(self) -> DbApiExecResult {
+    pub fn into_result(self) -> PyResult<DbApiExecResult> {
         log::debug!(
             "DbApiHandler::into_result: has_result_set={}, rows={}, cols={}",
             self.has_result_set,
@@ -56,9 +56,10 @@ impl<'a> DbApiHandler<'a> {
         if self.has_result_set {
             // Build description as PyList
             let description = Python::attach(|py| {
-                PyList::new(
-                    py,
-                    self.col_infos.iter().map(|info| {
+                let items: Vec<_> = self
+                    .col_infos
+                    .iter()
+                    .map(|info| {
                         (
                             info.name.as_str(), // name
                             info.type_code,     // type_code
@@ -73,23 +74,21 @@ impl<'a> DbApiHandler<'a> {
                             }, // null_ok
                         )
                             .into_pyobject(py)
-                            .unwrap()
-                    }),
-                )
-                .map(|bound| bound.unbind())
-            })
-            .expect("Failed to create description");
+                    })
+                    .collect::<PyResult<Vec<_>>>()?;
+                PyList::new(py, items).map(|bound| bound.unbind())
+            })?;
 
-            DbApiExecResult::WithDescription {
+            Ok(DbApiExecResult::WithDescription {
                 rows: self.rows,
                 description,
                 affected_rows: self.affected_rows,
-            }
+            })
         } else {
-            DbApiExecResult::NoDescription {
+            Ok(DbApiExecResult::NoDescription {
                 affected_rows: self.affected_rows,
                 last_insert_id: self.last_insert_id,
-            }
+            })
         }
     }
 }

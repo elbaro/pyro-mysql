@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used)]
 use pyro_mysql::tokio_thread::TokioThread;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -5,7 +6,7 @@ use std::time::Duration;
 
 #[test]
 fn basic_spawn() {
-    let tokio_thread = TokioThread::new();
+    let tokio_thread = TokioThread::new().unwrap();
 
     let handle = tokio_thread.spawn(async {
         tokio::time::sleep(Duration::from_millis(10)).await;
@@ -18,7 +19,7 @@ fn basic_spawn() {
 
 #[test]
 fn multiple_spawns() {
-    let tokio_thread = TokioThread::new();
+    let tokio_thread = TokioThread::new().unwrap();
 
     let handle1 = tokio_thread.spawn(async { 1 });
     let handle2 = tokio_thread.spawn(async { 2 });
@@ -35,7 +36,7 @@ fn multiple_spawns() {
 
 #[test]
 fn concurrent_tasks() {
-    let tokio_thread = TokioThread::new();
+    let tokio_thread = TokioThread::new().unwrap();
     let counter = Arc::new(AtomicU32::new(0));
 
     let mut handles = vec![];
@@ -57,7 +58,7 @@ fn concurrent_tasks() {
 
 #[test]
 fn async_computation() {
-    let tokio_thread = TokioThread::new();
+    let tokio_thread = TokioThread::new().unwrap();
 
     let handle = tokio_thread.spawn(async {
         let mut sum = 0;
@@ -73,7 +74,7 @@ fn async_computation() {
 
 #[test]
 fn spawn_with_tokio_features() {
-    let tokio_thread = TokioThread::new();
+    let tokio_thread = TokioThread::new().unwrap();
 
     let handle = tokio_thread.spawn(async {
         // Test tokio::time::sleep
@@ -91,7 +92,7 @@ fn spawn_with_tokio_features() {
 
 #[test]
 fn spawn_with_shared_state() {
-    let tokio_thread = TokioThread::new();
+    let tokio_thread = TokioThread::new().unwrap();
     let data = Arc::new(AtomicU32::new(0));
 
     let data1 = Arc::clone(&data);
@@ -114,8 +115,8 @@ fn spawn_with_shared_state() {
 
 #[test]
 fn multiple_tokio_threads() {
-    let thread1 = TokioThread::new();
-    let thread2 = TokioThread::new();
+    let thread1 = TokioThread::new().unwrap();
+    let thread2 = TokioThread::new().unwrap();
 
     let handle1 = thread1.spawn(async { "thread1" });
     let handle2 = thread2.spawn(async { "thread2" });
@@ -131,7 +132,7 @@ fn multiple_tokio_threads() {
 fn drop_cleanup() {
     // Create and immediately drop
     {
-        let tokio_thread = TokioThread::new();
+        let tokio_thread = TokioThread::new().unwrap();
         let _handle = tokio_thread.spawn(async {
             tokio::time::sleep(Duration::from_millis(1)).await;
         });
@@ -142,7 +143,7 @@ fn drop_cleanup() {
 
 #[test]
 fn spawn_returns_result() {
-    let tokio_thread = TokioThread::new();
+    let tokio_thread = TokioThread::new().unwrap();
 
     let handle = tokio_thread.spawn(async {
         if 2 + 2 == 4 {
@@ -158,7 +159,7 @@ fn spawn_returns_result() {
 
 #[test]
 fn nested_async_operations() {
-    let tokio_thread = TokioThread::new();
+    let tokio_thread = TokioThread::new().unwrap();
 
     let handle = tokio_thread.spawn(async {
         let inner = async {

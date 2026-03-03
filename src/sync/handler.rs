@@ -67,7 +67,7 @@ impl<'py> BinaryResultSetHandler for TupleHandler<'py> {
         self.rows
             .bind(self.py)
             .append(tuple.build(self.py))
-            .unwrap();
+            .map_err(zero_mysql::error::Error::from_debug)?;
         Ok(())
     }
 
@@ -113,7 +113,7 @@ impl<'py> TextResultSetHandler for TupleHandler<'py> {
         self.rows
             .bind(self.py)
             .append(tuple.build(self.py))
-            .unwrap();
+            .map_err(zero_mysql::error::Error::from_debug)?;
         Ok(())
     }
 
@@ -232,11 +232,14 @@ impl<'py> BinaryResultSetHandler for DictHandler<'py> {
                 std::str::from_utf8(col.name_alias).unwrap_or(""),
                 py_value.0.bind(self.py).clone(),
             )
-            .unwrap();
+            .map_err(zero_mysql::error::Error::from_debug)?;
             bytes = rest;
         }
 
-        self.rows.bind(self.py).append(dict).expect("OOM");
+        self.rows
+            .bind(self.py)
+            .append(dict)
+            .map_err(zero_mysql::error::Error::from_debug)?;
         Ok(())
     }
 
@@ -278,10 +281,13 @@ impl<'py> TextResultSetHandler for DictHandler<'py> {
                 val
             };
             dict.set_item(std::str::from_utf8(col.name_alias).unwrap_or(""), py_value)
-                .unwrap();
+                .map_err(zero_mysql::error::Error::from_debug)?;
         }
 
-        self.rows.bind(self.py).append(dict).unwrap();
+        self.rows
+            .bind(self.py)
+            .append(dict)
+            .map_err(zero_mysql::error::Error::from_debug)?;
         Ok(())
     }
 

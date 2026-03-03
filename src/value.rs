@@ -48,11 +48,11 @@ pub enum Value {
 impl FromPyObject<'_, '_> for Value {
     type Error = PyErr;
 
-    fn extract(ob: Borrowed<PyAny>) -> Result<Self, Self::Error> {
-        let py = ob.py();
+    fn extract(obj: Borrowed<PyAny>) -> Result<Self, Self::Error> {
+        let py = obj.py();
 
         // Get the type object and its name
-        let type_obj = ob.get_type();
+        let type_obj = obj.get_type();
         let type_name = type_obj.name()?;
 
         // Match on type name
@@ -60,44 +60,44 @@ impl FromPyObject<'_, '_> for Value {
             "NoneType" => Ok(Value::NULL),
 
             "bool" => {
-                let v = ob.extract::<bool>()?;
+                let v = obj.extract::<bool>()?;
                 Ok(Value::Int(v as i64))
             }
 
             "int" => {
                 // Try to fit in i64 first, then u64, otherwise convert to string
-                if let Ok(v) = ob.extract::<i64>() {
+                if let Ok(v) = obj.extract::<i64>() {
                     Ok(Value::Int(v))
-                } else if let Ok(v) = ob.extract::<u64>() {
+                } else if let Ok(v) = obj.extract::<u64>() {
                     Ok(Value::UInt(v))
                 } else {
                     // Integer too large for i64/u64, store as zero-copy string
-                    let int_str = ob.str()?;
+                    let int_str = obj.str()?;
                     let backed_str = int_str.extract::<PyBackedStr>()?;
                     Ok(Value::Str(backed_str))
                 }
             }
 
             "float" => {
-                let v = ob.extract::<f64>()?;
+                let v = obj.extract::<f64>()?;
                 Ok(Value::Double(v))
             }
 
             "str" => {
                 // Zero-copy string extraction
-                let backed_str = ob.extract::<PyBackedStr>()?;
+                let backed_str = obj.extract::<PyBackedStr>()?;
                 Ok(Value::Str(backed_str))
             }
 
             "bytes" => {
                 // Zero-copy bytes extraction
-                let backed_bytes = ob.extract::<PyBackedBytes>()?;
+                let backed_bytes = obj.extract::<PyBackedBytes>()?;
                 Ok(Value::Bytes(backed_bytes))
             }
 
             "bytearray" => {
                 // Extract from bytearray (requires a copy since PyBackedBytes doesn't support bytearray)
-                let v = ob.cast::<PyByteArray>()?;
+                let v = obj.cast::<PyByteArray>()?;
                 // We need to create bytes from bytearray
                 let bytes_obj = PyBytes::new(py, &v.to_vec());
                 let backed_bytes = bytes_obj.extract::<PyBackedBytes>()?;
@@ -108,20 +108,20 @@ impl FromPyObject<'_, '_> for Value {
                 // Serialize collections to JSON as zero-copy string
                 let json_module = get_json_module(py)?;
                 let json_str = json_module
-                    .call_method1("dumps", (ob,))?
+                    .call_method1("dumps", (obj,))?
                     .extract::<PyBackedStr>()?;
                 Ok(Value::Str(json_str))
             }
 
             "datetime" => {
                 // datetime.datetime
-                let year = ob.getattr("year")?.extract::<u16>()?;
-                let month = ob.getattr("month")?.extract::<u8>()?;
-                let day = ob.getattr("day")?.extract::<u8>()?;
-                let hour = ob.getattr("hour")?.extract::<u8>()?;
-                let minute = ob.getattr("minute")?.extract::<u8>()?;
-                let second = ob.getattr("second")?.extract::<u8>()?;
-                let microsecond = ob.getattr("microsecond")?.extract::<u32>()?;
+                let year = obj.getattr("year")?.extract::<u16>()?;
+                let month = obj.getattr("month")?.extract::<u8>()?;
+                let day = obj.getattr("day")?.extract::<u8>()?;
+                let hour = obj.getattr("hour")?.extract::<u8>()?;
+                let minute = obj.getattr("minute")?.extract::<u8>()?;
+                let second = obj.getattr("second")?.extract::<u8>()?;
+                let microsecond = obj.getattr("microsecond")?.extract::<u32>()?;
                 Ok(Value::Date(
                     year,
                     month,
@@ -135,24 +135,24 @@ impl FromPyObject<'_, '_> for Value {
 
             "date" => {
                 // datetime.date
-                let year = ob.getattr("year")?.extract::<u16>()?;
-                let month = ob.getattr("month")?.extract::<u8>()?;
-                let day = ob.getattr("day")?.extract::<u8>()?;
+                let year = obj.getattr("year")?.extract::<u16>()?;
+                let month = obj.getattr("month")?.extract::<u8>()?;
+                let day = obj.getattr("day")?.extract::<u8>()?;
                 Ok(Value::Date(year, month, day, 0, 0, 0, 0))
             }
 
             "time" => {
                 // datetime.time
-                let hour = ob.getattr("hour")?.extract::<u8>()?;
-                let minute = ob.getattr("minute")?.extract::<u8>()?;
-                let second = ob.getattr("second")?.extract::<u8>()?;
-                let microsecond = ob.getattr("microsecond")?.extract::<u32>()?;
+                let hour = obj.getattr("hour")?.extract::<u8>()?;
+                let minute = obj.getattr("minute")?.extract::<u8>()?;
+                let second = obj.getattr("second")?.extract::<u8>()?;
+                let microsecond = obj.getattr("microsecond")?.extract::<u32>()?;
                 Ok(Value::Time(false, 0, hour, minute, second, microsecond))
             }
 
             "timedelta" => {
                 // datetime.timedelta
-                let total_seconds = ob.call_method0("total_seconds")?.extract::<f64>()?;
+                let total_seconds = obj.call_method0("total_seconds")?.extract::<f64>()?;
                 let is_negative = total_seconds < 0.0;
                 let abs_seconds = total_seconds.abs();
 
@@ -176,24 +176,24 @@ impl FromPyObject<'_, '_> for Value {
 
             "struct_time" => {
                 // time.struct_time
-                let year = ob.getattr("tm_year")?.extract::<u16>()?;
-                let month = ob.getattr("tm_mon")?.extract::<u8>()?;
-                let day = ob.getattr("tm_mday")?.extract::<u8>()?;
-                let hour = ob.getattr("tm_hour")?.extract::<u8>()?;
-                let minute = ob.getattr("tm_min")?.extract::<u8>()?;
-                let second = ob.getattr("tm_sec")?.extract::<u8>()?;
+                let year = obj.getattr("tm_year")?.extract::<u16>()?;
+                let month = obj.getattr("tm_mon")?.extract::<u8>()?;
+                let day = obj.getattr("tm_mday")?.extract::<u8>()?;
+                let hour = obj.getattr("tm_hour")?.extract::<u8>()?;
+                let minute = obj.getattr("tm_min")?.extract::<u8>()?;
+                let second = obj.getattr("tm_sec")?.extract::<u8>()?;
                 Ok(Value::Date(year, month, day, hour, minute, second, 0))
             }
 
             "Decimal" => {
                 // decimal.Decimal - convert to zero-copy string
-                let decimal_str = ob.str()?.extract::<PyBackedStr>()?;
+                let decimal_str = obj.str()?.extract::<PyBackedStr>()?;
                 Ok(Value::Str(decimal_str))
             }
 
             "UUID" => {
                 // uuid.UUID - convert hex to zero-copy string
-                let hex = ob.getattr("hex")?.extract::<PyBackedStr>()?;
+                let hex = obj.getattr("hex")?.extract::<PyBackedStr>()?;
                 Ok(Value::Str(hex))
             }
 

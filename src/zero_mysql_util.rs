@@ -98,7 +98,11 @@ pub fn decode_text_value_to_python<'py>(
             })?;
             // Convert f32 to f64 via string to maintain precision
             let mut buffer = ryu::Buffer::new();
-            let f64_val = buffer.format(val).parse::<f64>().unwrap();
+            let f64_val = buffer.format(val).parse::<f64>().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Failed to parse ryu output: {e}"
+                ))
+            })?;
             Ok(f64_val.into_bound_py_any(py)?)
         }
 
