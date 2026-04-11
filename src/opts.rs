@@ -9,7 +9,7 @@ use crate::error::PyroResult;
 /// Buffer pools reduce memory allocation overhead by reusing buffers across queries.
 /// By default, connections use a global shared buffer pool. You can create a custom
 /// pool for isolation or tuning.
-#[pyclass(module = "pyro_mysql", name = "BufferPool")]
+#[pyclass(module = "pyro_mysql", name = "BufferPool", from_py_object)]
 #[derive(Clone)]
 pub struct BufferPool {
     pub inner: Arc<zero_mysql::BufferPool>,
@@ -49,7 +49,7 @@ impl BufferPool {
 /// # Or build manually
 /// opts = Opts().host("localhost").port(3306).user("root").password("secret").db("mydb")
 /// ```
-#[pyclass(module = "pyro_mysql", name = "Opts")]
+#[pyclass(module = "pyro_mysql", name = "Opts", skip_from_py_object)]
 #[derive(Clone, Debug, Default)]
 pub struct Opts {
     pub inner: zero_mysql::Opts,
