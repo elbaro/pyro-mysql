@@ -22,7 +22,3 @@ jobs:
       - uses: rustsec/audit-check@v2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          # RUSTSEC-2023-0071: Marvin Attack timing sidechannel in `rsa`.
-          # Pulled in transitively via zero-mysql. No patched version is
-          # available upstream.
-          ignore: RUSTSEC-2023-0071
