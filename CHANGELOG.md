@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/elbaro/pyro-mysql/compare/v0.2.17...v0.3.0) (2026-05-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* update googleapis/release-please-action action to v5 ([#66](https://github.com/elbaro/pyro-mysql/issues/66))
+* update actions/upload-pages-artifact action to v5 ([#62](https://github.com/elbaro/pyro-mysql/issues/62))
+* update breaking dependencies ([#53](https://github.com/elbaro/pyro-mysql/issues/53))
+
+* update actions/upload-pages-artifact action to v5 ([#62](https://github.com/elbaro/pyro-mysql/issues/62)) ([8ba4bda](https://github.com/elbaro/pyro-mysql/commit/8ba4bdaa568f8a2a7fd4743a654e161202c45468))
+* update breaking dependencies ([#53](https://github.com/elbaro/pyro-mysql/issues/53)) ([e2bb577](https://github.com/elbaro/pyro-mysql/commit/e2bb57757a8a2f0d8aa755dc589d33d300ba06d6))
+* update googleapis/release-please-action action to v5 ([#66](https://github.com/elbaro/pyro-mysql/issues/66)) ([44cd8be](https://github.com/elbaro/pyro-mysql/commit/44cd8be1d5be601fcbcbf3d10b0855df080c6d46))
+
 ## [0.2.17](https://github.com/elbaro/pyro-mysql/compare/v0.2.16...v0.2.17) (2026-03-03)
 
 
