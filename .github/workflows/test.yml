@@ -44,7 +44,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     services:
       mysql:
-        image: mariadb:12.3-rc
+        image: mariadb:13.0-rc
         env:
           MYSQL_USER: test
           MYSQL_PASSWORD: "1234"
