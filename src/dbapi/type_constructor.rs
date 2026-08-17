@@ -31,7 +31,9 @@ pub fn timestamp(
 #[pyfunction]
 #[pyo3(name = "DateFromTicks")]
 pub fn date_from_ticks(py: Python, ticks: i64) -> PyResult<Bound<PyDate>> {
-    PyDate::from_timestamp(py, ticks)
+    // This cast is lossless for all timestamps representable by PyDate: f64 represents every
+    // integer exactly through 2^53, while PyDate's timestamp range is within 2^38.
+    PyDate::from_timestamp(py, ticks as f64)
 }
 
 #[pyfunction]
