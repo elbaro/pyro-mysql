@@ -2,7 +2,7 @@
 .claude
 /.cargo
 /target
-CLAUDE.md
+AGENTS.md
 /uv.lock
 __pycache__
 /.direnv/

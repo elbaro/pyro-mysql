@@ -69,7 +69,7 @@ impl TupleHandler {
                         use zero_mysql::protocol::primitive::read_string_lenenc;
                         let mut data = &bytes[..];
 
-                        for i in 0..rs.cols.len() {
+                        for col in &rs.cols {
                             if !data.is_empty() && data[0] == 0xFB {
                                 values.push(py.None().into_bound(py));
                                 data = &data[1..];
@@ -80,8 +80,7 @@ impl TupleHandler {
                                             "Failed to read string: {e}"
                                         ))
                                     })?;
-                                let py_value =
-                                    decode_text_value_to_python(py, &rs.cols[i], value_bytes)?;
+                                let py_value = decode_text_value_to_python(py, col, value_bytes)?;
                                 values.push(py_value);
                                 data = rest;
                             }
