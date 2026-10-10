@@ -29,6 +29,10 @@
       "hidden": true
     },
     {
+      "type": "test",
+      "hidden": true
+    },
+    {
       "type": "infra",
       "hidden": true
     },
