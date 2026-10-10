@@ -1,0 +1,27 @@
+name: CLA
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  cla:
+    if: github.event.pull_request.user.type != 'Bot' && github.event.pull_request.user.login != 'elbaro'
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          grant='I grant the repository owner the [Blue Oak Contributor License Version 1.0.0](https://blueoakcouncil.org/contributor/1.0.0) for my contributions to the repository.'
+          body=$(printf '%s\n' "$PR_BODY" | tr -d '\r' | perl -0pe 's/<!--.*?(-->|\z)//gs')
+          if printf '%s\n' "$body" | grep -qxF -e "- [x] $grant" -e "- [X] $grant"; then
+            echo "Contributor license granted."
+          elif printf '%s\n' "$body" | grep -qxF -e "- [ ] $grant"; then
+            echo "::error::Check the Blue Oak Contributor License checkbox in the PR description."
+            exit 1
+          else
+            echo "::error::The PR description is missing the Blue Oak Contributor License line from .github/pull_request_template.md."
+            exit 1
+          fi

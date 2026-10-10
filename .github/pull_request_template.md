@@ -1,0 +1,1 @@
+- [ ] I grant the repository owner the [Blue Oak Contributor License Version 1.0.0](https://blueoakcouncil.org/contributor/1.0.0) for my contributions to the repository.

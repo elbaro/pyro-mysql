@@ -18,14 +18,14 @@ dev-dependencies = ["maturin>=1,<2"]
 name = "pyro-mysql"
 description = "High-performance MySQL driver for Python"
 readme = "README.md"
-license = { text = "MIT" }
+license = "BlueOak-1.0.0"
+license-files = ["LICENSE.md"]
 keywords = ["mysql", "async", "asyncio", "database", "rust", "pyo3"]
 dynamic = ["version"]
 requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
