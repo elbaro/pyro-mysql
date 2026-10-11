@@ -4,6 +4,9 @@ pyro-mysql is a high-performance MySQL driver for Python, backed by Rust.
 
 ```bash
 pip install pyro-mysql
+
+# with the SQLAlchemy dialect (mysql+pyro_mysql://, mysql+pyro_mysql_async://)
+pip install 'pyro-mysql[sqlalchemy]'
 ```
 
 ## Quick Start
