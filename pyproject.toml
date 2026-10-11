@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=1,<2"]
+requires = ["maturin>=1.15,<2"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -12,7 +12,6 @@ cache-keys = [
   { file = "pyro_mysql/*.py" },  # typing stub
   { file = "src/**/*.rs" },
 ]
-dev-dependencies = ["maturin>=1,<2"]
 
 [project]
 name = "pyro-mysql"
@@ -44,7 +43,8 @@ classifiers = [
 ]
 dependencies = [
   "pep249>=1.1.0",
-  "typing_extensions>=4.0.0",
+  # We can remove typing_extensions since Python 3.12.
+  "typing_extensions>=4.4.0",
 ]
 
 [project.optional-dependencies]
@@ -55,10 +55,10 @@ Repository = "https://github.com/elbaro/pyro-mysql"
 
 [dependency-groups]
 dev = [
-  "maturin>=1.9.4",
-  "pyright>=1.1.406",
-  "pytest-asyncio>=1.2.0",
-  "sqlalchemy[asyncio]>=2.0.44",
+  "maturin>=1.15,<2",
+  "pyright>=1.1.414",
+  "pytest-asyncio>=1.4.0",
+  "sqlalchemy[asyncio]>=2.1.4",
 ]
 
 [project.entry-points."sqlalchemy.dialects"]
