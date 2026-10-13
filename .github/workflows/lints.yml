@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-      - uses: psf/black@26.5.1
+      - uses: psf/black@26.10.1
         with:
           options: "--check --diff"
       - uses: dtolnay/rust-toolchain@nightly
