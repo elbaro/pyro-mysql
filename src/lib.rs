@@ -1,6 +1,3 @@
-#![allow(async_fn_in_trait)]
-#![feature(likely_unlikely)]
-#![feature(once_cell_try)]
 #![warn(
     clippy::expect_used,
     clippy::get_unwrap,

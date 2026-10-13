@@ -10,7 +10,14 @@ static GLOBAL_TOKIO_THREAD: OnceLock<TokioThread> = OnceLock::new();
 
 /// Get or initialize the global TokioThread instance
 pub fn get_tokio_thread() -> Result<&'static TokioThread, String> {
-    GLOBAL_TOKIO_THREAD.get_or_try_init(TokioThread::new)
+    if let Some(tokio_thread) = GLOBAL_TOKIO_THREAD.get() {
+        return Ok(tokio_thread);
+    }
+    // On a race, the losing instance is dropped, which shuts down its thread.
+    let _ = GLOBAL_TOKIO_THREAD.set(TokioThread::new()?);
+    GLOBAL_TOKIO_THREAD
+        .get()
+        .ok_or_else(|| "TokioThread was not initialized".to_string())
 }
 
 /// A dedicated OS thread running a Tokio runtime with 'current_thread' flavor.

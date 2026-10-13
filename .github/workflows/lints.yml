@@ -15,7 +15,7 @@ jobs:
       - uses: psf/black@26.10.1
         with:
           options: "--check --diff"
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
       - run: cargo fmt -- --check
