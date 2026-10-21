@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.3.0](https://github.com/elbaro/pyro-mysql/compare/v0.2.17...v0.3.0) (2026-10-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* `pip install pyro-mysql` no longer installs SQLAlchemy; use the `sqlalchemy` extra for the `mysql+pyro_mysql://` and `mysql+pyro_mysql_async://` dialects.
+* Python 3.10 is no longer supported; the minimum is now Python 3.11.
+* update breaking dependencies ([#76](https://github.com/elbaro/pyro-mysql/issues/76))
+* update googleapis/release-please-action action to v5 ([#66](https://github.com/elbaro/pyro-mysql/issues/66))
+* update actions/upload-pages-artifact action to v5 ([#62](https://github.com/elbaro/pyro-mysql/issues/62))
+* update breaking dependencies ([#53](https://github.com/elbaro/pyro-mysql/issues/53))
+
+* drop Python 3.10 support ([5e4d849](https://github.com/elbaro/pyro-mysql/commit/5e4d849e3da403186f835c0e679ce60673b20f23))
+* update actions/upload-pages-artifact action to v5 ([#62](https://github.com/elbaro/pyro-mysql/issues/62)) ([8ba4bda](https://github.com/elbaro/pyro-mysql/commit/8ba4bdaa568f8a2a7fd4743a654e161202c45468))
+* update breaking dependencies ([#53](https://github.com/elbaro/pyro-mysql/issues/53)) ([e2bb577](https://github.com/elbaro/pyro-mysql/commit/e2bb57757a8a2f0d8aa755dc589d33d300ba06d6))
+* update breaking dependencies ([#76](https://github.com/elbaro/pyro-mysql/issues/76)) ([cc38dad](https://github.com/elbaro/pyro-mysql/commit/cc38dadf5b8f50da857f5eee6e84a3c3b390778a))
+* update googleapis/release-please-action action to v5 ([#66](https://github.com/elbaro/pyro-mysql/issues/66)) ([44cd8be](https://github.com/elbaro/pyro-mysql/commit/44cd8be1d5be601fcbcbf3d10b0855df080c6d46))
+
+
+### Features
+
+* make sqlalchemy an optional extra ([b4e3e68](https://github.com/elbaro/pyro-mysql/commit/b4e3e6871b46cb4f8ac23af2b9a8bbd363d1f0bf))
+* support Python 3.15 ([e2d2c3f](https://github.com/elbaro/pyro-mysql/commit/e2d2c3f865ee1ca8e675ffd3f27f2fcf107242c8))
+
+
+### Bug Fixes
+
+* clippy ([33611e9](https://github.com/elbaro/pyro-mysql/commit/33611e9a3cb7f215587e7ca7e74fd4ab8fc71602))
+
+
+### Documentation
+
+* remove license section from README ([b24688d](https://github.com/elbaro/pyro-mysql/commit/b24688d59c335c40810bbe92e382fe6fa29ded0c))
+
 ## [0.2.17](https://github.com/elbaro/pyro-mysql/compare/v0.2.16...v0.2.17) (2026-03-03)
 
 
