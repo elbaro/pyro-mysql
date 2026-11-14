@@ -1,5 +1,23 @@
 # Changelog
 
+## [v0.3.0](https://github.com/rusticdotdev/pyro-mysql/compare/v0.2.17...v0.3.0) - 2026-11-14
+
+### <!-- 0 -->New features
+- support Python 3.15
+- [**breaking**] make sqlalchemy an optional extra
+
+### <!-- 1 -->Bug fixes
+- clippy
+
+### <!-- 3 -->Documentation
+- use Opts(url) constructor in Opts example
+- remove license section from README
+
+### <!-- 9 -->Other
+- refactor: drop deprecated pyclass skip_from_py_object option
+- refactor: build on stable Rust instead of nightly
+- tidy: clarification comment why f64 for timestmap is okay
+
 ## [0.2.17](https://github.com/elbaro/pyro-mysql/compare/v0.2.16...v0.2.17) (2026-03-03)
 
 
