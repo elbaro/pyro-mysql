@@ -1,0 +1,48 @@
+[workspace]
+git_only = true
+git_tag_name = "v{{ version }}"
+semver_check = false
+release_commits = "^(feat|fix|refactor|perf|deps|revert)[(!:]"
+pr_name = "release: v{{ version }}"
+pr_labels = ["release"]
+pr_body = """
+{% for release in releases %}
+* `{{ release.package }}`: {% if release.previous_version and release.previous_version != release.next_version %}{{ release.previous_version }} -> {% endif %}{{ release.next_version }}
+{% if release.changelog %}
+{{ release.changelog }}
+{% endif %}
+{%- endfor %}
+"""
+
+[changelog]
+header = """# Changelog
+
+"""
+commit_parsers = [
+  { message = "^release", skip = true },
+  { message = "^infra", skip = true },
+  { message = "^deps", group = "<!-- hidden -->" },
+  { message = "^feat", group = "<!-- 0 -->New features" },
+  { message = "^fix", group = "<!-- 1 -->Bug fixes" },
+  { message = "^perf", group = "<!-- 2 -->Performance" },
+  { message = "^docs", group = "<!-- 3 -->Documentation" },
+  { message = "^.*", group = "<!-- 9 -->Other" },
+]
+body = """
+## [v{{ version }}]{%- if release_link -%}({{ release_link }}){% endif %} - {{ timestamp | date(format="%Y-%m-%d") }}
+{% for group, commits in commits | group_by(attribute="group") %}{% if group != "<!-- hidden -->" %}
+### {{ group | upper_first }}
+{% for commit in commits %}
+{%- if group is containing("Other") -%}
+    {%- set msg = commit.raw_message | split(pat="\n") | first -%}
+{%- else -%}
+    {%- set msg = commit.message -%}
+{%- endif -%}
+{%- if commit.scope -%}
+- *({{commit.scope}})* {% if commit.breaking %}[**breaking**] {% endif %}{{ msg }}{%- if commit.links %} ({% for link in commit.links %}[{{link.text}}]({{link.href}}) {% endfor -%}){% endif %}
+{% else -%}
+- {% if commit.breaking %}[**breaking**] {% endif %}{{ msg }}
+{% endif -%}
+{% endfor -%}
+{% endif %}{% endfor %}
+"""
