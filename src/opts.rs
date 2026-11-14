@@ -44,7 +44,7 @@ impl BufferPool {
 /// # Examples
 /// ```python
 /// # Create from URL
-/// opts = Opts.from_url("mysql://user:pass@localhost:3306/mydb")
+/// opts = Opts("mysql://user:pass@localhost:3306/mydb")
 ///
 /// # Or build manually
 /// opts = Opts().host("localhost").port(3306).user("root").password("secret").db("mydb")
