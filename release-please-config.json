@@ -37,6 +37,10 @@
       "hidden": true
     },
     {
+      "type": "deps",
+      "hidden": true
+    },
+    {
       "type": "revert",
       "hidden": true
     },
