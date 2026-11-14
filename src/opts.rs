@@ -49,7 +49,7 @@ impl BufferPool {
 /// # Or build manually
 /// opts = Opts().host("localhost").port(3306).user("root").password("secret").db("mydb")
 /// ```
-#[pyclass(module = "pyro_mysql", name = "Opts", skip_from_py_object)]
+#[pyclass(module = "pyro_mysql", name = "Opts")]
 #[derive(Clone, Debug, Default)]
 pub struct Opts {
     pub inner: zero_mysql::Opts,
